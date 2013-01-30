@@ -50,7 +50,7 @@ setup(
     scripts=[],
 
     provides=[],
-    install_requires=['distribute', 'cliff'],
+    install_requires=['distribute', 'cliff', 'boto'],
 
     namespace_packages=[],
     packages=find_packages(),
@@ -61,6 +61,13 @@ setup(
             'clifford = clifford.main:main'
             ],
         'clifford': [
+            'instances = clifford.instances:Instances',
+            'launch = clifford.launch:Launch',
+            'terminate = clifford.actions:Terminate',
+            'reboot = clifford.actions:Reboot',
+            'stop = clifford.actions:Stop',
+            'start = clifford.actions:Start',
+
             'simple = clifford.simple:Simple',
             'two_part = clifford.simple:Simple',
             'error = clifford.simple:Error',

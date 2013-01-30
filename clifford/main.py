@@ -1,6 +1,7 @@
 import logging
 import sys
 
+import boto
 from cliff.app import App
 from cliff.commandmanager import CommandManager
 
@@ -15,6 +16,7 @@ class CliffordApp(App):
             version='0.1',
             command_manager=CommandManager('clifford'),
             )
+        self.ec2_conn = boto.connect_ec2()
 
     def initialize_app(self, argv):
         self.log.debug('initialize_app')
