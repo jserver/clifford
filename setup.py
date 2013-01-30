@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-PROJECT = 'cliffdemo'
+PROJECT = 'clifford'
 
 # Change docs/sphinx/conf.py too!
 VERSION = '0.1'
@@ -25,14 +25,14 @@ setup(
     name=PROJECT,
     version=VERSION,
 
-    description='Demo app for cliff',
+    description='Clifford, ec2 made easy.',
     long_description=long_description,
 
-    author='Doug Hellmann',
-    author_email='doug.hellmann@gmail.com',
+    author='Joe Server',
+    author_email='servernyc@gmail.com',
 
-    url='https://github.com/dreamhost/cliff',
-    download_url='https://github.com/dreamhost/cliff/tarball/master',
+    url='https://github.com/jserver/clifford',
+    download_url='https://github.com/jserver/clifford/tarball/master',
 
     classifiers=['Development Status :: 3 - Alpha',
                  'License :: OSI Approved :: Apache Software License',
@@ -58,16 +58,16 @@ setup(
 
     entry_points={
         'console_scripts': [
-            'cliffdemo = cliffdemo.main:main'
+            'clifford = clifford.main:main'
             ],
-        'cliff.demo': [
-            'simple = cliffdemo.simple:Simple',
-            'two_part = cliffdemo.simple:Simple',
-            'error = cliffdemo.simple:Error',
-            'list files = cliffdemo.list:Files',
-            'files = cliffdemo.list:Files',
-            'file = cliffdemo.show:File',
-            'show file = cliffdemo.show:File',
+        'clifford': [
+            'simple = clifford.simple:Simple',
+            'two_part = clifford.simple:Simple',
+            'error = clifford.simple:Error',
+            'list files = clifford.list:Files',
+            'files = clifford.list:Files',
+            'file = clifford.show:File',
+            'show file = clifford.show:File',
             ],
         },
 

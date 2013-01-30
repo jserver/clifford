@@ -5,15 +5,15 @@ from cliff.app import App
 from cliff.commandmanager import CommandManager
 
 
-class DemoApp(App):
+class CliffordApp(App):
 
     log = logging.getLogger(__name__)
 
     def __init__(self):
-        super(DemoApp, self).__init__(
-            description='cliff demo app',
+        super(CliffordApp, self).__init__(
+            description='clifford ec2 app',
             version='0.1',
-            command_manager=CommandManager('cliff.demo'),
+            command_manager=CommandManager('clifford'),
             )
 
     def initialize_app(self, argv):
@@ -29,7 +29,7 @@ class DemoApp(App):
 
 
 def main(argv=sys.argv[1:]):
-    myapp = DemoApp()
+    myapp = CliffordApp()
     return myapp.run(argv)
 
 
