@@ -1,31 +1,40 @@
 import logging
-import os
 
 from cliff.show import ShowOne
 
+from mixins import SingleBoxMixin
 
-class File(ShowOne):
-    "Show details about a file"
+
+class Describe(ShowOne, SingleBoxMixin):
+    "Show details about a single instance."
 
     log = logging.getLogger(__name__)
 
     def get_parser(self, prog_name):
-        parser = super(File, self).get_parser(prog_name)
-        parser.add_argument('filename', nargs='?', default='.')
+        parser = super(Describe, self).get_parser(prog_name)
+        parser.add_argument('name')
         return parser
 
     def take_action(self, parsed_args):
-        stat_data = os.stat(parsed_args.filename)
+        instance = self.get_box(parsed_args.name)
+
         columns = ('Name',
-                   'Size',
-                   'UID',
-                   'GID',
-                   'Modified Time',
+                   'Id',
+                   'State',
+                   'Type',
+                   'Root Device',
+                   'Arch',
+                   'Zone',
+                   'Public DNS'
                    )
-        data = (parsed_args.filename,
-                stat_data.st_size,
-                stat_data.st_uid,
-                stat_data.st_gid,
-                stat_data.st_mtime,
+        data = (instance.tags.get('Name'),
+                instance.id,
+                instance.state,
+                instance.instance_type,
+                instance.root_device_type,
+                instance.architecture,
+                instance.placement,
+                instance.public_dns_name or '',
                 )
+
         return (columns, data)

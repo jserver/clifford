@@ -61,6 +61,7 @@ setup(
             'clifford = clifford.main:main'
             ],
         'clifford': [
+            'desc = clifford.show:Describe',
             'instances = clifford.instances:Instances',
             'launch = clifford.launch:Launch',
             'terminate = clifford.actions:Terminate',
