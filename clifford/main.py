@@ -1,5 +1,7 @@
 import logging
 import sys
+from ConfigParser import SafeConfigParser
+from os.path import expanduser
 
 import boto
 from cliff.app import App
@@ -16,7 +18,10 @@ class CliffordApp(App):
             version='0.1',
             command_manager=CommandManager('clifford'),
             )
+        self.config_file = '%s/.clifford' % expanduser("~")
         self.ec2_conn = boto.connect_ec2()
+        self.cparser = SafeConfigParser()
+        self.cparser.read(self.config_file)
 
     def initialize_app(self, argv):
         self.log.debug('initialize_app')
@@ -28,6 +33,11 @@ class CliffordApp(App):
         self.log.debug('clean_up %s', cmd.__class__.__name__)
         if err:
             self.log.debug('got an error: %s', err)
+
+    def write_config(self):
+        with open('%s/.clifford' % expanduser("~"), 'wb') as configfile:
+            self.cparser.write(configfile)
+        self.cparser.read(self.config_file)
 
 
 def main(argv=sys.argv[1:]):
