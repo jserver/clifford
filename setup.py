@@ -62,6 +62,7 @@ setup(
             ],
         'clifford': [
             'desc = clifford.show:Describe',
+            'ls addresses = clifford.list:Addresses',
             'ls images = clifford.list:Images',
             'ls instances = clifford.list:Instances',
             'ls keys = clifford.list:Keys',
