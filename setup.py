@@ -61,20 +61,29 @@ setup(
             'clifford = clifford.main:main'
             ],
         'clifford': [
-            'desc = clifford.show:Describe',
+            # Lister tools
             'ls addresses = clifford.list:Addresses',
             'ls images = clifford.list:Images',
             'ls instances = clifford.list:Instances',
             'ls keys = clifford.list:Keys',
             'ls owners = clifford.list:Owners',
             'ls security groups = clifford.list:SecurityGroups',
+
+            # EC2
+            'add image = clifford.actions:AddImage',
+            'add owner = clifford.actions:AddOwner',
+            'desc = clifford.show:Describe',
             'launch = clifford.launch:Launch',
             'terminate = clifford.actions:Terminate',
             'reboot = clifford.actions:Reboot',
             'stop = clifford.actions:Stop',
             'start = clifford.actions:Start',
-            'add image = clifford.actions:AddImage',
-            'add owner = clifford.actions:AddOwner',
+
+            # Elastic IPs
+            'associate = clifford.address:Associate',
+            'disassociate = clifford.address:Disassociate',
+            'allocate = clifford.address:Allocate',
+            'release = clifford.address:Release',
             ],
         },
 

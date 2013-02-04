@@ -124,23 +124,6 @@ class Launch(Command):
 
         # user-data
 
-        # IP Associate
-        addresses = [address for address in self.app.ec2_conn.get_all_addresses() if not address.instance_id]
-        ip_address = None
-        if addresses:
-            self.app.stdout.write('Available IP Addresses\n')
-            self.app.stdout.write('----------------------\n')
-            self.app.stdout.write('0) Do Not Associate\n')
-            for index, item in enumerate(addresses):
-                self.app.stdout.write('%s) %s\n' % (index + 1, item.public_ip))
-            address_choice = raw_input('Enter number of IP address: ')
-            if not address_choice.isdigit() or int(address_choice) > len(addresses):
-                self.app.stdout.write('Not a valid IP address!\n')
-                return
-            address_choice = int(address_choice)
-            if address_choice > 0:
-                ip_address = addresses[address_choice - 1]
-        self.log.debug('the %s IP address was selected!\n' % ip_address)
 
         #############
         # DEBUG CHECK
@@ -153,10 +136,6 @@ class Launch(Command):
             self.app.stdout.write('zone: %s\n' % kwargs['placement'])
         else:
             self.app.stdout.write('zone: N/A\n')
-        if ip_address:
-            self.app.stdout.write('ip address: %s\n' % ip_address.public_ip)
-        else:
-            self.app.stdout.write('ip address: N/A\n')
         you_sure = raw_input('Are you sure? ')
         if you_sure.lower() not in ['y', 'yes']:
             self.app.stdout.write('OK NOT LAUNCHING\n')
@@ -182,10 +161,6 @@ class Launch(Command):
             if status == 'running':
                 break
             self.app.stdout.write(status)
-
-        if ip_address:
-            self.app.stdout.write('Attaching to Elastic IP...\n')
-            ip_address.associate(instance.id)
 
         time.sleep(20)
         self.app.stdout.write('Instance should now be running\n')

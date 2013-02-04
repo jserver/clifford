@@ -2,17 +2,47 @@ import logging
 
 from cliff.command import Command
 
-from mixins import SingleBoxMixin
+from commands import InstanceCommand
 
 
-class InstanceCommand(Command, SingleBoxMixin):
+class Terminate(InstanceCommand):
+    "Terminates an instance."
 
-    log = logging.getLogger(__name__)
+    def take_action(self, parsed_args):
+        instance = self.get_box(parsed_args.name)
+        if instance and self.sure_check():
+            self.log.info('Terminating %s' % parsed_args.name)
+            instance.terminate()
 
-    def get_parser(self, prog_name):
-        parser = super(InstanceCommand, self).get_parser(prog_name)
-        parser.add_argument('name')
-        return parser
+
+class Reboot(InstanceCommand):
+    "Reboot an instance."
+
+    def take_action(self, parsed_args):
+        instance = self.get_box(parsed_args.name)
+        if instance and self.sure_check():
+            self.log.info('Rebooting %s' % parsed_args.name)
+            instance.reboot()
+
+
+class Stop(InstanceCommand):
+    "Stop an instance."
+
+    def take_action(self, parsed_args):
+        instance = self.get_box(parsed_args.name)
+        if instance and self.sure_check():
+            self.log.info('Stopping %s' % parsed_args.name)
+            instance.stop()
+
+
+class Start(InstanceCommand):
+    "Start an instance."
+
+    def take_action(self, parsed_args):
+        instance = self.get_box(parsed_args.name)
+        if instance and self.sure_check():
+            self.log.info('Starting %s' % parsed_args.name)
+            instance.start()
 
 
 class AddImage(Command):
@@ -59,40 +89,3 @@ class AddOwner(Command):
             self.app.cparser.add_section('Owners')
         self.app.cparser.set('Owners', parsed_args.name, parsed_args.owner_id)
         self.app.write_config()
-
-
-class Terminate(InstanceCommand):
-    "Terminates an instance."
-
-    def take_action(self, parsed_args):
-        instance = self.get_box(parsed_args.name)
-        if instance:
-            self.log.info('Terminating %s' % parsed_args.name)
-            instance.terminate()
-
-
-class Reboot(InstanceCommand):
-
-    def take_action(self, parsed_args):
-        instance = self.get_box(parsed_args.name)
-        if instance:
-            self.log.info('Rebooting %s' % parsed_args.name)
-            instance.reboot()
-
-
-class Stop(InstanceCommand):
-
-    def take_action(self, parsed_args):
-        instance = self.get_box(parsed_args.name)
-        if instance:
-            self.log.info('Stopping %s' % parsed_args.name)
-            instance.stop()
-
-
-class Start(InstanceCommand):
-
-    def take_action(self, parsed_args):
-        instance = self.get_box(parsed_args.name)
-        if instance:
-            self.log.info('Starting %s' % parsed_args.name)
-            instance.start()
