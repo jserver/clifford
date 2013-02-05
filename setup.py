@@ -66,24 +66,34 @@ setup(
             'ls images = clifford.list:Images',
             'ls instances = clifford.list:Instances',
             'ls keys = clifford.list:Keys',
-            'ls owners = clifford.list:Owners',
             'ls security groups = clifford.list:SecurityGroups',
+            'ls snapshots = clifford.list:Snapshots',
+            'ls volumes = clifford.list:Volumes',
 
             # EC2
             'add image = clifford.actions:AddImage',
-            'add owner = clifford.actions:AddOwner',
+            'set owner = clifford.actions:SetOwner',
+            'owner = clifford.show:Owner',
             'desc = clifford.show:Describe',
             'launch = clifford.launch:Launch',
             'terminate = clifford.actions:Terminate',
             'reboot = clifford.actions:Reboot',
             'stop = clifford.actions:Stop',
             'start = clifford.actions:Start',
+            'create image = clifford.actions.CreateImage',
+            'create snapshot = clifford.actions.CreateSnapshot',
+            'rm volume = clifford.actions:DeleteVolume',
 
             # Elastic IPs
             'associate = clifford.address:Associate',
             'disassociate = clifford.address:Disassociate',
             'allocate = clifford.address:Allocate',
             'release = clifford.address:Release',
+
+            # S3
+            'create bucket = clifford.storage:CreateBucket',
+            'download = clifford.storage:Download',
+            'upload = clifford.storage:Upload',
             ],
         },
 

@@ -3,8 +3,10 @@ import time
 
 from cliff.command import Command
 
+from mixins import SureCheckMixin
 
-class Launch(Command):
+
+class Launch(Command, SureCheckMixin):
     "Launches an ec2 instance."
 
     log = logging.getLogger(__name__)
@@ -26,7 +28,6 @@ class Launch(Command):
         else:
             self.app.stdout.write('Unrecognized instance size!\n')
             return
-        self.log.debug('the %s instance type was selected!\n' % instance_type)
 
         # Name Input
         # TODO: check for uniqueness of name
@@ -34,7 +35,6 @@ class Launch(Command):
         if not name:
             self.app.stdout.write('No name given!\n')
             return
-        self.log.debug('the instance will be called %s!\n' % name)
 
         # Image selection
         if not self.app.cparser.has_option('Images', 'images'):
@@ -56,7 +56,6 @@ class Launch(Command):
             self.app.stdout.write('Not a valid image!\n')
             return
         image = images[int(image_choice)]
-        self.log.debug('the %s image was selected!\n' % image.name)
 
         # Key selection
         keys = self.app.ec2_conn.get_all_key_pairs()
@@ -75,7 +74,6 @@ class Launch(Command):
                 self.app.stdout.write('Not a valid key!\n')
                 return
             key = keys[int(key_choice)]
-            self.log.debug('the %s key was selected!\n' % key.name)
 
         # Zone Selection
         zones = self.app.ec2_conn.get_all_zones()
@@ -93,7 +91,6 @@ class Launch(Command):
             zone = None
         else:
             zone = zones[zone_choice - 1]
-        self.log.debug('the %s zone was selected!\n' % zone)
 
         # Security Group selection
         groups = self.app.ec2_conn.get_all_security_groups()
@@ -112,7 +109,6 @@ class Launch(Command):
                 self.app.stdout.write('Not a valid security group!\n')
                 return
             security_group = groups[int(group_choice)]
-            self.log.debug('the %s security group was selected!\n' % security_group.name)
 
         kwargs = {
             'key_name': key.name,
@@ -123,27 +119,10 @@ class Launch(Command):
             kwargs['placement'] = zone.name
 
         # user-data
+        # TODO: should at least give the option
 
-
-        #############
-        # DEBUG CHECK
-        #############
-        self.app.stdout.write('KWARGS\n')
-        self.app.stdout.write('key: %s\n' % kwargs['key_name'])
-        self.app.stdout.write('size: %s\n' % kwargs['instance_type'])
-        self.app.stdout.write('security: %s\n' % kwargs['security_group_ids'])
-        if 'placement' in kwargs:
-            self.app.stdout.write('zone: %s\n' % kwargs['placement'])
-        else:
-            self.app.stdout.write('zone: N/A\n')
-        you_sure = raw_input('Are you sure? ')
-        if you_sure.lower() not in ['y', 'yes']:
-            self.app.stdout.write('OK NOT LAUNCHING\n')
-            return
-        #############
-        # END DEBUG
-        #############
-
+        if not self.sure_check():
+            raise RuntimeError('Instance not created!')
 
         # Launch this thing
         self.app.stdout.write('Launching instance...\n')

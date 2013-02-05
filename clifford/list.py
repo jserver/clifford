@@ -22,14 +22,13 @@ class Images(Lister):
     log = logging.getLogger(__name__)
 
     def take_action(self, parsed_args):
-        images = []
-        if not self.app.cparser.has_section('Images') or not self.app.cparser.has_option('Images', 'images'):
-            self.log.info('No Images available')
-        else:
-            images_str = self.app.cparser.get('Images', 'images')
-            image_ids = images_str.split(',')
-            if image_ids:
-                images = [(image.id, image.name, image.description) for image in self.app.ec2_conn.get_all_images(image_ids=image_ids)]
+        if not self.app.cparser.has_option('Images', 'images'):
+            raise RuntimeError('No images added!')
+
+        images_str = self.app.cparser.get('Images', 'images')
+        image_ids = images_str.split(',')
+        if image_ids:
+            images = [(image.id, image.name, image.description) for image in self.app.ec2_conn.get_all_images(image_ids=image_ids)]
 
         return (('Name', 'Description', 'Image ID'),
                 tuple(images)
@@ -43,24 +42,24 @@ class Instances(Lister):
 
     def take_action(self, parsed_args):
         reservations = self.app.ec2_conn.get_all_instances()
-        boxes = []
+        instances = []
         for res in reservations:
             for instance in res.instances:
                 if instance.public_dns_name:
                     public_dns = instance.public_dns_name
                 else:
                     public_dns = ''
-                boxes.append((instance.tags.get('Name'),
-                              instance.id,
-                              instance.state,
-                              instance.instance_type,
-                              instance.root_device_type,
-                              instance.architecture,
-                              instance.placement,
-                              public_dns))
+                instances.append((instance.tags.get('Name'),
+                                  instance.id,
+                                  instance.state,
+                                  instance.instance_type,
+                                  instance.root_device_type,
+                                  instance.architecture,
+                                  instance.placement,
+                                  public_dns))
 
         return (('Name', 'Id', 'State', 'Type', 'Root Device', 'Arch', 'Zone', 'Public DNS'),
-                (box for box in boxes)
+                (instance for instance in instances)
                )
 
 
@@ -77,23 +76,6 @@ class Keys(Lister):
                )
 
 
-class Owners(Lister):
-    "Show a list of owners added to config."
-
-    log = logging.getLogger(__name__)
-
-    def take_action(self, parsed_args):
-        owners = tuple()
-        if self.app.cparser.has_section('Owners'):
-            owners = self.app.cparser.items('Owners')
-        else:
-            self.log.info('No Owners available')
-
-        return (('Name', 'ID'),
-                tuple(owners)
-               )
-
-
 class SecurityGroups(Lister):
     "Show a list of security groups in ec2."
 
@@ -104,4 +86,45 @@ class SecurityGroups(Lister):
 
         return (('Name', 'Description'),
                 ((group.name, group.description) for group in security_groups)
+               )
+
+
+class Snapshots(Lister):
+    "Show a list of snapshots in ec2."
+
+    log = logging.getLogger(__name__)
+
+    def take_action(self, parsed_args):
+        if not self.app.cparser.has_option('Owner', 'owner'):
+            raise RuntimeError('No owner set!')
+
+        owner = self.app.cparser.get('Owner', 'owner')
+        snapshots = self.app.ec2_conn.get_all_snapshots(owner=owner)
+
+        return (('Name', 'ID', 'Size', 'Status', 'Progress' ),
+                ((snapshot.tags.get('name', ''),
+                  snapshot.id,
+                  '%s GiB' % snapshot.volume_size,
+                  snapshot.status,
+                  snapshot.progress) for snapshot in snapshots)
+               )
+
+
+class Volumes(Lister):
+    "Show a list of Volumes in ec2."
+
+    log = logging.getLogger(__name__)
+
+    def take_action(self, parsed_args):
+        volumes = self.app.ec2_conn.get_all_volumes()
+
+        return (('Name', 'ID', 'Size', 'Type', 'Snapshot ID', 'Zone', 'Status', 'Instance ID'),
+                ((volume.tags.get('name', ''),
+                  volume.id,
+                  '%s GiB' % volume.size,
+                  volume.type,
+                  volume.snapshot_id,
+                  volume.zone,
+                  volume.status,
+                  hasattr(volume, 'attach_data') and volume.attach_data.instance_id or '') for volume in volumes)
                )

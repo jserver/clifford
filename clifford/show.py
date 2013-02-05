@@ -1,5 +1,6 @@
 import logging
 
+from cliff.command import Command
 from cliff.show import ShowOne
 
 from mixins import SingleBoxMixin
@@ -38,3 +39,14 @@ class Describe(ShowOne, SingleBoxMixin):
                 )
 
         return (columns, data)
+
+
+class Owner(Command):
+    "Show the owner saved to the config file."
+
+    log = logging.getLogger(__name__)
+
+    def take_action(self, parsed_args):
+        if not self.app.cparser.has_option('Owner', 'owner'):
+            raise RuntimeError('No owner set!')
+        self.app.stdout.write(self.app.cparser.get('Owner', 'owner'))
