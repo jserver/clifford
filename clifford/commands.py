@@ -2,10 +2,10 @@ import logging
 
 from cliff.command import Command
 
-from mixins import SingleBoxMixin, SureCheckMixin
+from mixins import SingleInstanceMixin, SureCheckMixin
 
 
-class InstanceCommand(Command, SingleBoxMixin, SureCheckMixin):
+class InstanceCommand(Command, SingleInstanceMixin, SureCheckMixin):
 
     log = logging.getLogger(__name__)
 

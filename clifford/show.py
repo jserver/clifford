@@ -3,10 +3,10 @@ import logging
 from cliff.command import Command
 from cliff.show import ShowOne
 
-from mixins import SingleBoxMixin
+from mixins import SingleInstanceMixin
 
 
-class Describe(ShowOne, SingleBoxMixin):
+class Describe(ShowOne, SingleInstanceMixin):
     "Show details about a single instance."
 
     log = logging.getLogger(__name__)

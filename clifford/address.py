@@ -3,10 +3,9 @@ import logging
 from cliff.command import Command
 
 from commands import InstanceCommand
-from mixins import SingleInstanceMixin
 
 
-class Associate(InstanceCommand, SingleInstanceMixin):
+class Associate(InstanceCommand):
     "Associate an Elastic IP with an ec2 instance."
 
     log = logging.getLogger(__name__)
@@ -27,8 +26,9 @@ class Associate(InstanceCommand, SingleInstanceMixin):
             return
         address_choice = int(address_choice)
         ip_address = addresses[address_choice]
-        self.app.stdout.write('Attaching to Elastic IP...\n')
-        ip_address.associate(instance.id)
+        if self.sure_check():
+            self.app.stdout.write('Attaching to Elastic IP...\n')
+            ip_address.associate(instance.id)
 
 
 class Disassociate(Command):
@@ -51,8 +51,9 @@ class Disassociate(Command):
             return
         address_choice = int(address_choice)
         ip_address = addresses[address_choice]
-        self.app.stdout.write('Disassociating Elastic IP...\n')
-        ip_address.disassociate()
+        if self.sure_check():
+            self.app.stdout.write('Disassociating Elastic IP...\n')
+            ip_address.disassociate()
 
 
 class Allocate(Command):
@@ -61,8 +62,9 @@ class Allocate(Command):
     log = logging.getLogger(__name__)
 
     def take_action(self, parsed_args):
-        self.app.stdout.write('Allocating Elastic IP...\n')
-        self.app.ec2_conn.allocate_address()
+        if self.sure_check():
+            self.app.stdout.write('Allocating Elastic IP...\n')
+            self.app.ec2_conn.allocate_address()
 
 
 class Release(Command):
@@ -85,5 +87,6 @@ class Release(Command):
             return
         address_choice = int(address_choice)
         ip_address = addresses[address_choice]
-        self.app.stdout.write('Releasing Elastic IP...\n')
-        ip_address.release()
+        if self.sure_check():
+            self.app.stdout.write('Releasing Elastic IP...\n')
+            ip_address.release()
