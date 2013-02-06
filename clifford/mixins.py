@@ -1,4 +1,3 @@
-#Utilities go here
 class SingleInstanceMixin(object):
     def get_instance(self, name):
         reservations = self.app.ec2_conn.get_all_instances(filters={'tag:Name': name})

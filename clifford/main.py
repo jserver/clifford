@@ -20,6 +20,7 @@ class CliffordApp(App):
             )
         self.config_file = '%s/.clifford' % expanduser("~")
         self.ec2_conn = boto.connect_ec2()
+        self.s3_conn = boto.connect_s3()
         self.cparser = SafeConfigParser()
         self.cparser.read(self.config_file)
 

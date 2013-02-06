@@ -63,6 +63,7 @@ setup(
         'clifford': [
             # Lister tools
             'ls addresses = clifford.list:Addresses',
+            'ls buckets = clifford.list:Buckets',
             'ls images = clifford.list:Images',
             'ls instances = clifford.list:Instances',
             'ls keys = clifford.list:Keys',
@@ -92,6 +93,7 @@ setup(
 
             # S3
             'create bucket = clifford.storage:CreateBucket',
+            'rm bucket = clifford.storage:DeleteBucket',
             'download = clifford.storage:Download',
             'upload = clifford.storage:Upload',
             ],

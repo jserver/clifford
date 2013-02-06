@@ -16,6 +16,19 @@ class Addresses(Lister):
                )
 
 
+class Buckets(Lister):
+    "Show a list of Buckets in S3."
+
+    log = logging.getLogger(__name__)
+
+    def take_action(self, parsed_args):
+        buckets = self.app.s3_conn.get_all_buckets()
+
+        return (('Name', 'Website'),
+                ((bucket.name, bucket.get_website_endpoint()) for bucket in buckets)
+               )
+
+
 class Images(Lister):
     "Show a list of images in ec2."
 
