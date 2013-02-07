@@ -17,7 +17,7 @@ class Describe(ShowOne, SingleInstanceMixin):
         return parser
 
     def take_action(self, parsed_args):
-        instance = self.get_box(parsed_args.name)
+        instance = self.get_instance(parsed_args.name)
 
         columns = ('Name',
                    'Id',
