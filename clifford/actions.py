@@ -12,7 +12,7 @@ class Terminate(InstanceCommand):
     def take_action(self, parsed_args):
         instance = self.get_instance(parsed_args.name)
         if instance and self.sure_check():
-            self.app.stdout.write('Terminating %s' % parsed_args.name)
+            self.app.stdout.write('Terminating %s\n' % parsed_args.name)
             instance.terminate()
 
 
@@ -22,7 +22,7 @@ class Reboot(InstanceCommand):
     def take_action(self, parsed_args):
         instance = self.get_instance(parsed_args.name)
         if instance and self.sure_check():
-            self.app.stdout.write('Rebooting %s' % parsed_args.name)
+            self.app.stdout.write('Rebooting %s\n' % parsed_args.name)
             instance.reboot()
 
 
@@ -32,7 +32,7 @@ class Stop(InstanceCommand):
     def take_action(self, parsed_args):
         instance = self.get_instance(parsed_args.name)
         if instance and self.sure_check():
-            self.app.stdout.write('Stopping %s' % parsed_args.name)
+            self.app.stdout.write('Stopping %s\n' % parsed_args.name)
             instance.stop()
 
 
@@ -42,7 +42,7 @@ class Start(InstanceCommand):
     def take_action(self, parsed_args):
         instance = self.get_instance(parsed_args.name)
         if instance and self.sure_check():
-            self.app.stdout.write('Starting %s' % parsed_args.name)
+            self.app.stdout.write('Starting %s\n' % parsed_args.name)
             instance.start()
 
 

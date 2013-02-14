@@ -49,4 +49,4 @@ class Owner(Command):
     def take_action(self, parsed_args):
         if not self.app.cparser.has_option('Owner', 'owner'):
             raise RuntimeError('No owner set!')
-        self.app.stdout.write(self.app.cparser.get('Owner', 'owner'))
+        self.app.stdout.write('%s\n' % self.app.cparser.get('Owner', 'owner'))

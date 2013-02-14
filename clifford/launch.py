@@ -139,7 +139,7 @@ class Launch(Command, SureCheckMixin):
             status = instance.update()
             if status == 'running':
                 break
-            self.app.stdout.write(status)
+            self.app.stdout.write('%s\n' % status)
 
         time.sleep(20)
         self.app.stdout.write('Instance should now be running\n')
