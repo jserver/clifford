@@ -43,7 +43,7 @@ class Images(Lister):
         if image_ids:
             images = [(image.id, image.name, image.description) for image in self.app.ec2_conn.get_all_images(image_ids=image_ids)]
 
-        return (('Name', 'Description', 'Image ID'),
+        return (('Image ID', 'Name', 'Description'),
                 tuple(images)
                )
 

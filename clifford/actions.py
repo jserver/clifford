@@ -70,7 +70,7 @@ class AddImage(Command):
         else:
             self.app.cparser.set('Images', 'images', image.id)
         self.app.write_config()
-        self.app.stdout.write('%s image added to config' % image.name)
+        self.app.stdout.write('%s image added to config\n' % image.name)
 
 
 class SetOwner(Command):
