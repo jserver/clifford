@@ -10,7 +10,7 @@ class Terminate(InstanceCommand):
     "Terminates an instance."
 
     def take_action(self, parsed_args):
-        instance = self.get_instance(parsed_args.name, parsed_args.instance_id)
+        instance = self.get_instance(parsed_args.name, parsed_args.arg_is_id)
         if instance and self.sure_check():
             self.app.stdout.write('Terminating %s\n' % parsed_args.name)
             instance.terminate()
@@ -20,7 +20,7 @@ class Reboot(InstanceCommand):
     "Reboot an instance."
 
     def take_action(self, parsed_args):
-        instance = self.get_instance(parsed_args.name, parsed_args.instance_id)
+        instance = self.get_instance(parsed_args.name, parsed_args.arg_is_id)
         if instance and self.sure_check():
             self.app.stdout.write('Rebooting %s\n' % parsed_args.name)
             instance.reboot()
@@ -30,7 +30,7 @@ class Stop(InstanceCommand):
     "Stop an instance."
 
     def take_action(self, parsed_args):
-        instance = self.get_instance(parsed_args.name, parsed_args.instance_id)
+        instance = self.get_instance(parsed_args.name, parsed_args.arg_is_id)
         if instance and self.sure_check():
             self.app.stdout.write('Stopping %s\n' % parsed_args.name)
             instance.stop()
@@ -40,7 +40,7 @@ class Start(InstanceCommand):
     "Start an instance."
 
     def take_action(self, parsed_args):
-        instance = self.get_instance(parsed_args.name, parsed_args.instance_id)
+        instance = self.get_instance(parsed_args.name, parsed_args.arg_is_id)
         if instance and self.sure_check():
             self.app.stdout.write('Starting %s\n' % parsed_args.name)
             instance.start()

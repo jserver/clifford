@@ -1,7 +1,7 @@
 class SingleInstanceMixin(object):
-    def get_instance(self, name, instance_id):
-        if instance_id:
-            reservations = self.app.ec2_conn.get_all_instances(instance_ids=[instance_id])
+    def get_instance(self, name, arg_is_id):
+        if arg_is_id:
+            reservations = self.app.ec2_conn.get_all_instances(instance_ids=[name])
         else:
             reservations = self.app.ec2_conn.get_all_instances(filters={'tag:Name': name})
         if len(reservations) > 1:
