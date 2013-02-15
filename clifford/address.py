@@ -11,7 +11,7 @@ class Associate(InstanceCommand):
     log = logging.getLogger(__name__)
 
     def take_action(self, parsed_args):
-        instance = self.get_instance(parsed_args.name)
+        instance = self.get_instance(parsed_args.name, parsed_args.instance_id)
         addresses = [address for address in self.app.ec2_conn.get_all_addresses() if not address.instance_id]
         if not instance or not addresses:
             raise RuntimeError('Need both an instance and an address!')

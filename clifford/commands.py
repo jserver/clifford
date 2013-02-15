@@ -11,5 +11,6 @@ class InstanceCommand(Command, SingleInstanceMixin, SureCheckMixin):
 
     def get_parser(self, prog_name):
         parser = super(InstanceCommand, self).get_parser(prog_name)
+        parser.add_argument('--id', dest='instance_id')
         parser.add_argument('name')
         return parser

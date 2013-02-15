@@ -1,6 +1,11 @@
 class SingleInstanceMixin(object):
-    def get_instance(self, name):
-        reservations = self.app.ec2_conn.get_all_instances(filters={'tag:Name': name})
+    def get_instance(self, name, instance_id):
+        if instance_id:
+            reservations = self.app.ec2_conn.get_all_instances(instance_ids=[instance_id])
+        else:
+            reservations = self.app.ec2_conn.get_all_instances(filters={'tag:Name': name})
+        if len(reservations) > 1:
+            raise RuntimeError('More than one reservation returned, use --id')
         for res in reservations:
             if not res.instances:
                 raise RuntimeError('No instances wth name %s' % name)
