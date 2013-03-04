@@ -106,6 +106,36 @@ class CreateSnapshot(Command):
         pass
 
 
+class DeleteImage(Command, SureCheckMixin):
+    "Deletes an image"
+
+    log = logging.getLogger(__name__)
+
+    def take_action(self, parsed_args):
+        if not self.app.cparser.has_option('Images', 'images'):
+            raise RuntimeError('No images found!')
+
+        images_str = self.app.cparser.get('Images', 'images')
+        image_ids = images_str.split(',')
+        if image_ids:
+            images = [{'id': image.id, 'name': image.name} for image in self.app.ec2_conn.get_all_images(image_ids=image_ids)]
+
+        self.app.stdout.write('Available Images\n')
+        self.app.stdout.write('----------------\n')
+        for index, item in enumerate(images):
+            self.app.stdout.write('%s) %s - %s\n' % (index, item['id'], item['name']))
+        image_choice = raw_input('Enter number of image: ')
+        if not image_choice.isdigit() or int(image_choice) >= len(images):
+            self.app.stdout.write('Not a valid image!\n')
+            return
+        image = images[int(image_choice)]
+        if self.sure_check():
+            image_ids.remove(image['id'])
+            images = ','.join(image_ids)
+            self.app.cparser.set('Images', 'images', images)
+            self.app.write_config()
+            self.app.stdout.write('%s removed from images\n' % image['name'])
+
 class DeleteVolume(Command, SureCheckMixin):
     "Deletes a volume"
 
