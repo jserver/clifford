@@ -3,7 +3,7 @@ import logging
 from cliff.command import Command
 
 from commands import InstanceCommand
-from mixins import SureCheckMixin
+from mixins import QuestionableMixin, SureCheckMixin
 
 
 class Terminate(InstanceCommand):
@@ -106,7 +106,7 @@ class CreateSnapshot(Command):
         pass
 
 
-class DeleteImage(Command, SureCheckMixin):
+class DeleteImage(Command, QuestionableMixin, SureCheckMixin):
     "Deletes an image"
 
     log = logging.getLogger(__name__)
@@ -120,40 +120,26 @@ class DeleteImage(Command, SureCheckMixin):
         if image_ids:
             images = [{'id': image.id, 'name': image.name} for image in self.app.ec2_conn.get_all_images(image_ids=image_ids)]
 
-        self.app.stdout.write('Available Images\n')
-        self.app.stdout.write('----------------\n')
-        for index, item in enumerate(images):
-            self.app.stdout.write('%s) %s - %s\n' % (index, item['id'], item['name']))
-        image_choice = raw_input('Enter number of image: ')
-        if not image_choice.isdigit() or int(image_choice) >= len(images):
-            self.app.stdout.write('Not a valid image!\n')
-            return
-        image = images[int(image_choice)]
-        if self.sure_check():
+        image = self.question_maker('Available Images', 'image', images)
+
+        if image and self.sure_check():
             image_ids.remove(image['id'])
             images = ','.join(image_ids)
             self.app.cparser.set('Images', 'images', images)
             self.app.write_config()
             self.app.stdout.write('%s removed from images\n' % image['name'])
 
-class DeleteVolume(Command, SureCheckMixin):
+class DeleteVolume(Command, QuestionableMixin, SureCheckMixin):
     "Deletes a volume"
 
     log = logging.getLogger(__name__)
 
     def take_action(self, parsed_args):
-        volumes = [volume for volume in self.app.ec2_conn.get_all_volumes() if volume.status == 'available']
+        volumes = [{'id': volume.id, 'obj': volume, 'name': ''} for volume in self.app.ec2_conn.get_all_volumes() if volume.status == 'available']
         if not volumes:
-            raise RuntimeError('No volumes found!')
+            raise RuntimeError('No available volumes found!')
 
-        self.app.stdout.write('Available Volumes\n')
-        self.app.stdout.write('-----------------\n')
-        for index, item in enumerate(volumes):
-            self.app.stdout.write('%s) %s\n' % (index, item.id))
-        volume_choice = raw_input('Enter number of volume: ')
-        if not volume_choice.isdigit() or int(volume_choice) >= len(volumes):
-            self.app.stdout.write('Not a valid volume!\n')
-            return
-        volume = volumes[int(volume_choice)]
-        if self.sure_check():
-            volume.delete()
+        volume = self.question_maker('Available Volumes', 'volume', volumes)
+
+        if volume and self.sure_check():
+            volume.obj.delete()
