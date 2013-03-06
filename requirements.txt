@@ -1,5 +1,2 @@
-argparse
 boto
-bpython
 cliff
-envoy

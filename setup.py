@@ -67,23 +67,40 @@ setup(
             'ls images = clifford.list:Images',
             'ls instances = clifford.list:Instances',
             'ls keys = clifford.list:Keys',
+            'ls packages = clifford.list:Packages',
             'ls security groups = clifford.list:SecurityGroups',
             'ls snapshots = clifford.list:Snapshots',
             'ls volumes = clifford.list:Volumes',
 
             # EC2
-            'add image = clifford.actions:AddImage',
+            'set keydir = clifford.actions:SetKeyDir',
+            'show keydir = clifford.show:KeyDir',
             'set owner = clifford.actions:SetOwner',
-            'owner = clifford.show:Owner',
-            'desc = clifford.show:Describe',
+            'show owner = clifford.show:Owner',
+            'set scriptdir = clifford.actions:SetScriptDir',
+            'show scriptdir = clifford.show:ScriptDir',
+
+            'add image = clifford.actions:AddImage',
+            'create image = clifford.actions.CreateImage',
+            'create snapshot = clifford.actions.CreateSnapshot',
+            'rm image = clifford.actions:DeleteImage',
+            'rm volume = clifford.actions:DeleteVolume',
+
+            'show instance = clifford.show:Instance',
             'launch = clifford.launch:Launch',
             'terminate = clifford.actions:Terminate',
             'reboot = clifford.actions:Reboot',
             'stop = clifford.actions:Stop',
             'start = clifford.actions:Start',
-            'create image = clifford.actions.CreateImage',
-            'create snapshot = clifford.actions.CreateSnapshot',
-            'rm volume = clifford.actions:DeleteVolume',
+
+            'remote install = clifford.remote:Install',
+            'remote script = clifford.remote:Script',
+
+            'create package = clifford.package:CreatePackage',
+            'package add = clifford.package:PackageAdd',
+            'package rm = clifford.package:PackageRemove',
+            'rm package = clifford.package:DeletePackage',
+            'show package = clifford.show:Package',
 
             # Elastic IPs
             'associate = clifford.address:Associate',

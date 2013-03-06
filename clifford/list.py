@@ -89,6 +89,19 @@ class Keys(Lister):
                )
 
 
+class Packages(Lister):
+    "Show a list of packages in config."
+
+    log = logging.getLogger(__name__)
+
+    def take_action(self, parsed_args):
+        packages = self.app.cparser.items('Packages')
+
+        return (('Name', 'Packages'),
+                ((package[0], package[1]) for package in packages)
+               )
+
+
 class SecurityGroups(Lister):
     "Show a list of security groups in ec2."
 

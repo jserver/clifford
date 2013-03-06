@@ -26,42 +26,38 @@ class Launch(Command, SureCheckMixin):
         elif parsed_args.size in ['t1.micro', 'm1.small']:
             instance_type = parsed_args.size
         else:
-            self.app.stdout.write('Unrecognized instance size!\n')
-            return
+            raise RuntimeError('Unrecognized instance size!\n')
 
         # Name Input
         # TODO: check for uniqueness of name
         name = raw_input('Enter name of instance: ')
         if not name:
-            self.app.stdout.write('No name given!\n')
-            return
+            raise RuntimeError('No name given!\n')
 
         # Image selection
         if not self.app.cparser.has_option('Images', 'images'):
-            self.app.stdout.write('No images in config!\n')
-            return
+            raise RuntimeError('No images in config!\n')
+
         image_ids = self.app.cparser.get('Images', 'images')
         image_ids = image_ids.split(',')
         if image_ids:
             images = self.app.ec2_conn.get_all_images(image_ids=image_ids)
         if not images:
-            self.app.stdout.write('No images!\n')
-            return
+            raise RuntimeError('No images!\n')
+
         self.app.stdout.write('Available Images\n')
         self.app.stdout.write('----------------\n')
         for index, item in enumerate(images):
             self.app.stdout.write('%s) %s\n' % (index, item.name))
         image_choice = raw_input('Enter number of image: ')
         if not image_choice.isdigit() or int(image_choice) >= len(images):
-            self.app.stdout.write('Not a valid image!\n')
-            return
+            raise RuntimeError('Not a valid image!\n')
         image = images[int(image_choice)]
 
         # Key selection
         keys = self.app.ec2_conn.get_all_key_pairs()
         if not keys:
-            self.app.stdout.write('No keys!\n')
-            return
+            raise RuntimeError('No keys!\n')
         if len(keys) == 1:
             key = keys[0]
         else:
@@ -71,8 +67,7 @@ class Launch(Command, SureCheckMixin):
                 self.app.stdout.write('%s) %s\n' % (index, item.name))
             key_choice = raw_input('Enter number of key: ')
             if not key_choice.isdigit() or int(key_choice) >= len(keys):
-                self.app.stdout.write('Not a valid key!\n')
-                return
+                raise RuntimeError('Not a valid key!\n')
             key = keys[int(key_choice)]
 
         # Zone Selection
@@ -84,8 +79,7 @@ class Launch(Command, SureCheckMixin):
             self.app.stdout.write('%s) %s\n' % (index + 1, item))
         zone_choice = raw_input('Enter number of zone: ')
         if not zone_choice.isdigit() or int(zone_choice) > len(zones):
-            self.app.stdout.write('Not a valid zone!\n')
-            return
+            raise RuntimeError('Not a valid zone!\n')
         zone_choice = int(zone_choice)
         if zone_choice == 0:
             zone = None
@@ -95,8 +89,7 @@ class Launch(Command, SureCheckMixin):
         # Security Group selection
         groups = self.app.ec2_conn.get_all_security_groups()
         if not groups:
-            self.app.stdout.write('No security groups!\n')
-            return
+            raise RuntimeError('No security groups!\n')
         if len(groups) == 1:
             security_group = groups[0]
         else:
@@ -106,8 +99,7 @@ class Launch(Command, SureCheckMixin):
                 self.app.stdout.write('%s) %s\n' % (index, item.name))
             group_choice = raw_input('Enter number of security group: ')
             if not group_choice.isdigit() or int(group_choice) >= len(groups):
-                self.app.stdout.write('Not a valid security group!\n')
-                return
+                raise RuntimeError('Not a valid security group!\n')
             security_group = groups[int(group_choice)]
 
         kwargs = {
