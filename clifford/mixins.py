@@ -4,16 +4,24 @@ class SingleInstanceMixin(object):
             reservations = self.app.ec2_conn.get_all_instances(instance_ids=[name])
         else:
             reservations = self.app.ec2_conn.get_all_instances(filters={'tag:Name': name})
-        if len(reservations) > 1:
-            raise RuntimeError('More than one reservation returned, use --id')
-        for res in reservations:
-            if not res.instances:
-                raise RuntimeError('No instances wth name %s' % name)
-            elif len(res.instances) > 1:
-                raise RuntimeError('More than one instance has name %s' % name)
-            else:
-                return res.instances[0]
-            return None
+            possible_reservations = []
+            for res in reservations:
+                for instance in res.instances:
+                    if instance.state == 'terminated':
+                        pass
+                    else:
+                        possible_reservations.append(res)
+            if len(possible_reservations) > 1:
+                raise RuntimeError('More than one reservation returned, use --id')
+            reservations = possible_reservations
+        res = reservations[0]
+        if not res.instances:
+            raise RuntimeError('No instances wth name %s' % name)
+        elif len(res.instances) > 1:
+            raise RuntimeError('More than one instance in reservation!' % name)
+        else:
+            return res.instances[0]
+        return None
 
 
 class QuestionableMixin(object):
