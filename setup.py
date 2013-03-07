@@ -50,7 +50,7 @@ setup(
     scripts=[],
 
     provides=[],
-    install_requires=['distribute', 'cliff', 'boto'],
+    install_requires=['distribute', 'cliff', 'boto', 'paramiko'],
 
     namespace_packages=[],
     packages=find_packages(),
@@ -95,6 +95,7 @@ setup(
 
             'remote install = clifford.remote:Install',
             'remote script = clifford.remote:Script',
+            'remote upgrade = clifford.remote:Upgrade',
 
             'create package = clifford.package:CreatePackage',
             'package add = clifford.package:PackageAdd',

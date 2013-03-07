@@ -75,3 +75,27 @@ class Script(InstanceCommand, SureCheckMixin):
                 for line in stdout.readlines():
                     self.app.stdout.write(line)
                 ssh.close()
+
+
+class Upgrade(InstanceCommand, SureCheckMixin):
+    "Update and Upgrade an ec2 instance."
+
+    log = logging.getLogger(__name__)
+
+    def take_action(self, parsed_args):
+        instance = self.get_instance(parsed_args.name, parsed_args.arg_is_id)
+        if not self.app.cparser.has_option('Key Dir', 'keydir'):
+            raise RuntimeError('No keydir set!')
+        keydir = self.app.cparser.get('Key Dir', 'keydir')
+        if keydir[-1:] == '/':
+            keydir = keydir[:-1]
+
+        if instance and self.sure_check():
+            cmd = 'sudo apt-get -y update; sudo apt-get -y upgrade'
+            ssh = paramiko.SSHClient()
+            ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+            ssh.connect(instance.public_dns_name, username='ubuntu', key_filename='%s/%s.pem' % (keydir, instance.key_name))
+            stdin, stdout, stderr = ssh.exec_command(cmd)
+            for line in stdout.readlines():
+                self.app.stdout.write(line)
+            ssh.close()
