@@ -93,6 +93,7 @@ setup(
             'stop = clifford.actions:Stop',
             'start = clifford.actions:Start',
 
+            'remote easy_install = clifford.remote:EasyInstall',
             'remote install = clifford.remote:Install',
             'remote script = clifford.remote:Script',
             'remote upgrade = clifford.remote:Upgrade',
