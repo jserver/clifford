@@ -1,6 +1,7 @@
 import logging
 import os
 
+from boto.exception import S3CreateError, S3ResponseError
 from boto.s3.key import Key
 from cliff.command import Command
 
@@ -18,7 +19,10 @@ class CreateBucket(Command):
         return parser
 
     def take_action(self, parsed_args):
-        self.app.s3_conn.create_bucket(parsed_args.name)
+        try:
+            self.app.s3_conn.create_bucket(parsed_args.name)
+        except S3CreateError as e:
+            raise RuntimeError('Unable to create bucket [%s]!' % e.reason)
 
 
 class DeleteBucket(Command, SureCheckMixin):
@@ -34,7 +38,10 @@ class DeleteBucket(Command, SureCheckMixin):
     def take_action(self, parsed_args):
         bucket = self.app.s3_conn.get_bucket(parsed_args.name)
         if bucket and self.sure_check():
-            bucket.delete()
+            try:
+                bucket.delete()
+            except S3ResponseError as e:
+                raise RuntimeError('Unable to delete bucket [%s]!' % e.reason)
 
 
 class Download(Command):
