@@ -16,7 +16,7 @@ class CliffordApp(App):
         super(CliffordApp, self).__init__(
             description='clifford ec2 app',
             version='0.1',
-            command_manager=CommandManager('clifford'),
+            command_manager=CommandManager('clifford', convert_underscores=False),
             )
         self.config_file = '%s/.clifford' % expanduser("~")
         self.ec2_conn = boto.connect_ec2()
