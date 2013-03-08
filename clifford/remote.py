@@ -40,6 +40,19 @@ class Install(InstanceCommand, SureCheckMixin):
 
     log = logging.getLogger(__name__)
 
+    def get_preseeds(self, packages):
+        preseeds = []
+        package_list = packages.split(' ')
+        for package in package_list:
+            if not self.app.cparser.has_section('%s.debconf' % package):
+                continue
+            options = self.app.cparser.options('%s.debconf' % package)
+            if options:
+                for option in options:
+                    preseeds.append(self.app.cparser.get('%s.debconf' % package, option))
+        return preseeds
+
+
     def take_action(self, parsed_args):
         instance = self.get_instance(parsed_args.name, parsed_args.arg_is_id)
         if not self.app.cparser.has_option('Key Dir', 'keydir'):
@@ -53,11 +66,17 @@ class Install(InstanceCommand, SureCheckMixin):
         packages = self.app.cparser.get('Packages', package)
 
         if instance and packages and self.sure_check():
-            cmd = 'sudo apt-get -y install %s' % packages
+            cmd = 'apt-get -y install %s' % packages
             ssh = paramiko.SSHClient()
             ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
             ssh.connect(instance.public_dns_name, username='ubuntu', key_filename='%s/%s.pem' % (keydir, instance.key_name))
-            stdin, stdout, stderr = ssh.exec_command(cmd)
+
+            preseeds = self.get_preseeds(packages)
+            if preseeds:
+                stdin, stdout, stderr = ssh.exec_command('cat << EOF | sudo debconf-set-selections\n%s\nEOF' % '\n'.join(preseeds))
+                stdin, stdout, stderr = ssh.exec_command('sudo su -c "DEBIAN_FRONTEND=noninteractive; %s"' % cmd)
+            else:
+                stdin, stdout, stderr = ssh.exec_command('sudo %s' % cmd)
             for line in stdout.readlines():
                 self.app.stdout.write(line)
             ssh.close()
