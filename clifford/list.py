@@ -4,7 +4,7 @@ from cliff.lister import Lister
 
 
 class Addresses(Lister):
-    "Show a list of IP addresses in ec2."
+    "List of IP addresses in ec2."
 
     log = logging.getLogger(__name__)
 
@@ -17,7 +17,7 @@ class Addresses(Lister):
 
 
 class Buckets(Lister):
-    "Show a list of Buckets in S3."
+    "List of Buckets in S3."
 
     log = logging.getLogger(__name__)
 
@@ -30,7 +30,7 @@ class Buckets(Lister):
 
 
 class Images(Lister):
-    "Show a list of images in ec2."
+    "List of images stored in the config."
 
     log = logging.getLogger(__name__)
 
@@ -49,7 +49,7 @@ class Images(Lister):
 
 
 class Instances(Lister):
-    "Show a list of instances in ec2."
+    "List of instances in ec2."
 
     log = logging.getLogger(__name__)
 
@@ -77,7 +77,7 @@ class Instances(Lister):
 
 
 class Keys(Lister):
-    "Show a list of keys in ec2."
+    "List of keys in ec2."
 
     log = logging.getLogger(__name__)
 
@@ -90,7 +90,7 @@ class Keys(Lister):
 
 
 class Packages(Lister):
-    "Show a list of packages in config."
+    "List of packages in config."
 
     log = logging.getLogger(__name__)
 
@@ -103,7 +103,7 @@ class Packages(Lister):
 
 
 class SecurityGroups(Lister):
-    "Show a list of security groups in ec2."
+    "List of security groups in ec2."
 
     log = logging.getLogger(__name__)
 
@@ -116,7 +116,7 @@ class SecurityGroups(Lister):
 
 
 class Snapshots(Lister):
-    "Show a list of snapshots in ec2."
+    "List of snapshots in ec2."
 
     log = logging.getLogger(__name__)
 
@@ -137,7 +137,7 @@ class Snapshots(Lister):
 
 
 class Volumes(Lister):
-    "Show a list of Volumes in ec2."
+    "List of Volumes in ec2."
 
     log = logging.getLogger(__name__)
 
