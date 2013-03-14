@@ -62,15 +62,15 @@ setup(
             ],
         'clifford': [
             # Lister tools
-            'ls addresses = clifford.list:Addresses',
-            'ls buckets = clifford.list:Buckets',
-            'ls images = clifford.list:Images',
-            'ls instances = clifford.list:Instances',
-            'ls keys = clifford.list:Keys',
-            'ls packages = clifford.list:Packages',
-            'ls security groups = clifford.list:SecurityGroups',
-            'ls snapshots = clifford.list:Snapshots',
-            'ls volumes = clifford.list:Volumes',
+            'ls addresses = clifford.listing:Addresses',
+            'ls buckets = clifford.listing:Buckets',
+            'ls images = clifford.listing:Images',
+            'ls instances = clifford.listing:Instances',
+            'ls keys = clifford.listing:Keys',
+            'ls packages = clifford.listing:Packages',
+            'ls security groups = clifford.listing:SecurityGroups',
+            'ls snapshots = clifford.listing:Snapshots',
+            'ls volumes = clifford.listing:Volumes',
 
             # EC2
             'set keydir = clifford.actions:SetKeyDir',
