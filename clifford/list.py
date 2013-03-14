@@ -1,6 +1,10 @@
 import logging
+import os
 
 from cliff.lister import Lister
+
+
+ROWS, COLUMNS = [int(i) for i in os.popen('stty size', 'r').read().split()]
 
 
 class Addresses(Lister):
@@ -41,9 +45,9 @@ class Images(Lister):
         images_str = self.app.cparser.get('Images', 'images')
         image_ids = images_str.split(',')
         if image_ids:
-            images = [(image.id, image.name, image.description) for image in self.app.ec2_conn.get_all_images(image_ids=image_ids)]
+            images = [(image.id, image.name) for image in self.app.ec2_conn.get_all_images(image_ids=image_ids)]
 
-        return (('Image ID', 'Name', 'Description'),
+        return (('Image ID', 'Name'),
                 tuple(images)
                )
 
@@ -71,7 +75,7 @@ class Instances(Lister):
                                   instance.placement,
                                   public_dns))
 
-        return (('Name', 'Id', 'State', 'Type', 'Root Device', 'Arch', 'Zone', 'Public DNS'),
+        return (('Name', 'Id', 'State', 'Type', 'RootDevice', 'Arch', 'Zone', 'PublicDNS'),
                 (instance for instance in instances)
                )
 
@@ -95,11 +99,24 @@ class Packages(Lister):
     log = logging.getLogger(__name__)
 
     def take_action(self, parsed_args):
+        if not self.app.cparser.has_section('Packages'):
+            raise RuntimeError('No packages found!')
+
         packages = self.app.cparser.items('Packages')
+        max_name_len = max(4, max([len(package[0]) for package in packages]))
+        max_packages_len = COLUMNS - max_name_len - 7
+
+        package_tuples = []
+        for package in packages:
+            if len(package[1]) > max_packages_len:
+                package_tuples.append((package[0], package[1][:max_packages_len - 3] + '...'))
+            else:
+                package_tuples.append((package[0], package[1]))
+
 
         return (('Name', 'Packages'),
-                ((package[0], package[1]) for package in packages)
-               )
+                package_tuples
+                )
 
 
 class SecurityGroups(Lister):
