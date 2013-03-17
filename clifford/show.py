@@ -6,6 +6,22 @@ from cliff.show import ShowOne
 from mixins import SingleInstanceMixin
 
 
+class Group(Command):
+    "Display the items in a group."
+
+    log = logging.getLogger(__name__)
+
+    def get_parser(self, prog_name):
+        parser = super(Group, self).get_parser(prog_name)
+        parser.add_argument('name')
+        return parser
+
+    def take_action(self, parsed_args):
+        if not self.app.cparser.has_option('Groups', parsed_args.name):
+            raise RuntimeError('No group named %s!' % parsed_args.name)
+        self.app.stdout.write('%s\n' % self.app.cparser.get('Groups', parsed_args.name))
+
+
 class Instance(ShowOne, SingleInstanceMixin):
     "Show details about a single instance."
 
@@ -64,7 +80,7 @@ class Owner(Command):
 
 
 class Package(Command):
-    "Display the items in the package."
+    "Display the items in a package."
 
     log = logging.getLogger(__name__)
 

@@ -17,7 +17,7 @@ class Addresses(Lister):
 
         return (('Public IP', 'Instance ID'),
                 ((address.public_ip, address.instance_id) for address in addresses)
-               )
+                )
 
 
 class Buckets(Lister):
@@ -30,7 +30,33 @@ class Buckets(Lister):
 
         return (('Name', 'Website'),
                 ((bucket.name, bucket.get_website_endpoint()) for bucket in buckets)
-               )
+                )
+
+
+class Groups(Lister):
+    "List of groups in config."
+
+    log = logging.getLogger(__name__)
+
+    def take_action(self, parsed_args):
+        if not self.app.cparser.has_section('Groups'):
+            raise RuntimeError('No groups found!')
+
+        groups = self.app.cparser.items('Groups')
+        max_name_len = max(4, max([len(group[0]) for group in groups]))
+        max_groups_len = COLUMNS - max_name_len - 7
+
+        group_tuples = []
+        for group in groups:
+            if len(group[1]) > max_groups_len:
+                group_tuples.append((group[0], group[1][:max_groups_len - 3] + '...'))
+            else:
+                group_tuples.append((group[0], group[1]))
+
+
+        return (('Name', 'Groups'),
+                group_tuples
+                )
 
 
 class Images(Lister):
@@ -49,7 +75,7 @@ class Images(Lister):
 
         return (('Image ID', 'Name'),
                 tuple(images)
-               )
+                )
 
 
 class Instances(Lister):
@@ -77,7 +103,7 @@ class Instances(Lister):
 
         return (('Name', 'Id', 'State', 'Type', 'RootDevice', 'Arch', 'Zone', 'PublicDNS'),
                 (instance for instance in instances)
-               )
+                )
 
 
 class Keys(Lister):
@@ -90,7 +116,7 @@ class Keys(Lister):
 
         return (('Name', 'fingerprint'),
                 ((key.name, key.fingerprint) for key in keys)
-               )
+                )
 
 
 class Packages(Lister):
@@ -129,7 +155,7 @@ class SecurityGroups(Lister):
 
         return (('Name', 'Description'),
                 ((group.name, group.description) for group in security_groups)
-               )
+                )
 
 
 class Snapshots(Lister):
@@ -150,7 +176,7 @@ class Snapshots(Lister):
                   '%s GiB' % snapshot.volume_size,
                   snapshot.status,
                   snapshot.progress) for snapshot in snapshots)
-               )
+                )
 
 
 class Volumes(Lister):
@@ -170,4 +196,4 @@ class Volumes(Lister):
                   volume.zone,
                   volume.status,
                   hasattr(volume, 'attach_data') and volume.attach_data.instance_id or '') for volume in volumes)
-               )
+                )

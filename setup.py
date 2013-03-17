@@ -64,6 +64,7 @@ setup(
             # Lister tools
             'ls addresses = clifford.listing:Addresses',
             'ls buckets = clifford.listing:Buckets',
+            'ls groups = clifford.listing:Groups',
             'ls images = clifford.listing:Images',
             'ls instances = clifford.listing:Instances',
             'ls keys = clifford.listing:Keys',
@@ -94,7 +95,8 @@ setup(
             'start = clifford.actions:Start',
 
             'remote easy_install = clifford.remote:EasyInstall',
-            'remote install = clifford.remote:Install',
+            'remote group install = clifford.remote:GroupInstall',
+            'remote package install = clifford.remote:PackageInstall',
             'remote script = clifford.remote:Script',
             'remote upgrade = clifford.remote:Upgrade',
 
@@ -103,6 +105,12 @@ setup(
             'package rm = clifford.package:PackageRemove',
             'rm package = clifford.package:DeletePackage',
             'show package = clifford.show:Package',
+
+            'create group = clifford.package:CreateGroup',
+            'group add = clifford.package:GroupAdd',
+            'group rm = clifford.package:GroupRemove',
+            'rm group = clifford.package:DeleteGroup',
+            'show group = clifford.show:Group',
 
             # Elastic IPs
             'associate = clifford.address:Associate',
