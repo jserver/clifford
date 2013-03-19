@@ -33,6 +33,32 @@ class Buckets(Lister):
                 )
 
 
+class Bundles(Lister):
+    "List of bundles in config."
+
+    log = logging.getLogger(__name__)
+
+    def take_action(self, parsed_args):
+        if not self.app.cparser.has_section('Bundles'):
+            raise RuntimeError('No bundles found!')
+
+        bundles = self.app.cparser.items('Bundles')
+        max_name_len = max(4, max([len(bundle[0]) for bundle in bundles]))
+        max_bundles_len = COLUMNS - max_name_len - 7
+
+        bundle_tuples = []
+        for bundle in bundles:
+            if len(bundle[1]) > max_bundles_len:
+                bundle_tuples.append((bundle[0], bundle[1][:max_bundles_len - 3] + '...'))
+            else:
+                bundle_tuples.append((bundle[0], bundle[1]))
+
+
+        return (('Name', 'Packages'),
+                bundle_tuples
+                )
+
+
 class Groups(Lister):
     "List of groups in config."
 
@@ -54,7 +80,7 @@ class Groups(Lister):
                 group_tuples.append((group[0], group[1]))
 
 
-        return (('Name', 'Groups'),
+        return (('Name', 'Bundles'),
                 group_tuples
                 )
 
@@ -116,32 +142,6 @@ class Keys(Lister):
 
         return (('Name', 'fingerprint'),
                 ((key.name, key.fingerprint) for key in keys)
-                )
-
-
-class Packages(Lister):
-    "List of packages in config."
-
-    log = logging.getLogger(__name__)
-
-    def take_action(self, parsed_args):
-        if not self.app.cparser.has_section('Packages'):
-            raise RuntimeError('No packages found!')
-
-        packages = self.app.cparser.items('Packages')
-        max_name_len = max(4, max([len(package[0]) for package in packages]))
-        max_packages_len = COLUMNS - max_name_len - 7
-
-        package_tuples = []
-        for package in packages:
-            if len(package[1]) > max_packages_len:
-                package_tuples.append((package[0], package[1][:max_packages_len - 3] + '...'))
-            else:
-                package_tuples.append((package[0], package[1]))
-
-
-        return (('Name', 'Packages'),
-                package_tuples
                 )
 
 

@@ -6,6 +6,22 @@ from cliff.show import ShowOne
 from mixins import SingleInstanceMixin
 
 
+class Bundle(Command):
+    "Display the packages in a bundle."
+
+    log = logging.getLogger(__name__)
+
+    def get_parser(self, prog_name):
+        parser = super(Bundle, self).get_parser(prog_name)
+        parser.add_argument('name')
+        return parser
+
+    def take_action(self, parsed_args):
+        if not self.app.cparser.has_option('Bundles', parsed_args.name):
+            raise RuntimeError('No bundle named %s!' % parsed_args.name)
+        self.app.stdout.write('%s\n' % self.app.cparser.get('Bundles', parsed_args.name))
+
+
 class Group(Command):
     "Display the items in a group."
 
@@ -77,22 +93,6 @@ class Owner(Command):
         if not self.app.cparser.has_option('Owner', 'owner'):
             raise RuntimeError('No owner set!')
         self.app.stdout.write('%s\n' % self.app.cparser.get('Owner', 'owner'))
-
-
-class Package(Command):
-    "Display the items in a package."
-
-    log = logging.getLogger(__name__)
-
-    def get_parser(self, prog_name):
-        parser = super(Package, self).get_parser(prog_name)
-        parser.add_argument('name')
-        return parser
-
-    def take_action(self, parsed_args):
-        if not self.app.cparser.has_option('Packages', parsed_args.name):
-            raise RuntimeError('No package named %s!' % parsed_args.name)
-        self.app.stdout.write('%s\n' % self.app.cparser.get('Packages', parsed_args.name))
 
 
 class ScriptDir(Command):
