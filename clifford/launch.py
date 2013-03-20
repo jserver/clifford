@@ -23,7 +23,11 @@ class Launch(Command, SureCheckMixin):
             instance_type = 't1.micro'
         elif parsed_args.size == 'small':
             instance_type = 'm1.small'
-        elif parsed_args.size in ['t1.micro', 'm1.small']:
+        elif parsed_args.size == 'medium':
+            instance_type = 'm1.medium'
+        elif parsed_args.size == 'large':
+            instance_type = 'm1.large'
+        elif parsed_args.size in ['t1.micro', 'm1.small', 'm1.medium', 'm1.large']:
             instance_type = parsed_args.size
         else:
             raise RuntimeError('Unrecognized instance size!\n')
@@ -44,6 +48,8 @@ class Launch(Command, SureCheckMixin):
             images = self.app.ec2_conn.get_all_images(image_ids=image_ids)
         if not images:
             raise RuntimeError('No images!\n')
+
+        images = sorted(images, key=lambda image: image.name)
 
         self.app.stdout.write('Available Images\n')
         self.app.stdout.write('----------------\n')
@@ -135,3 +141,8 @@ class Launch(Command, SureCheckMixin):
 
         time.sleep(20)
         self.app.stdout.write('Instance should now be running\n')
+        if self.app.cparser.has_option('Key Dir', 'keydir'):
+            keydir = self.app.cparser.get('Key Dir', 'keydir')
+            self.app.stdout.write('ssh -i %s/%s.pem ubuntu@%s\n' % (keydir, key.name, instance.public_dns_name))
+        else:
+            self.app.stdout.write('Public DNS: %s\n' % instance.public_dns_name)
