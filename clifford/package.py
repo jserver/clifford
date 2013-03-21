@@ -11,13 +11,15 @@ class BundleAdd(Command):
 
     def get_parser(self, prog_name):
         parser = super(BundleAdd, self).get_parser(prog_name)
+        parser.add_argument('--py', dest='is_py_bundle', action='store_true')
         parser.add_argument('name')
         return parser
 
     def take_action(self, parsed_args):
-        if not self.app.cparser.has_option('Bundles', parsed_args.name):
+        section = 'Bundles' if not is_py_bundle else 'Python Bundles'
+        if not self.app.cparser.has_option(section, parsed_args.name):
             raise RuntimeError('Bundle does not exist!\n')
-        bundle = self.app.cparser.get('Bundles', parsed_args.name)
+        bundle = self.app.cparser.get(section, parsed_args.name)
         packages = bundle.split(' ')
 
         new_packages = raw_input('Enter packages to add: ')
@@ -26,7 +28,7 @@ class BundleAdd(Command):
         new_packages = new_packages.split(' ')
         packages = list(set(packages).union(set(new_packages)))
         packages.sort()
-        self.app.cparser.set('Bundles', parsed_args.name, ' '.join(packages))
+        self.app.cparser.set(section, parsed_args.name, ' '.join(packages))
         self.app.write_config()
 
 
@@ -36,13 +38,15 @@ class BundleRemove(Command):
 
     def get_parser(self, prog_name):
         parser = super(BundleRemove, self).get_parser(prog_name)
+        parser.add_argument('--py', dest='is_py_bundle', action='store_true')
         parser.add_argument('name')
         return parser
 
     def take_action(self, parsed_args):
-        if not self.app.cparser.has_option('Bundles', parsed_args.name):
+        section = 'Bundles' if not is_py_bundle else 'Python Bundles'
+        if not self.app.cparser.has_option(section, parsed_args.name):
             raise RuntimeError('Bundle does not exist!\n')
-        bundle = self.app.cparser.get('Bundles', parsed_args.name)
+        bundle = self.app.cparser.get(section, parsed_args.name)
         packages = bundle.split(' ')
 
         packages_to_remove = raw_input('Enter packages to remove: ')
@@ -51,7 +55,7 @@ class BundleRemove(Command):
         packages_to_remove = packages_to_remove.split(' ')
         packages = list(set(packages).difference(set(packages_to_remove)))
         packages.sort()
-        self.app.cparser.set('Bundles', parsed_args.name, ' '.join(packages))
+        self.app.cparser.set(section, parsed_args.name, ' '.join(packages))
         self.app.write_config()
 
 
@@ -61,18 +65,20 @@ class CreateBundle(Command):
 
     def get_parser(self, prog_name):
         parser = super(CreateBundle, self).get_parser(prog_name)
+        parser.add_argument('--py', dest='is_py_bundle', action='store_true')
         parser.add_argument('name')
         return parser
 
     def take_action(self, parsed_args):
-        if self.app.cparser.has_option('Bundles', parsed_args.name):
+        section = 'Bundles' if not is_py_bundle else 'Python Bundles'
+        if self.app.cparser.has_option(section, parsed_args.name):
             raise RuntimeError('Bundle already exists!\n')
         packages = raw_input('Enter package names: ')
         if not packages:
             raise RuntimeError('No package names given!\n')
-        if not self.app.cparser.has_section('Bundles'):
-            self.app.cparser.add_section('Bundles')
-        self.app.cparser.set('Bundles', parsed_args.name, packages)
+        if not self.app.cparser.has_section(section):
+            self.app.cparser.add_section(section)
+        self.app.cparser.set(section, parsed_args.name, packages)
         self.app.write_config()
 
 
@@ -103,14 +109,16 @@ class DeleteBundle(Command, SureCheckMixin):
 
     def get_parser(self, prog_name):
         parser = super(DeleteBundle, self).get_parser(prog_name)
+        parser.add_argument('--py', dest='is_py_bundle', action='store_true')
         parser.add_argument('name')
         return parser
 
     def take_action(self, parsed_args):
-        if not self.app.cparser.has_option('Bundles', parsed_args.name):
+        section = 'Bundles' if not is_py_bundle else 'Python Bundles'
+        if not self.app.cparser.has_option(section, parsed_args.name):
             raise RuntimeError('Bundle does not exist!\n')
         if self.sure_check():
-            self.app.cparser.remove_option('Bundles', parsed_args.name)
+            self.app.cparser.remove_option(section, parsed_args.name)
             self.app.write_config()
 
 

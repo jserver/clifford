@@ -76,9 +76,9 @@ class EasyInstall(InstanceCommand, SureCheckMixin):
         if key_path[-1:] == '/':
             key_path = key_path[:-1]
         bundle = raw_input('Enter name of bundle to easy_install: ')
-        if not bundle or not self.app.cparser.has_option('Bundles', bundle):
+        if not bundle or not self.app.cparser.has_option('Python Bundles', bundle):
             raise RuntimeError('Bundle not found!')
-        bundle = self.app.cparser.get('Bundles', bundle)
+        bundle = self.app.cparser.get('Python Bundles', bundle)
 
         if instance and bundle and self.sure_check():
             ssh = paramiko.SSHClient()

@@ -145,6 +145,32 @@ class Keys(Lister):
                 )
 
 
+class PythonBundles(Lister):
+    "List of python bundles in config."
+
+    log = logging.getLogger(__name__)
+
+    def take_action(self, parsed_args):
+        if not self.app.cparser.has_section('Python Bundles'):
+            raise RuntimeError('No bundles found!')
+
+        bundles = self.app.cparser.items('Python Bundles')
+        max_name_len = max(4, max([len(bundle[0]) for bundle in bundles]))
+        max_bundles_len = COLUMNS - max_name_len - 7
+
+        bundle_tuples = []
+        for bundle in bundles:
+            if len(bundle[1]) > max_bundles_len:
+                bundle_tuples.append((bundle[0], bundle[1][:max_bundles_len - 3] + '...'))
+            else:
+                bundle_tuples.append((bundle[0], bundle[1]))
+
+
+        return (('Name', 'Packages'),
+                bundle_tuples
+                )
+
+
 class Scripts(Lister):
     "List of scripts in script_path."
 

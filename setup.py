@@ -69,6 +69,7 @@ setup(
             'ls images = clifford.listing:Images',
             'ls instances = clifford.listing:Instances',
             'ls keys = clifford.listing:Keys',
+            'ls python bundles = clifford.listing:PythonBundles',
             'ls scripts = clifford.listing:Scripts',
             'ls security groups = clifford.listing:SecurityGroups',
             'ls snapshots = clifford.listing:Snapshots',
@@ -95,8 +96,8 @@ setup(
             'stop = clifford.actions:Stop',
             'start = clifford.actions:Start',
 
-            'remote easy_install = clifford.remote:EasyInstall',
             'remote bundle install = clifford.remote:BundleInstall',
+            'remote easy_install = clifford.remote:EasyInstall',
             'remote group install = clifford.remote:GroupInstall',
             'remote script = clifford.remote:Script',
             'remote upgrade = clifford.remote:Upgrade',

@@ -13,13 +13,15 @@ class Bundle(Command):
 
     def get_parser(self, prog_name):
         parser = super(Bundle, self).get_parser(prog_name)
+        parser.add_argument('--py', dest='is_py_bundle', action='store_true')
         parser.add_argument('name')
         return parser
 
     def take_action(self, parsed_args):
-        if not self.app.cparser.has_option('Bundles', parsed_args.name):
+        section = 'Bundles' if not is_py_bundle else 'Python Bundles'
+        if not self.app.cparser.has_option(section, parsed_args.name):
             raise RuntimeError('No bundle named %s!' % parsed_args.name)
-        self.app.stdout.write('%s\n' % self.app.cparser.get('Bundles', parsed_args.name))
+        self.app.stdout.write('%s\n' % self.app.cparser.get(section, parsed_args.name))
 
 
 class Group(Command):
