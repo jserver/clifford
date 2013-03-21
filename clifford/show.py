@@ -73,15 +73,15 @@ class Instance(ShowOne, SingleInstanceMixin):
         return (columns, data)
 
 
-class KeyDir(Command):
-    "Show the key dir saved to the config file."
+class KeyPath(Command):
+    "Show the key_path saved to the config file."
 
     log = logging.getLogger(__name__)
 
     def take_action(self, parsed_args):
-        if not self.app.cparser.has_option('Key Dir', 'keydir'):
-            raise RuntimeError('No keydir set!')
-        self.app.stdout.write('%s\n' % self.app.cparser.get('Key Dir', 'keydir'))
+        if not self.app.cparser.has_option('Key Path', 'key_path'):
+            raise RuntimeError('No key_path set!')
+        self.app.stdout.write('%s\n' % self.app.cparser.get('Key Path', 'key_path'))
 
 
 class Owner(Command):
@@ -95,12 +95,12 @@ class Owner(Command):
         self.app.stdout.write('%s\n' % self.app.cparser.get('Owner', 'owner'))
 
 
-class ScriptDir(Command):
-    "Show the script dir saved to the config file."
+class ScriptPath(Command):
+    "Show the script_path saved to the config file."
 
     log = logging.getLogger(__name__)
 
     def take_action(self, parsed_args):
-        if not self.app.cparser.has_option('Script Dir', 'scriptdir'):
-            raise RuntimeError('No scriptdir set!')
-        self.app.stdout.write('%s\n' % self.app.cparser.get('Script Dir', 'scriptdir'))
+        if not self.app.cparser.has_option('Script Path', 'script_path'):
+            raise RuntimeError('No script_path set!')
+        self.app.stdout.write('%s\n' % self.app.cparser.get('Script Path', 'script_path'))

@@ -69,17 +69,18 @@ setup(
             'ls images = clifford.listing:Images',
             'ls instances = clifford.listing:Instances',
             'ls keys = clifford.listing:Keys',
+            'ls scripts = clifford.listing:Scripts',
             'ls security groups = clifford.listing:SecurityGroups',
             'ls snapshots = clifford.listing:Snapshots',
             'ls volumes = clifford.listing:Volumes',
 
             # EC2
-            'set keydir = clifford.actions:SetKeyDir',
-            'show keydir = clifford.show:KeyDir',
+            'set key_path = clifford.actions:SetKeyPath',
+            'show key_path = clifford.show:KeyPath',
             'set owner = clifford.actions:SetOwner',
             'show owner = clifford.show:Owner',
-            'set scriptdir = clifford.actions:SetScriptDir',
-            'show scriptdir = clifford.show:ScriptDir',
+            'set script_path = clifford.actions:SetScriptPath',
+            'show script_path = clifford.show:ScriptPath',
 
             'add image = clifford.actions:AddImage',
             'create image = clifford.actions.CreateImage',

@@ -73,20 +73,20 @@ class AddImage(Command):
         self.app.stdout.write('%s image added to config\n' % image.name)
 
 
-class SetKeyDir(Command):
-    "Adds the keydir to config."
+class SetKeyPath(Command):
+    "Adds the key_path to config."
 
     log = logging.getLogger(__name__)
 
     def get_parser(self, prog_name):
-        parser = super(SetKeyDir, self).get_parser(prog_name)
-        parser.add_argument('key_dir')
+        parser = super(SetKeyPath, self).get_parser(prog_name)
+        parser.add_argument('key_path')
         return parser
 
     def take_action(self, parsed_args):
-        if not self.app.cparser.has_section('Key Dir'):
-            self.app.cparser.add_section('Key Dir')
-        self.app.cparser.set('Key Dir', 'keydir', parsed_args.key_dir)
+        if not self.app.cparser.has_section('Key Path'):
+            self.app.cparser.add_section('Key Path')
+        self.app.cparser.set('Key Path', 'key_path', parsed_args.key_path)
         self.app.write_config()
 
 
@@ -107,20 +107,20 @@ class SetOwner(Command):
         self.app.write_config()
 
 
-class SetScriptDir(Command):
-    "Adds the scriptdir to config."
+class SetScriptPath(Command):
+    "Adds the script_path to config."
 
     log = logging.getLogger(__name__)
 
     def get_parser(self, prog_name):
-        parser = super(SetScriptDir, self).get_parser(prog_name)
-        parser.add_argument('script_dir')
+        parser = super(SetScriptPath, self).get_parser(prog_name)
+        parser.add_argument('script_path')
         return parser
 
     def take_action(self, parsed_args):
-        if not self.app.cparser.has_section('Script Dir'):
-            self.app.cparser.add_section('Script Dir')
-        self.app.cparser.set('Script Dir', 'scriptdir', parsed_args.script_dir)
+        if not self.app.cparser.has_section('Script Path'):
+            self.app.cparser.add_section('Script Path')
+        self.app.cparser.set('Script Path', 'script_path', parsed_args.script_path)
         self.app.write_config()
 
 

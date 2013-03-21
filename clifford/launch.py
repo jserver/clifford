@@ -141,8 +141,8 @@ class Launch(Command, SureCheckMixin):
 
         time.sleep(20)
         self.app.stdout.write('Instance should now be running\n')
-        if self.app.cparser.has_option('Key Dir', 'keydir'):
-            keydir = self.app.cparser.get('Key Dir', 'keydir')
-            self.app.stdout.write('ssh -i %s/%s.pem ubuntu@%s\n' % (keydir, key.name, instance.public_dns_name))
+        if self.app.cparser.has_option('Key Path', 'key_path'):
+            key_path = self.app.cparser.get('Key Path', 'key_path')
+            self.app.stdout.write('ssh -i %s/%s.pem ubuntu@%s\n' % (key_path, key.name, instance.public_dns_name))
         else:
             self.app.stdout.write('Public DNS: %s\n' % instance.public_dns_name)

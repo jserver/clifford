@@ -27,11 +27,11 @@ class BundleInstall(InstanceCommand, SureCheckMixin):
 
     def take_action(self, parsed_args):
         instance = self.get_instance(parsed_args.name, parsed_args.arg_is_id)
-        if not self.app.cparser.has_option('Key Dir', 'keydir'):
-            raise RuntimeError('No keydir set!')
-        keydir = self.app.cparser.get('Key Dir', 'keydir')
-        if keydir[-1:] == '/':
-            keydir = keydir[:-1]
+        if not self.app.cparser.has_option('Key Path', 'key_path'):
+            raise RuntimeError('No key_path set!')
+        key_path = self.app.cparser.get('Key Path', 'key_path')
+        if key_path[-1:] == '/':
+            key_path = key_path[:-1]
 
         bundle_name = raw_input('Enter name of bundle to install: ')
         if not bundle_name or not self.app.cparser.has_option('Bundles', bundle_name):
@@ -41,7 +41,7 @@ class BundleInstall(InstanceCommand, SureCheckMixin):
         if instance and bundle and self.sure_check():
             ssh = paramiko.SSHClient()
             ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-            ssh.connect(instance.public_dns_name, username='ubuntu', key_filename='%s/%s.pem' % (keydir, instance.key_name))
+            ssh.connect(instance.public_dns_name, username='ubuntu', key_filename='%s/%s.pem' % (key_path, instance.key_name))
 
             preseeds = self.get_preseeds(bundle)
             cmd = 'apt-get -y install %s' % bundle
@@ -70,11 +70,11 @@ class EasyInstall(InstanceCommand, SureCheckMixin):
 
     def take_action(self, parsed_args):
         instance = self.get_instance(parsed_args.name, parsed_args.arg_is_id)
-        if not self.app.cparser.has_option('Key Dir', 'keydir'):
-            raise RuntimeError('No keydir set!')
-        keydir = self.app.cparser.get('Key Dir', 'keydir')
-        if keydir[-1:] == '/':
-            keydir = keydir[:-1]
+        if not self.app.cparser.has_option('Key Path', 'key_path'):
+            raise RuntimeError('No key_path set!')
+        key_path = self.app.cparser.get('Key Path', 'key_path')
+        if key_path[-1:] == '/':
+            key_path = key_path[:-1]
         bundle = raw_input('Enter name of bundle to easy_install: ')
         if not bundle or not self.app.cparser.has_option('Bundles', bundle):
             raise RuntimeError('Bundle not found!')
@@ -83,7 +83,7 @@ class EasyInstall(InstanceCommand, SureCheckMixin):
         if instance and bundle and self.sure_check():
             ssh = paramiko.SSHClient()
             ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-            ssh.connect(instance.public_dns_name, username='ubuntu', key_filename='%s/%s.pem' % (keydir, instance.key_name))
+            ssh.connect(instance.public_dns_name, username='ubuntu', key_filename='%s/%s.pem' % (key_path, instance.key_name))
             stdin, stdout, stderr = ssh.exec_command('sudo easy_install %s' % bundle)
             for line in stdout.readlines():
                 self.app.stdout.write(line)
@@ -110,11 +110,11 @@ class GroupInstall(InstanceCommand, SureCheckMixin):
 
     def take_action(self, parsed_args):
         instance = self.get_instance(parsed_args.name, parsed_args.arg_is_id)
-        if not self.app.cparser.has_option('Key Dir', 'keydir'):
-            raise RuntimeError('No keydir set!')
-        keydir = self.app.cparser.get('Key Dir', 'keydir')
-        if keydir[-1:] == '/':
-            keydir = keydir[:-1]
+        if not self.app.cparser.has_option('Key Path', 'key_path'):
+            raise RuntimeError('No key_path set!')
+        key_path = self.app.cparser.get('Key Path', 'key_path')
+        if key_path[-1:] == '/':
+            key_path = key_path[:-1]
         group_name = raw_input('Enter name of group to install: ')
         if not group_name or not self.app.cparser.has_option('Groups', group_name):
             raise RuntimeError('Group not found!')
@@ -124,7 +124,7 @@ class GroupInstall(InstanceCommand, SureCheckMixin):
         if instance and bundle_names and self.sure_check():
             ssh = paramiko.SSHClient()
             ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-            ssh.connect(instance.public_dns_name, username='ubuntu', key_filename='%s/%s.pem' % (keydir, instance.key_name))
+            ssh.connect(instance.public_dns_name, username='ubuntu', key_filename='%s/%s.pem' % (key_path, instance.key_name))
 
             has_error = False
             for bundle_name in bundle_names:
@@ -158,30 +158,30 @@ class Script(InstanceCommand, SureCheckMixin):
 
     log = logging.getLogger(__name__)
 
-    def get_dir(self, section, option):
+    def get_path(self, section, option):
         if not self.app.cparser.has_option(section, option):
             raise RuntimeError('No %s set!' % option)
-        dir = self.app.cparser.get(section, option)
-        if dir[-1:] == '/':
-            dir = dir[:-1]
-        return dir
+        path = self.app.cparser.get(section, option)
+        if path[-1:] == '/':
+            path = path[:-1]
+        return path 
 
 
     def take_action(self, parsed_args):
         instance = self.get_instance(parsed_args.name, parsed_args.arg_is_id)
-        keydir = self.get_dir('Key Dir', 'keydir')
-        scriptdir = self.get_dir('Script Dir', 'scriptdir')
+        key_path = self.get_path('Key Path', 'key_path')
+        script_path = self.get_path('Script Path', 'script_path')
 
         if instance:
             script_name = raw_input('Enter name of script: ')
-            script = os.path.join(scriptdir, script_name)
+            script = os.path.join(script_path, script_name)
             if not os.path.isfile(script):
                 raise RuntimeError('Could not locate Script!')
 
             if self.sure_check():
                 ssh = paramiko.SSHClient()
                 ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-                ssh.connect(instance.public_dns_name, username='ubuntu', key_filename='%s/%s.pem' % (keydir, instance.key_name))
+                ssh.connect(instance.public_dns_name, username='ubuntu', key_filename='%s/%s.pem' % (key_path, instance.key_name))
                 with open(script, 'r') as f:
                     contents = f.read()
                     if contents[-1:] == '\n':
@@ -204,16 +204,16 @@ class Upgrade(InstanceCommand, SureCheckMixin):
 
     def take_action(self, parsed_args):
         instance = self.get_instance(parsed_args.name, parsed_args.arg_is_id)
-        if not self.app.cparser.has_option('Key Dir', 'keydir'):
-            raise RuntimeError('No keydir set!')
-        keydir = self.app.cparser.get('Key Dir', 'keydir')
-        if keydir[-1:] == '/':
-            keydir = keydir[:-1]
+        if not self.app.cparser.has_option('Key Path', 'key_path'):
+            raise RuntimeError('No key_path set!')
+        key_path = self.app.cparser.get('Key Path', 'key_path')
+        if key_path[-1:] == '/':
+            key_path = key_path[:-1]
 
         if instance and self.sure_check():
             ssh = paramiko.SSHClient()
             ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-            ssh.connect(instance.public_dns_name, username='ubuntu', key_filename='%s/%s.pem' % (keydir, instance.key_name))
+            ssh.connect(instance.public_dns_name, username='ubuntu', key_filename='%s/%s.pem' % (key_path, instance.key_name))
 
             has_error = False
             stdin, stdout, stderr = ssh.exec_command('sudo su -c "apt-get -y update"')

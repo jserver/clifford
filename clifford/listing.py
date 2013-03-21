@@ -145,6 +145,25 @@ class Keys(Lister):
                 )
 
 
+class Scripts(Lister):
+    "List of scripts in script_path."
+
+    log = logging.getLogger(__name__)
+
+    def take_action(self, parsed_args):
+        if not self.app.cparser.has_option('Script Path', 'script_path'):
+            raise RuntimeError('No script_path set!')
+        script_path = self.app.cparser.get('Script Path', 'script_path')
+        if script_path[-1:] == '/':
+            script_path = script_path[:-1]
+
+        return (('Name',),
+                ((script,) for script in os.listdir(script_path) if not script.startswith('.'))
+                )
+
+
+
+
 class SecurityGroups(Lister):
     "List of security groups in ec2."
 
