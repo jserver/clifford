@@ -85,8 +85,8 @@ setup(
             'add image = clifford.actions:AddImage',
             'create image = clifford.actions.CreateImage',
             'create snapshot = clifford.actions.CreateSnapshot',
-            'rm image = clifford.actions:DeleteImage',
-            'rm volume = clifford.actions:DeleteVolume',
+            'del image = clifford.actions:DeleteImage',
+            'del volume = clifford.actions:DeleteVolume',
 
             'show instance = clifford.show:Instance',
             'launch = clifford.launch:Launch',
@@ -104,26 +104,26 @@ setup(
             'create bundle = clifford.package:CreateBundle',
             'bundle add = clifford.package:BundleAdd',
             'bundle rm = clifford.package:BundleRemove',
-            'rm bundle = clifford.package:DeleteBundle',
+            'del bundle = clifford.package:DeleteBundle',
             'show bundle = clifford.show:Bundle',
 
             'create group = clifford.package:CreateGroup',
             'group add = clifford.package:GroupAdd',
             'group rm = clifford.package:GroupRemove',
-            'rm group = clifford.package:DeleteGroup',
+            'del group = clifford.package:DeleteGroup',
             'show group = clifford.show:Group',
 
             # Elastic IPs
-            'associate = clifford.address:Associate',
-            'disassociate = clifford.address:Disassociate',
-            'allocate = clifford.address:Allocate',
-            'release = clifford.address:Release',
+            'ip associate = clifford.address:Associate',
+            'ip disassociate = clifford.address:Disassociate',
+            'ip allocate = clifford.address:Allocate',
+            'ip release = clifford.address:Release',
 
             # S3
-            'create bucket = clifford.storage:CreateBucket',
-            'rm bucket = clifford.storage:DeleteBucket',
-            'download = clifford.storage:Download',
-            'upload = clifford.storage:Upload',
+            's3 create bucket = clifford.storage:CreateBucket',
+            's3 del bucket = clifford.storage:DeleteBucket',
+            's3 download = clifford.storage:Download',
+            's3 upload = clifford.storage:Upload',
             ],
         },
 
