@@ -1,13 +1,9 @@
 import logging
 
-from cliff.command import Command
-
-from mixins import SureCheckMixin
+from commands import BaseCommand
 
 
-class BundleAdd(Command):
-
-    log = logging.getLogger(__name__)
+class BundleAdd(BaseCommand):
 
     def get_parser(self, prog_name):
         parser = super(BundleAdd, self).get_parser(prog_name)
@@ -32,9 +28,7 @@ class BundleAdd(Command):
         self.app.write_config()
 
 
-class BundleRemove(Command):
-
-    log = logging.getLogger(__name__)
+class BundleRemove(BaseCommand):
 
     def get_parser(self, prog_name):
         parser = super(BundleRemove, self).get_parser(prog_name)
@@ -59,9 +53,7 @@ class BundleRemove(Command):
         self.app.write_config()
 
 
-class CreateBundle(Command):
-
-    log = logging.getLogger(__name__)
+class CreateBundle(BaseCommand):
 
     def get_parser(self, prog_name):
         parser = super(CreateBundle, self).get_parser(prog_name)
@@ -82,9 +74,7 @@ class CreateBundle(Command):
         self.app.write_config()
 
 
-class CreateGroup(Command):
-
-    log = logging.getLogger(__name__)
+class CreateGroup(BaseCommand):
 
     def get_parser(self, prog_name):
         parser = super(CreateGroup, self).get_parser(prog_name)
@@ -103,9 +93,7 @@ class CreateGroup(Command):
         self.app.write_config()
 
 
-class DeleteBundle(Command, SureCheckMixin):
-
-    log = logging.getLogger(__name__)
+class DeleteBundle(BaseCommand):
 
     def get_parser(self, prog_name):
         parser = super(DeleteBundle, self).get_parser(prog_name)
@@ -122,9 +110,7 @@ class DeleteBundle(Command, SureCheckMixin):
             self.app.write_config()
 
 
-class DeleteGroup(Command, SureCheckMixin):
-
-    log = logging.getLogger(__name__)
+class DeleteGroup(BaseCommand):
 
     def get_parser(self, prog_name):
         parser = super(DeleteGroup, self).get_parser(prog_name)
@@ -139,9 +125,7 @@ class DeleteGroup(Command, SureCheckMixin):
             self.app.write_config()
 
 
-class GroupAdd(Command):
-
-    log = logging.getLogger(__name__)
+class GroupAdd(BaseCommand):
 
     def get_parser(self, prog_name):
         parser = super(GroupAdd, self).get_parser(prog_name)
@@ -165,9 +149,7 @@ class GroupAdd(Command):
         self.app.write_config()
 
 
-class GroupRemove(Command):
-
-    log = logging.getLogger(__name__)
+class GroupRemove(BaseCommand):
 
     def get_parser(self, prog_name):
         parser = super(GroupRemove, self).get_parser(prog_name)

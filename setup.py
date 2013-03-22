@@ -96,6 +96,7 @@ setup(
             'stop = clifford.actions:Stop',
             'start = clifford.actions:Start',
 
+            'remote apt-get install = clifford.remote:AptGetInstall',
             'remote bundle install = clifford.remote:BundleInstall',
             'remote easy_install = clifford.remote:EasyInstall',
             'remote group install = clifford.remote:GroupInstall',

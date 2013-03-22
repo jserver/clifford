@@ -1,15 +1,13 @@
 import logging
 
-from cliff.command import Command
 from cliff.show import ShowOne
 
+from commands import BaseCommand
 from mixins import SingleInstanceMixin
 
 
-class Bundle(Command):
+class Bundle(BaseCommand):
     "Display the packages in a bundle."
-
-    log = logging.getLogger(__name__)
 
     def get_parser(self, prog_name):
         parser = super(Bundle, self).get_parser(prog_name)
@@ -24,10 +22,8 @@ class Bundle(Command):
         self.app.stdout.write('%s\n' % self.app.cparser.get(section, parsed_args.name))
 
 
-class Group(Command):
+class Group(BaseCommand):
     "Display the items in a group."
-
-    log = logging.getLogger(__name__)
 
     def get_parser(self, prog_name):
         parser = super(Group, self).get_parser(prog_name)
@@ -42,8 +38,6 @@ class Group(Command):
 
 class Instance(ShowOne, SingleInstanceMixin):
     "Show details about a single instance."
-
-    log = logging.getLogger(__name__)
 
     def get_parser(self, prog_name):
         parser = super(Instance, self).get_parser(prog_name)
@@ -75,10 +69,8 @@ class Instance(ShowOne, SingleInstanceMixin):
         return (columns, data)
 
 
-class KeyPath(Command):
+class KeyPath(BaseCommand):
     "Show the key_path saved to the config file."
-
-    log = logging.getLogger(__name__)
 
     def take_action(self, parsed_args):
         if not self.app.cparser.has_option('Key Path', 'key_path'):
@@ -86,10 +78,8 @@ class KeyPath(Command):
         self.app.stdout.write('%s\n' % self.app.cparser.get('Key Path', 'key_path'))
 
 
-class Owner(Command):
+class Owner(BaseCommand):
     "Show the owner saved to the config file."
-
-    log = logging.getLogger(__name__)
 
     def take_action(self, parsed_args):
         if not self.app.cparser.has_option('Owner', 'owner'):
@@ -97,10 +87,8 @@ class Owner(Command):
         self.app.stdout.write('%s\n' % self.app.cparser.get('Owner', 'owner'))
 
 
-class ScriptPath(Command):
+class ScriptPath(BaseCommand):
     "Show the script_path saved to the config file."
-
-    log = logging.getLogger(__name__)
 
     def take_action(self, parsed_args):
         if not self.app.cparser.has_option('Script Path', 'script_path'):

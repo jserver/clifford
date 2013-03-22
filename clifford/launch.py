@@ -1,15 +1,11 @@
 import logging
 import time
 
-from cliff.command import Command
-
-from mixins import SureCheckMixin
+from commands import BaseCommand
 
 
-class Launch(Command, SureCheckMixin):
+class Launch(BaseCommand):
     "Launches an ec2 instance."
-
-    log = logging.getLogger(__name__)
 
     def get_parser(self, prog_name):
         parser = super(Launch, self).get_parser(prog_name)
@@ -49,16 +45,9 @@ class Launch(Command, SureCheckMixin):
         if not images:
             raise RuntimeError('No images!\n')
 
-        images = sorted(images, key=lambda image: image.name)
-
-        self.app.stdout.write('Available Images\n')
-        self.app.stdout.write('----------------\n')
-        for index, item in enumerate(images):
-            self.app.stdout.write('%s) %s\n' % (index, item.name))
-        image_choice = raw_input('Enter number of image: ')
-        if not image_choice.isdigit() or int(image_choice) >= len(images):
-            raise RuntimeError('Not a valid image!\n')
-        image = images[int(image_choice)]
+        images = sorted(images, key=lambda image: image.name.lower())
+        image = self.question_maker('Available Images', 'image',
+                [{'text': '%s - %s' %(image.id, image.name), 'obj': image} for image in images])
 
         # Key selection
         keys = self.app.ec2_conn.get_all_key_pairs()
@@ -67,46 +56,22 @@ class Launch(Command, SureCheckMixin):
         if len(keys) == 1:
             key = keys[0]
         else:
-            self.app.stdout.write('Available Keys\n')
-            self.app.stdout.write('--------------\n')
-            for index, item in enumerate(keys):
-                self.app.stdout.write('%s) %s\n' % (index, item.name))
-            key_choice = raw_input('Enter number of key: ')
-            if not key_choice.isdigit() or int(key_choice) >= len(keys):
-                raise RuntimeError('Not a valid key!\n')
-            key = keys[int(key_choice)]
+            key = self.question_maker('Available Keys', 'key', [{'text': key.name, 'obj': key} for key in keys])
 
         # Zone Selection
-        zones = self.app.ec2_conn.get_all_zones()
-        self.app.stdout.write('Available Zones\n')
-        self.app.stdout.write('---------------\n')
-        self.app.stdout.write('0) No Preference\n')
-        for index, item in enumerate(zones):
-            self.app.stdout.write('%s) %s\n' % (index + 1, item))
-        zone_choice = raw_input('Enter number of zone: ')
-        if not zone_choice.isdigit() or int(zone_choice) > len(zones):
-            raise RuntimeError('Not a valid zone!\n')
-        zone_choice = int(zone_choice)
-        if zone_choice == 0:
-            zone = None
-        else:
-            zone = zones[zone_choice - 1]
+        zones = [{'text': zone.name, 'obj': zone} for zone in self.app.ec2_conn.get_all_zones()]
+        zones.insert(0, {'text': 'No Preference', 'obj': None})
+        zone = self.question_maker('Available Zones', 'zone', zones, start_at=0)
 
         # Security Group selection
-        groups = self.app.ec2_conn.get_all_security_groups()
-        if not groups:
+        security_groups = self.app.ec2_conn.get_all_security_groups()
+        if not security_groups:
             raise RuntimeError('No security groups!\n')
-        if len(groups) == 1:
-            security_group = groups[0]
+        if len(security_groups) == 1:
+            security_group = security_groups[0]
         else:
-            self.app.stdout.write('Available Security Groups\n')
-            self.app.stdout.write('-------------------------\n')
-            for index, item in enumerate(groups):
-                self.app.stdout.write('%s) %s\n' % (index, item.name))
-            group_choice = raw_input('Enter number of security group: ')
-            if not group_choice.isdigit() or int(group_choice) >= len(groups):
-                raise RuntimeError('Not a valid security group!\n')
-            security_group = groups[int(group_choice)]
+            security_group = self.question_maker('Available Security Groups', 'security group',
+                    [{'text': security_group.name, 'obj': security_group} for security_group in security_groups])
 
         kwargs = {
             'key_name': key.name,

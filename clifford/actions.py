@@ -1,9 +1,6 @@
 import logging
 
-from cliff.command import Command
-
-from commands import InstanceCommand
-from mixins import QuestionableMixin, SureCheckMixin
+from commands import BaseCommand, InstanceCommand
 
 
 class Terminate(InstanceCommand):
@@ -46,10 +43,8 @@ class Start(InstanceCommand):
             instance.start()
 
 
-class AddImage(Command):
+class AddImage(BaseCommand):
     "Adds an image to config."
-
-    log = logging.getLogger(__name__)
 
     def get_parser(self, prog_name):
         parser = super(AddImage, self).get_parser(prog_name)
@@ -73,10 +68,8 @@ class AddImage(Command):
         self.app.stdout.write('%s image added to config\n' % image.name)
 
 
-class SetKeyPath(Command):
+class SetKeyPath(BaseCommand):
     "Adds the key_path to config."
-
-    log = logging.getLogger(__name__)
 
     def get_parser(self, prog_name):
         parser = super(SetKeyPath, self).get_parser(prog_name)
@@ -86,14 +79,15 @@ class SetKeyPath(Command):
     def take_action(self, parsed_args):
         if not self.app.cparser.has_section('Key Path'):
             self.app.cparser.add_section('Key Path')
-        self.app.cparser.set('Key Path', 'key_path', parsed_args.key_path)
+        key_path = parsed_args.key_path
+        if key_path[-1:] == '/':
+            key_path = key_path[:-1]
+        self.app.cparser.set('Key Path', 'key_path', key_path)
         self.app.write_config()
 
 
-class SetOwner(Command):
+class SetOwner(BaseCommand):
     "Adds owner to config."
-
-    log = logging.getLogger(__name__)
 
     def get_parser(self, prog_name):
         parser = super(SetOwner, self).get_parser(prog_name)
@@ -107,10 +101,8 @@ class SetOwner(Command):
         self.app.write_config()
 
 
-class SetScriptPath(Command):
+class SetScriptPath(BaseCommand):
     "Adds the script_path to config."
-
-    log = logging.getLogger(__name__)
 
     def get_parser(self, prog_name):
         parser = super(SetScriptPath, self).get_parser(prog_name)
@@ -120,7 +112,10 @@ class SetScriptPath(Command):
     def take_action(self, parsed_args):
         if not self.app.cparser.has_section('Script Path'):
             self.app.cparser.add_section('Script Path')
-        self.app.cparser.set('Script Path', 'script_path', parsed_args.script_path)
+        script_path = parsed_args.script_path
+        if script_path[-1:] == '/':
+            script_path = script_path[:-1]
+        self.app.cparser.set('Script Path', 'script_path', script_path)
         self.app.write_config()
 
 
@@ -131,19 +126,15 @@ class CreateImage(InstanceCommand):
         pass
 
 
-class CreateSnapshot(Command):
+class CreateSnapshot(BaseCommand):
     "Create a snapshot of a volume."
-
-    log = logging.getLogger(__name__)
 
     def take_action(self, parsed_args):
         pass
 
 
-class DeleteImage(Command, QuestionableMixin, SureCheckMixin):
+class DeleteImage(BaseCommand):
     "Deletes an image"
-
-    log = logging.getLogger(__name__)
 
     def take_action(self, parsed_args):
         if not self.app.cparser.has_option('Images', 'images'):
@@ -152,8 +143,7 @@ class DeleteImage(Command, QuestionableMixin, SureCheckMixin):
         images_str = self.app.cparser.get('Images', 'images')
         image_ids = images_str.split(',')
         if image_ids:
-            images = [{'id': image.id, 'name': image.name} for image in self.app.ec2_conn.get_all_images(image_ids=image_ids)]
-
+            images = [{'text': '%s - %s' % (image.id, image.name)} for image in self.app.ec2_conn.get_all_images(image_ids=image_ids)]
         image = self.question_maker('Available Images', 'image', images)
 
         if image and self.sure_check():
@@ -163,16 +153,14 @@ class DeleteImage(Command, QuestionableMixin, SureCheckMixin):
             self.app.write_config()
             self.app.stdout.write('%s removed from images\n' % image['name'])
 
-class DeleteVolume(Command, QuestionableMixin, SureCheckMixin):
+
+class DeleteVolume(BaseCommand):
     "Deletes a volume"
 
-    log = logging.getLogger(__name__)
-
     def take_action(self, parsed_args):
-        volumes = [{'id': volume.id, 'obj': volume, 'name': ''} for volume in self.app.ec2_conn.get_all_volumes() if volume.status == 'available']
+        volumes = [{'text': volume.id, 'obj': volume} for volume in self.app.ec2_conn.get_all_volumes() if volume.status == 'available']
         if not volumes:
             raise RuntimeError('No available volumes found!')
-
         volume = self.question_maker('Available Volumes', 'volume', volumes)
 
         if volume and self.sure_check():

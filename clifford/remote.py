@@ -4,34 +4,51 @@ import os
 import paramiko
 
 from commands import InstanceCommand
-from mixins import SureCheckMixin
+from mixins import PreseedMixin
 
 
-class BundleInstall(InstanceCommand, SureCheckMixin):
-    "Install a bundle on a remote ec2 instance."
-
-    log = logging.getLogger(__name__)
-
-    def get_preseeds(self, bundle):
-        preseeds = []
-        packages = bundle.split(' ')
-        for package in packages:
-            if not self.app.cparser.has_section('%s.debconf' % package):
-                continue
-            options = self.app.cparser.options('%s.debconf' % package)
-            if options:
-                for option in options:
-                    preseeds.append(self.app.cparser.get('%s.debconf' % package, option))
-        return preseeds
-
+class AptGetInstall(InstanceCommand, PreseedMixin):
+    "Install packages on a remote ec2 instance."
 
     def take_action(self, parsed_args):
         instance = self.get_instance(parsed_args.name, parsed_args.arg_is_id)
-        if not self.app.cparser.has_option('Key Path', 'key_path'):
-            raise RuntimeError('No key_path set!')
-        key_path = self.app.cparser.get('Key Path', 'key_path')
-        if key_path[-1:] == '/':
-            key_path = key_path[:-1]
+        key_path = self.get_option('Key Path', 'key_path')
+
+        packages = raw_input('Enter name of packages to install: ')
+        if not packages:
+            raise RuntimeError('No packages specified!')
+
+        if instance and self.sure_check():
+            ssh = paramiko.SSHClient()
+            ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+            ssh.connect(instance.public_dns_name, username='ubuntu', key_filename='%s/%s.pem' % (key_path, instance.key_name))
+
+            preseeds = self.get_preseeds(packages)
+            cmd = 'apt-get -y install %s' % packages
+            if preseeds:
+                stdin, stdout, stderr = ssh.exec_command('cat << EOF | sudo debconf-set-selections\n%s\nEOF' % '\n'.join(preseeds))
+                stdin, stdout, stderr = ssh.exec_command('sudo su -c "DEBIAN_FRONTEND=noninteractive; %s"' % cmd)
+            else:
+                stdin, stdout, stderr = ssh.exec_command('sudo %s' % cmd)
+            for line in stdout.readlines():
+                if any([x in line for x in ['Note, selecting', 'is already the newest version']]):
+                    self.app.stdout.write(line)
+            has_error = False
+            for line in stderr.readlines():
+                if line.startswith('E: '):
+                    self.app.stdout.write(line)
+                    has_error = True
+            if not has_error:
+                self.app.stdout.write('Installed %s\n' % packages)
+            ssh.close()
+
+
+class BundleInstall(InstanceCommand, PreseedMixin):
+    "Install a bundle on a remote ec2 instance."
+
+    def take_action(self, parsed_args):
+        instance = self.get_instance(parsed_args.name, parsed_args.arg_is_id)
+        key_path = self.get_option('Key Path', 'key_path')
 
         bundle_name = raw_input('Enter name of bundle to install: ')
         if not bundle_name or not self.app.cparser.has_option('Bundles', bundle_name):
@@ -59,22 +76,17 @@ class BundleInstall(InstanceCommand, SureCheckMixin):
                     self.app.stdout.write(line)
                     has_error = True
             if not has_error:
-                self.app.stdout.write('Installed %s\n' % bundle_name)
+                self.app.stdout.write('Installed bundle %s\n' % bundle_name)
             ssh.close()
 
 
-class EasyInstall(InstanceCommand, SureCheckMixin):
+class EasyInstall(InstanceCommand):
     "Python easy_install a bundle on a remote ec2 instance."
-
-    log = logging.getLogger(__name__)
 
     def take_action(self, parsed_args):
         instance = self.get_instance(parsed_args.name, parsed_args.arg_is_id)
-        if not self.app.cparser.has_option('Key Path', 'key_path'):
-            raise RuntimeError('No key_path set!')
-        key_path = self.app.cparser.get('Key Path', 'key_path')
-        if key_path[-1:] == '/':
-            key_path = key_path[:-1]
+        key_path = self.get_option('Key Path', 'key_path')
+
         bundle = raw_input('Enter name of bundle to easy_install: ')
         if not bundle or not self.app.cparser.has_option('Python Bundles', bundle):
             raise RuntimeError('Bundle not found!')
@@ -90,31 +102,13 @@ class EasyInstall(InstanceCommand, SureCheckMixin):
             ssh.close()
 
 
-class GroupInstall(InstanceCommand, SureCheckMixin):
+class GroupInstall(InstanceCommand, PreseedMixin):
     "Install a group of bundles on a remote ec2 instance."
-
-    log = logging.getLogger(__name__)
-
-    def get_preseeds(self, bundle):
-        preseeds = []
-        packages = bundle.split(' ')
-        for package in packages:
-            if not self.app.cparser.has_section('%s.debconf' % package):
-                continue
-            options = self.app.cparser.options('%s.debconf' % package)
-            if options:
-                for option in options:
-                    preseeds.append(self.app.cparser.get('%s.debconf' % package, option))
-        return preseeds
-
 
     def take_action(self, parsed_args):
         instance = self.get_instance(parsed_args.name, parsed_args.arg_is_id)
-        if not self.app.cparser.has_option('Key Path', 'key_path'):
-            raise RuntimeError('No key_path set!')
-        key_path = self.app.cparser.get('Key Path', 'key_path')
-        if key_path[-1:] == '/':
-            key_path = key_path[:-1]
+        key_path = self.get_option('Key Path', 'key_path')
+
         group_name = raw_input('Enter name of group to install: ')
         if not group_name or not self.app.cparser.has_option('Groups', group_name):
             raise RuntimeError('Group not found!')
@@ -139,7 +133,7 @@ class GroupInstall(InstanceCommand, SureCheckMixin):
                 else:
                     stdin, stdout, stderr = ssh.exec_command('sudo %s' % cmd)
                 for line in stdout.readlines():
-                    if 'is already the newest version' in line:
+                    if any([x in line for x in ['Note, selecting', 'is already the newest version']]):
                         self.app.stdout.write(line)
                 for line in stderr.readlines():
                     if line.startswith('E: '):
@@ -148,29 +142,18 @@ class GroupInstall(InstanceCommand, SureCheckMixin):
                 if has_error:
                     ssh.close()
                     raise RuntimeError("Unable to continue...")
-                self.app.stdout.write('Installed %s\n' % bundle_name)
+                self.app.stdout.write('Installed bundle %s\n' % bundle_name)
 
             ssh.close()
 
 
-class Script(InstanceCommand, SureCheckMixin):
+class Script(InstanceCommand):
     "Run a bash script on a remote ec2 instance."
-
-    log = logging.getLogger(__name__)
-
-    def get_path(self, section, option):
-        if not self.app.cparser.has_option(section, option):
-            raise RuntimeError('No %s set!' % option)
-        path = self.app.cparser.get(section, option)
-        if path[-1:] == '/':
-            path = path[:-1]
-        return path 
-
 
     def take_action(self, parsed_args):
         instance = self.get_instance(parsed_args.name, parsed_args.arg_is_id)
-        key_path = self.get_path('Key Path', 'key_path')
-        script_path = self.get_path('Script Path', 'script_path')
+        key_path = self.get_option('Key Path', 'key_path')
+        script_path = self.get_option('Script Path', 'script_path')
 
         if instance:
             script_name = raw_input('Enter name of script: ')
@@ -197,10 +180,8 @@ class Script(InstanceCommand, SureCheckMixin):
                 ssh.close()
 
 
-class Upgrade(InstanceCommand, SureCheckMixin):
+class Upgrade(InstanceCommand):
     "Update and Upgrade an ec2 instance."
-
-    log = logging.getLogger(__name__)
 
     def take_action(self, parsed_args):
         instance = self.get_instance(parsed_args.name, parsed_args.arg_is_id)

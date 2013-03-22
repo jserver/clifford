@@ -14,9 +14,17 @@ class Addresses(Lister):
 
     def take_action(self, parsed_args):
         addresses = self.app.ec2_conn.get_all_addresses()
+        if not addresses:
+            raise RuntimeError('No IP Addresses attached to account')
 
-        return (('Public IP', 'Instance ID'),
-                ((address.public_ip, address.instance_id) for address in addresses)
+        reservations = self.app.ec2_conn.get_all_instances(instance_ids=[address.instance_id for address in addresses if address.instance_id])
+        instance_dict = {}
+        for res in reservations:
+            for instance in res.instances:
+                instance_dict[instance.id] = instance.tags.get('Name')
+
+        return (('Public IP', 'Instance ID', 'Name'),
+                ((address.public_ip, address.instance_id, instance_dict.get(address.instance_id, '')) for address in addresses)
                 )
 
 
@@ -96,8 +104,11 @@ class Images(Lister):
 
         images_str = self.app.cparser.get('Images', 'images')
         image_ids = images_str.split(',')
-        if image_ids:
-            images = [(image.id, image.name) for image in self.app.ec2_conn.get_all_images(image_ids=image_ids)]
+        if not image_ids:
+            raise RuntimeError('No images added!')
+
+        images = [(image.id, image.name) for image in self.app.ec2_conn.get_all_images(image_ids=image_ids)]
+        images = sorted(images, key=lambda image: image[1].lower())
 
         return (('Image ID', 'Name'),
                 tuple(images)
@@ -126,6 +137,7 @@ class Instances(Lister):
                                   instance.architecture,
                                   instance.placement,
                                   public_dns))
+                instances = sorted(instances, key=lambda instance: instance[0].lower())
 
         return (('Name', 'Id', 'State', 'Type', 'RootDevice', 'Arch', 'Zone', 'PublicDNS'),
                 (instance for instance in instances)

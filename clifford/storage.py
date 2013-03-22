@@ -3,15 +3,12 @@ import os
 
 from boto.exception import S3CreateError, S3ResponseError
 from boto.s3.key import Key
-from cliff.command import Command
 
-from mixins import SureCheckMixin
+from commands import BaseCommand
 
 
-class CreateBucket(Command):
+class CreateBucket(BaseCommand):
     "Create an S3 Bucket."
-
-    log = logging.getLogger(__name__)
 
     def get_parser(self, prog_name):
         parser = super(CreateBucket, self).get_parser(prog_name)
@@ -25,10 +22,8 @@ class CreateBucket(Command):
             raise RuntimeError('Unable to create bucket [%s]!' % e.reason)
 
 
-class DeleteBucket(Command, SureCheckMixin):
+class DeleteBucket(BaseCommand):
     "Delete an S3 Bucket."
-
-    log = logging.getLogger(__name__)
 
     def get_parser(self, prog_name):
         parser = super(DeleteBucket, self).get_parser(prog_name)
@@ -44,10 +39,8 @@ class DeleteBucket(Command, SureCheckMixin):
                 raise RuntimeError('Unable to delete bucket [%s]!' % e.reason)
 
 
-class Download(Command):
+class Download(BaseCommand):
     "Download a file from S3."
-
-    log = logging.getLogger(__name__)
 
     def get_parser(self, prog_name):
         parser = super(Upload, self).get_parser(prog_name)
@@ -65,10 +58,8 @@ class Download(Command):
         raise RuntimeError('NO IMPLEMENTATION YET')
 
 
-class Upload(Command):
+class Upload(BaseCommand):
     "Upload a file to S3."
-
-    log = logging.getLogger(__name__)
 
     def get_parser(self, prog_name):
         parser = super(Upload, self).get_parser(prog_name)
