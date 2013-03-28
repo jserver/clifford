@@ -102,6 +102,7 @@ setup(
             'remote group install = clifford.remote:GroupInstall',
             'remote script = clifford.remote:Script',
             'remote upgrade = clifford.remote:Upgrade',
+            'remote create user = clifford.remote:CreateUser',
 
             'create bundle = clifford.package:CreateBundle',
             'bundle add = clifford.package:BundleAdd',

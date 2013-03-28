@@ -152,8 +152,8 @@ class Keys(Lister):
     def take_action(self, parsed_args):
         keys = self.app.ec2_conn.get_all_key_pairs()
 
-        return (('Name', 'fingerprint'),
-                ((key.name, key.fingerprint) for key in keys)
+        return (('Name',),
+                ((key.name,) for key in keys)
                 )
 
 

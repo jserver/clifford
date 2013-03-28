@@ -9,30 +9,14 @@ class Launch(BaseCommand):
 
     def get_parser(self, prog_name):
         parser = super(Launch, self).get_parser(prog_name)
-        parser.add_argument('size')
+        parser.add_argument('name')
         return parser
 
     def take_action(self, parsed_args):
-        # Size validation
-        # TODO: make this better and configurable?
-        if parsed_args.size == 'micro':
-            instance_type = 't1.micro'
-        elif parsed_args.size == 'small':
-            instance_type = 'm1.small'
-        elif parsed_args.size == 'medium':
-            instance_type = 'm1.medium'
-        elif parsed_args.size == 'large':
-            instance_type = 'm1.large'
-        elif parsed_args.size in ['t1.micro', 'm1.small', 'm1.medium', 'm1.large']:
-            instance_type = parsed_args.size
-        else:
-            raise RuntimeError('Unrecognized instance size!\n')
-
-        # Name Input
-        # TODO: check for uniqueness of name
-        name = raw_input('Enter name of instance: ')
-        if not name:
-            raise RuntimeError('No name given!\n')
+        # Size selection
+        size = self.question_maker('Available Sizes', 'size',
+                [{'text': size} for size in ['t1.micro', 'm1.small', 'm1.medium', 'm1.large']])
+        instance_type = size['text']
 
         # Image selection
         if not self.app.cparser.has_option('Images', 'images'):
@@ -56,7 +40,8 @@ class Launch(BaseCommand):
         if len(keys) == 1:
             key = keys[0]
         else:
-            key = self.question_maker('Available Keys', 'key', [{'text': key.name, 'obj': key} for key in keys])
+            key = self.question_maker('Available Keys', 'key',
+                    [{'text': key.name, 'obj': key} for key in keys])
 
         # Zone Selection
         zones = [{'text': zone.name, 'obj': zone} for zone in self.app.ec2_conn.get_all_zones()]
@@ -70,6 +55,7 @@ class Launch(BaseCommand):
         if len(security_groups) == 1:
             security_group = security_groups[0]
         else:
+            security_groups = sorted(security_groups, key=lambda group: group.name.lower())
             security_group = self.question_maker('Available Security Groups', 'security group',
                     [{'text': security_group.name, 'obj': security_group} for security_group in security_groups])
 
@@ -95,7 +81,7 @@ class Launch(BaseCommand):
 
         time.sleep(10)
         self.app.stdout.write('Tagging instance...\n')
-        self.app.ec2_conn.create_tags([instance.id], {'Name': name})
+        self.app.ec2_conn.create_tags([instance.id], {'Name': parsed_args.name})
 
         while True:
             time.sleep(20)

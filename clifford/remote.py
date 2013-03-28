@@ -1,9 +1,10 @@
+import glob
 import logging
 import os
 
 import paramiko
 
-from commands import InstanceCommand
+from commands import InstanceCommand, RemoteCommand, RemoteUserCommand
 from mixins import PreseedMixin
 
 
@@ -18,7 +19,7 @@ class AptGetInstall(InstanceCommand, PreseedMixin):
         if not packages:
             raise RuntimeError('No packages specified!')
 
-        if instance and self.sure_check():
+        if self.sure_check():
             ssh = paramiko.SSHClient()
             ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
             ssh.connect(instance.public_dns_name, username='ubuntu', key_filename='%s/%s.pem' % (key_path, instance.key_name))
@@ -43,19 +44,15 @@ class AptGetInstall(InstanceCommand, PreseedMixin):
             ssh.close()
 
 
-class BundleInstall(InstanceCommand, PreseedMixin):
+class BundleInstall(RemoteCommand):
     "Install a bundle on a remote ec2 instance."
 
     def take_action(self, parsed_args):
         instance = self.get_instance(parsed_args.name, parsed_args.arg_is_id)
         key_path = self.get_option('Key Path', 'key_path')
+        bundle = self.get_option('Bundles', parsed_args.option)
 
-        bundle_name = raw_input('Enter name of bundle to install: ')
-        if not bundle_name or not self.app.cparser.has_option('Bundles', bundle_name):
-            raise RuntimeError('Bundle not found!')
-        bundle = self.app.cparser.get('Bundles', bundle_name)
-
-        if instance and bundle and self.sure_check():
+        if self.sure_check():
             ssh = paramiko.SSHClient()
             ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
             ssh.connect(instance.public_dns_name, username='ubuntu', key_filename='%s/%s.pem' % (key_path, instance.key_name))
@@ -76,55 +73,90 @@ class BundleInstall(InstanceCommand, PreseedMixin):
                     self.app.stdout.write(line)
                     has_error = True
             if not has_error:
-                self.app.stdout.write('Installed bundle %s\n' % bundle_name)
+                self.app.stdout.write('Installed bundle %s\n' % parsed_args.option)
             ssh.close()
 
 
-class EasyInstall(InstanceCommand):
+class CreateUser(RemoteUserCommand):
+    "scp all public (*.pub) keys to the ec2 instance."
+
+    def take_action(self, parsed_args):
+        instance = self.get_instance(parsed_args.name, parsed_args.arg_is_id)
+        user = parsed_args.user
+        key_path = self.get_option('Key Path', 'key_path')
+        keys = glob.glob('%s/*.pub' % key_path)
+
+        fullname = raw_input('Enter full name of user: ')
+        if not fullname:
+            raise RuntimeError('fullname not specified!')
+
+        self.app.stdout.write('The following keys will be copied:\n')
+        for key in keys:
+            key = key[len(key_path) + 1:]
+            self.app.stdout.write(key + '\n')
+
+        if self.sure_check():
+            ssh = paramiko.SSHClient()
+            ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+            ssh.connect(instance.public_dns_name, username='ubuntu', key_filename='%s/%s.pem' % (key_path, instance.key_name))
+
+            contents = ''
+            for key in keys:
+                with open(key, 'r') as f:
+                    contents += f.read()
+
+            stdin, stdout, stderr = ssh.exec_command('sudo su -c "useradd -m -g users -G sudo -c \'%s\' -s /bin/bash %s"' % (fullname, user))
+            stdin, stdout, stderr = ssh.exec_command('sudo su -c "mkdir /home/%s/.ssh && chown %s:users /home/%s/.ssh && chmod 700 /home/%s/.ssh"' % (user, user, user, user))
+            stdin, stdout, stderr = ssh.exec_command('sudo su -c "cat << EOF > /home/%s/.ssh/authorized_keys\n%sEOF"' % (user, contents))
+            stdin, stdout, stderr = ssh.exec_command('sudo su -c "chown %s:users /home/%s/.ssh/authorized_keys; chmod 600 /home/%s/.ssh/authorized_keys"' % (user, user, user))
+            #TODO: A lot of remote commands and no error checking
+            ssh.close()
+
+
+class EasyInstall(RemoteCommand):
     "Python easy_install a bundle on a remote ec2 instance."
 
     def take_action(self, parsed_args):
         instance = self.get_instance(parsed_args.name, parsed_args.arg_is_id)
         key_path = self.get_option('Key Path', 'key_path')
+        bundle = self.get_option('Python Bundles', parsed_args.option)
 
-        bundle = raw_input('Enter name of bundle to easy_install: ')
-        if not bundle or not self.app.cparser.has_option('Python Bundles', bundle):
-            raise RuntimeError('Bundle not found!')
-        bundle = self.app.cparser.get('Python Bundles', bundle)
-
-        if instance and bundle and self.sure_check():
+        if self.sure_check():
             ssh = paramiko.SSHClient()
             ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
             ssh.connect(instance.public_dns_name, username='ubuntu', key_filename='%s/%s.pem' % (key_path, instance.key_name))
             stdin, stdout, stderr = ssh.exec_command('sudo easy_install %s' % bundle)
             for line in stdout.readlines():
-                self.app.stdout.write(line)
+                if line.startswith('Installed') or line.startswith('Finished'):
+                    self.app.stdout.write(line)
             ssh.close()
 
 
-class GroupInstall(InstanceCommand, PreseedMixin):
+class GroupInstall(RemoteCommand):
     "Install a group of bundles on a remote ec2 instance."
 
     def take_action(self, parsed_args):
         instance = self.get_instance(parsed_args.name, parsed_args.arg_is_id)
         key_path = self.get_option('Key Path', 'key_path')
 
-        group_name = raw_input('Enter name of group to install: ')
-        if not group_name or not self.app.cparser.has_option('Groups', group_name):
-            raise RuntimeError('Group not found!')
-        group = self.app.cparser.get('Groups', group_name)
+        group = self.get_option('Groups', parsed_args.option)
         bundle_names = group.split(' ')
 
-        if instance and bundle_names and self.sure_check():
+        if bundle_names and self.sure_check():
             ssh = paramiko.SSHClient()
             ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
             ssh.connect(instance.public_dns_name, username='ubuntu', key_filename='%s/%s.pem' % (key_path, instance.key_name))
 
             has_error = False
             for bundle_name in bundle_names:
-                if not self.app.cparser.has_option('Bundles', bundle_name):
-                    continue
-                bundle = self.app.cparser.get('Bundles', bundle_name)
+                if self.app.cparser.has_option('Bundles', bundle_name):
+                    bundle = self.app.cparser.get('Bundles', bundle_name)
+                else:
+                    if bundle_name.startswith('(') and bundle_name.endswith(')'):
+                        bundle = bundle_name[1:-1].replace(',', ' ')
+                    else:
+                        self.app.stdout.write('No bundle named %s\n' % bundle_name)
+                        continue
                 preseeds = self.get_preseeds(bundle)
                 cmd = 'apt-get -y install %s' % bundle
                 if preseeds:
@@ -154,30 +186,28 @@ class Script(InstanceCommand):
         instance = self.get_instance(parsed_args.name, parsed_args.arg_is_id)
         key_path = self.get_option('Key Path', 'key_path')
         script_path = self.get_option('Script Path', 'script_path')
+        scripts = glob.glob('%s/*.sh' % script_path)
 
-        if instance:
-            script_name = raw_input('Enter name of script: ')
-            script = os.path.join(script_path, script_name)
-            if not os.path.isfile(script):
-                raise RuntimeError('Could not locate Script!')
+        script = self.question_maker('Select script', 'script', [{'text': script[len(script_path) + 1:]} for script in scripts])['text']
+        script = '%s/%s' % (script_path, script)
 
-            if self.sure_check():
-                ssh = paramiko.SSHClient()
-                ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-                ssh.connect(instance.public_dns_name, username='ubuntu', key_filename='%s/%s.pem' % (key_path, instance.key_name))
-                with open(script, 'r') as f:
-                    contents = f.read()
-                    if contents[-1:] == '\n':
-                        eof = 'EOF'
-                    else:
-                        eof = '\nEOF'
-                    stdin, stdout, stderr = ssh.exec_command('cat << EOF > clifford_script.sh\n%s%s' % (contents, eof))
-                stdin, stdout, stderr = ssh.exec_command('chmod 744 clifford_script.sh; ./clifford_script.sh')
-                for line in stdout.readlines():
-                    self.app.stdout.write(line)
-                for line in stderr.readlines():
-                    self.app.stdout.write('ERROR: %s' % line)
-                ssh.close()
+        if self.sure_check():
+            ssh = paramiko.SSHClient()
+            ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+            ssh.connect(instance.public_dns_name, username='ubuntu', key_filename='%s/%s.pem' % (key_path, instance.key_name))
+            with open(script, 'r') as f:
+                contents = f.read()
+                if contents[-1:] == '\n':
+                    eof = 'EOF'
+                else:
+                    eof = '\nEOF'
+                stdin, stdout, stderr = ssh.exec_command('cat << EOF > clifford_script.sh\n%s%s' % (contents, eof))
+            stdin, stdout, stderr = ssh.exec_command('chmod 744 clifford_script.sh; ./clifford_script.sh')
+            for line in stdout.readlines():
+                self.app.stdout.write(line)
+            for line in stderr.readlines():
+                self.app.stdout.write('ERROR: %s' % line)
+            ssh.close()
 
 
 class Upgrade(InstanceCommand):
@@ -185,19 +215,18 @@ class Upgrade(InstanceCommand):
 
     def take_action(self, parsed_args):
         instance = self.get_instance(parsed_args.name, parsed_args.arg_is_id)
-        if not self.app.cparser.has_option('Key Path', 'key_path'):
-            raise RuntimeError('No key_path set!')
-        key_path = self.app.cparser.get('Key Path', 'key_path')
+
+        key_path = self.get_option('Key Path', 'key_path')
         if key_path[-1:] == '/':
             key_path = key_path[:-1]
 
-        if instance and self.sure_check():
+        if self.sure_check():
             ssh = paramiko.SSHClient()
             ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
             ssh.connect(instance.public_dns_name, username='ubuntu', key_filename='%s/%s.pem' % (key_path, instance.key_name))
 
             has_error = False
-            stdin, stdout, stderr = ssh.exec_command('sudo su -c "apt-get -y update"')
+            stdin, stdout, stderr = ssh.exec_command('sudo apt-get -y update')
             for line in stderr.readlines():
                 if line.startswith('E: '):
                     self.app.stdout.write(line)
@@ -205,6 +234,12 @@ class Upgrade(InstanceCommand):
             if has_error:
                 raise RuntimeError("Unable to continue...")
             self.app.stdout.write('UPDATED\n')
+
+            stdin, stdout, stderr = ssh.exec_command('sudo apt-get -s upgrade')
+            string_list = ['The following packages have been kept back:', 'The following packages will be upgraded:']
+            for line in stdout.readlines():
+                if line.rstrip() in string_list or line.startswith('  '):
+                    self.app.stdout.write(line)
 
             upgrade = raw_input('Do you want to upgrade? ')
             if upgrade.lower() in ['y', 'yes']:
