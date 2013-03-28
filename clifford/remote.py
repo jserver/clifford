@@ -1,6 +1,7 @@
 import glob
 import logging
 import os
+import time
 
 import paramiko
 
@@ -80,13 +81,23 @@ class BundleInstall(RemoteCommand):
 class CreateUser(RemoteUserCommand):
     "scp all public (*.pub) keys to the ec2 instance."
 
+    def get_parser(self, prog_name):
+        parser = super(CreateUser, self).get_parser(prog_name)
+        parser.add_argument('--fullname', nargs='+')
+        return parser
+
+
     def take_action(self, parsed_args):
         instance = self.get_instance(parsed_args.name, parsed_args.arg_is_id)
         user = parsed_args.user
         key_path = self.get_option('Key Path', 'key_path')
         keys = glob.glob('%s/*.pub' % key_path)
 
-        fullname = raw_input('Enter full name of user: ')
+        if parsed_args.fullname:
+            fullname = ' '.join(parsed_args.fullname)
+        else:
+            fullname = raw_input('Enter full name of user: ')
+
         if not fullname:
             raise RuntimeError('fullname not specified!')
 
@@ -95,7 +106,7 @@ class CreateUser(RemoteUserCommand):
             key = key[len(key_path) + 1:]
             self.app.stdout.write(key + '\n')
 
-        if self.sure_check():
+        if parsed_args.assume_yes or self.sure_check():
             ssh = paramiko.SSHClient()
             ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
             ssh.connect(instance.public_dns_name, username='ubuntu', key_filename='%s/%s.pem' % (key_path, instance.key_name))
@@ -121,7 +132,7 @@ class EasyInstall(RemoteCommand):
         key_path = self.get_option('Key Path', 'key_path')
         bundle = self.get_option('Python Bundles', parsed_args.option)
 
-        if self.sure_check():
+        if parsed_args.assume_yes or self.sure_check():
             ssh = paramiko.SSHClient()
             ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
             ssh.connect(instance.public_dns_name, username='ubuntu', key_filename='%s/%s.pem' % (key_path, instance.key_name))
@@ -142,7 +153,7 @@ class GroupInstall(RemoteCommand):
         group = self.get_option('Groups', parsed_args.option)
         bundle_names = group.split(' ')
 
-        if bundle_names and self.sure_check():
+        if bundle_names and (parsed_args.assume_yes or self.sure_check()):
             ssh = paramiko.SSHClient()
             ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
             ssh.connect(instance.public_dns_name, username='ubuntu', key_filename='%s/%s.pem' % (key_path, instance.key_name))
@@ -211,7 +222,13 @@ class Script(InstanceCommand):
 
 
 class Upgrade(InstanceCommand):
-    "Update and Upgrade an ec2 instance."
+    "Update and upgrade an ec2 instance."
+
+    def get_parser(self, prog_name):
+        parser = super(Upgrade, self).get_parser(prog_name)
+        parser.add_argument('--upgrade', action='store_true')
+        parser.add_argument('--dist-upgrade', action='store_true')
+        return parser
 
     def take_action(self, parsed_args):
         instance = self.get_instance(parsed_args.name, parsed_args.arg_is_id)
@@ -220,7 +237,7 @@ class Upgrade(InstanceCommand):
         if key_path[-1:] == '/':
             key_path = key_path[:-1]
 
-        if self.sure_check():
+        if parsed_args.assume_yes or self.sure_check():
             ssh = paramiko.SSHClient()
             ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
             ssh.connect(instance.public_dns_name, username='ubuntu', key_filename='%s/%s.pem' % (key_path, instance.key_name))
@@ -241,18 +258,28 @@ class Upgrade(InstanceCommand):
                 if line.rstrip() in string_list or line.startswith('  '):
                     self.app.stdout.write(line)
 
-            upgrade = raw_input('Do you want to upgrade? ')
-            if upgrade.lower() in ['y', 'yes']:
-                stdin, stdout, stderr = ssh.exec_command('sudo su -c "env DEBIAN_FRONTEND=noninteractive apt-get -y -o DPkg::Options::=--force-confnew upgrade"')
-                for line in stderr.readlines():
-                    if line.startswith('E: '):
-                        self.app.stdout.write(line)
-                        has_error = True
-                if has_error:
-                    raise RuntimeError("Unable to continue...")
-                self.app.stdout.write('UPGRADED\n')
+            if not parsed_args.dist_upgrade:
+                if parsed_args.upgrade:
+                    upgrade = 'y'
+                else:
+                    upgrade = raw_input('Do you want to upgrade? ')
+                if upgrade.lower() in ['y', 'yes']:
+                    stdin, stdout, stderr = ssh.exec_command('sudo su -c "env DEBIAN_FRONTEND=noninteractive apt-get -y -o DPkg::Options::=--force-confnew upgrade"')
+                    for line in stderr.readlines():
+                        if line.startswith('E: '):
+                            self.app.stdout.write(line)
+                            has_error = True
+                    if has_error:
+                        raise RuntimeError("Unable to continue...")
+                    self.app.stdout.write('UPGRADED\n')
 
-            dist_upgrade = raw_input('Do you want to dist-upgrade? ')
+            if parsed_args.upgrade:
+                dist_upgrade = 'n'
+            elif parsed_args.dist_upgrade:
+                dist_upgrade = 'y'
+            else:
+                dist_upgrade = raw_input('Do you want to dist-upgrade? ')
+
             if dist_upgrade.lower() in ['y', 'yes']:
                 stdin, stdout, stderr = ssh.exec_command('sudo su -c "env DEBIAN_FRONTEND=noninteractive apt-get -y -o DPkg::Options::=--force-confnew dist-upgrade"')
                 for line in stderr.readlines():
@@ -265,7 +292,13 @@ class Upgrade(InstanceCommand):
 
             ssh.close()
 
-            reboot = raw_input('Do you want to reboot? ')
+            if parsed_args.upgrade or parsed_args.dist_upgrade:
+                reboot = 'y'
+            else:
+                reboot = raw_input('Do you want to reboot? ')
+
             if reboot.lower() in ['y', 'yes']:
+                time.sleep(5)
                 self.app.stdout.write('Rebooting...\n')
                 instance.reboot()
+                time.sleep(20)

@@ -30,7 +30,7 @@ class BaseCommand(Command):
         choice = dict_list[int(item_choice) - start_at]
         if 'obj' in choice:
             return choice['obj']
-        return choice
+        return choice['text']
 
     def sure_check(self):
         you_sure = raw_input('Are you sure? ')
@@ -43,6 +43,7 @@ class InstanceCommand(BaseCommand, SingleInstanceMixin):
 
     def get_parser(self, prog_name):
         parser = super(InstanceCommand, self).get_parser(prog_name)
+        parser.add_argument('-y', dest='assume_yes', action='store_true')
         parser.add_argument('--id', dest='arg_is_id', action='store_true')
         parser.add_argument('name')
         return parser

@@ -89,8 +89,9 @@ setup(
             'del image = clifford.actions:DeleteImage',
             'del volume = clifford.actions:DeleteVolume',
 
-            'show instance = clifford.show:Instance',
+            'buildbox = clifford.launch:BuildBox',
             'launch = clifford.launch:Launch',
+            'show instance = clifford.show:Instance',
             'terminate = clifford.actions:Terminate',
             'reboot = clifford.actions:Reboot',
             'stop = clifford.actions:Stop',
@@ -98,11 +99,11 @@ setup(
 
             'remote apt-get install = clifford.remote:AptGetInstall',
             'remote bundle install = clifford.remote:BundleInstall',
+            'remote create user = clifford.remote:CreateUser',
             'remote easy_install = clifford.remote:EasyInstall',
             'remote group install = clifford.remote:GroupInstall',
             'remote script = clifford.remote:Script',
             'remote upgrade = clifford.remote:Upgrade',
-            'remote create user = clifford.remote:CreateUser',
 
             'create bundle = clifford.package:CreateBundle',
             'bundle add = clifford.package:BundleAdd',

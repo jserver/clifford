@@ -13,7 +13,7 @@ class PreseedMixin(object):
 
 
 class SingleInstanceMixin(object):
-    def get_instance(self, name, arg_is_id):
+    def get_instance(self, name, arg_is_id=False):
         if arg_is_id:
             reservations = self.app.ec2_conn.get_all_instances(instance_ids=[name])
         else:
