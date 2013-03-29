@@ -1,6 +1,7 @@
-import logging
+import time
 
 from commands import BaseCommand, InstanceCommand
+from mixins import SingleInstanceMixin
 
 
 class Terminate(InstanceCommand):
@@ -126,11 +127,29 @@ class CreateImage(InstanceCommand):
         pass
 
 
-class CreateSnapshot(BaseCommand):
+class CreateSnapshot(BaseCommand, SingleInstanceMixin):
     "Create a snapshot of a volume."
 
     def take_action(self, parsed_args):
-        pass
+        all_volumes = self.app.ec2_conn.get_all_volumes()
+        volumes = []
+        instances = {}
+        for volume in all_volumes:
+            instance_id = ''
+            if volume.attachment_state() == 'attached':
+                instance = self.get_instance(volume.attach_data.instance_id, arg_is_id=True)
+                instances[instance.id] = instance
+                instance_id = ' - ' + instance.id + ' - ' + instance.tags.get('Name')
+            volumes.append({'text': '%s%s' % (volume.id, instance_id), 'obj': volume})
+
+        volume = self.question_maker('Available Volumes', 'volume', volumes)
+
+        if volume.attachment_state() == 'attached' and instances[volume.attach_data.instance_id].state == 'running':
+            self.app.stdout.write('Stopping %s' % instances[volume.attach_data.instance_id].tags.get('Name'))
+            instances[volume.attach_data.instance_id].stop()
+            time.sleep(20)
+
+        volume.create_snapshot('A really cool snapshot')
 
 
 class DeleteImage(BaseCommand):

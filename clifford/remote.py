@@ -31,7 +31,7 @@ class AptGetInstall(InstanceCommand, PreseedMixin):
             else:
                 stdin, stdout, stderr = ssh.exec_command('sudo %s' % cmd)
             for line in stdout.readlines():
-                if any([x in line for x in ['Note, selecting', 'is already the newest version']]):
+                if any([item in line for item in ['Note, selecting', 'is already the newest version']]):
                     self.app.stdout.write(line)
             has_error = False
             for line in stderr.readlines():
@@ -83,7 +83,6 @@ class CreateUser(RemoteUserCommand):
         parser = super(CreateUser, self).get_parser(prog_name)
         parser.add_argument('--fullname', nargs='+')
         return parser
-
 
     def take_action(self, parsed_args):
         instance = self.get_instance(parsed_args.name, parsed_args.arg_is_id)
@@ -174,7 +173,7 @@ class GroupInstall(RemoteCommand):
                 else:
                     stdin, stdout, stderr = ssh.exec_command('sudo %s' % cmd)
                 for line in stdout.readlines():
-                    if any([x in line for x in ['Note, selecting', 'is already the newest version']]):
+                    if any([item in line for item in ['Note, selecting', 'is already the newest version']]):
                         self.app.stdout.write(line)
                 for line in stderr.readlines():
                     if line.startswith('E: '):
@@ -191,19 +190,28 @@ class GroupInstall(RemoteCommand):
 class Script(InstanceCommand):
     "Run a bash script on a remote ec2 instance."
 
+    def get_parser(self, prog_name):
+        parser = super(Script, self).get_parser(prog_name)
+        parser.add_argument('--script')
+        parser.add_argument('--user', default='ubuntu')
+        return parser
+
     def take_action(self, parsed_args):
         instance = self.get_instance(parsed_args.name, parsed_args.arg_is_id)
         key_path = self.get_option('Key Path', 'key_path')
         script_path = self.get_option('Script Path', 'script_path')
         scripts = glob.glob('%s/*.sh' % script_path)
 
-        script = self.question_maker('Select script', 'script', [{'text': script[len(script_path) + 1:]} for script in scripts])['text']
-        script = '%s/%s' % (script_path, script)
+        if parsed_args.script:
+            script = '%s/%s' % (script_path, parsed_args.script)
+        else:
+            script = self.question_maker('Select script', 'script', [{'text': item[len(script_path) + 1:]} for item in scripts])
+            script = '%s/%s' % (script_path, script)
 
-        if self.sure_check():
+        if parsed_args.assume_yes or self.sure_check():
             ssh = paramiko.SSHClient()
             ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-            ssh.connect(instance.public_dns_name, username='ubuntu', key_filename='%s/%s.pem' % (key_path, instance.key_name))
+            ssh.connect(instance.public_dns_name, username=parsed_args.user, key_filename='%s/%s.pem' % (key_path, instance.key_name))
             with open(script, 'r') as f:
                 contents = f.read()
                 if contents[-1:] == '\n':
@@ -256,6 +264,7 @@ class Upgrade(InstanceCommand):
             for line in stdout.readlines():
                 if line.rstrip() in string_list or line.startswith('  '):
                     self.app.stdout.write(line)
+            time.sleep(5)
 
             if not parsed_args.dist_upgrade:
                 if parsed_args.upgrade:

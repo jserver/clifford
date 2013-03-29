@@ -84,12 +84,12 @@ setup(
             'show script_path = clifford.show:ScriptPath',
 
             'add image = clifford.actions:AddImage',
-            'create image = clifford.actions.CreateImage',
-            'create snapshot = clifford.actions.CreateSnapshot',
+            'create image = clifford.actions:CreateImage',
+            'create snapshot = clifford.actions:CreateSnapshot',
             'del image = clifford.actions:DeleteImage',
             'del volume = clifford.actions:DeleteVolume',
 
-            'buildbox = clifford.launch:BuildBox',
+            'build = clifford.build:Build',
             'launch = clifford.launch:Launch',
             'show instance = clifford.show:Instance',
             'terminate = clifford.actions:Terminate',
