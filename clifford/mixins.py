@@ -3,12 +3,12 @@ class PreseedMixin(object):
         preseeds = []
         packages = bundle.split(' ')
         for package in packages:
-            if not self.app.cparser.has_section('%s.debconf' % package):
+            if not self.app.cparser.has_section('debconf:%s' % package):
                 continue
-            options = self.app.cparser.options('%s.debconf' % package)
+            options = self.app.cparser.options('debconf:%s' % package)
             if options:
                 for option in options:
-                    preseeds.append(self.app.cparser.get('%s.debconf' % package, option))
+                    preseeds.append(self.app.cparser.get('debconf:%s' % package, option))
         return preseeds
 
 

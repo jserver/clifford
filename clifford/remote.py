@@ -1,6 +1,4 @@
 import glob
-import logging
-import os
 import time
 
 import paramiko
@@ -185,8 +183,8 @@ class GroupInstall(RemoteCommand):
                 if has_error:
                     ssh.close()
                     raise RuntimeError("Unable to continue...")
+                time.sleep(5)
                 self.app.stdout.write('Installed bundle %s\n' % bundle_name)
-
             ssh.close()
 
 
@@ -250,6 +248,7 @@ class Upgrade(InstanceCommand):
                     has_error = True
             if has_error:
                 raise RuntimeError("Unable to continue...")
+            time.sleep(5)
             self.app.stdout.write('UPDATED\n')
 
             stdin, stdout, stderr = ssh.exec_command('sudo apt-get -s upgrade')
@@ -271,6 +270,7 @@ class Upgrade(InstanceCommand):
                             has_error = True
                     if has_error:
                         raise RuntimeError("Unable to continue...")
+                    time.sleep(5)
                     self.app.stdout.write('UPGRADED\n')
 
             if parsed_args.upgrade:
@@ -288,6 +288,7 @@ class Upgrade(InstanceCommand):
                         has_error = True
                 if has_error:
                     raise RuntimeError("Unable to continue...")
+                time.sleep(5)
                 self.app.stdout.write('DIST-UPGRADED\n')
 
             ssh.close()

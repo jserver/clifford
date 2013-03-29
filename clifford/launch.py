@@ -1,4 +1,3 @@
-import logging
 import time
 
 from commands import BaseCommand
@@ -15,17 +14,17 @@ class BuildBox(BaseCommand, SingleInstanceMixin):
 
     def take_action(self, parsed_args):
         build = self.question_maker('Select Build', 'build',
-                [{'text': build[:-1 * len('.build')]} for build in self.app.cparser.sections() if build.endswith('.build')])
-        if not self.app.cparser.has_section('%s.build' % build):
+                [{'text': build[6:]} for build in self.app.cparser.sections() if build.startswith('build:')])
+        if not self.app.cparser.has_section('build:%s' % build):
             raise RuntimeError('No build with that name in config!\n')
 
         if not self.sure_check():
             return
 
-        option_list = self.app.cparser.options('%s.build' % build)
+        option_list = self.app.cparser.options('build:%s' % build)
         options = {}
         for option in option_list:
-            options[option] = self.app.cparser.get('%s.build' % build, option)
+            options[option] = self.app.cparser.get('build:%s' % build, option)
 
         cmd = 'launch -y'
         cmd += ' --size %s' % options['size']
@@ -35,6 +34,7 @@ class BuildBox(BaseCommand, SingleInstanceMixin):
         cmd += ' --security_group %s' % options['security_group']
         cmd += ' ' + parsed_args.name
         self.app.run_subcommand(cmd.split(' '))
+        time.sleep(10)
 
         instance = self.get_instance(parsed_args.name)
         if not instance:
@@ -48,12 +48,14 @@ class BuildBox(BaseCommand, SingleInstanceMixin):
             if options['upgrade'] == 'dist-upgrade':
                 cmd += ' --dist-upgrade'
             self.app.run_subcommand(cmd.split(' '))
+            time.sleep(35)
 
         if 'group' in options:
             cmd = 'remote group install -y'
             cmd += ' --id %s' % instance.id
             cmd += ' ' + options['group']
             self.app.run_subcommand(cmd.split(' '))
+            time.sleep(5)
 
         if 'easy_install' in options:
             cmd = 'remote easy_install -y'
@@ -116,22 +118,22 @@ class Launch(BaseCommand):
 
             images = sorted(images, key=lambda image: image.name.lower())
             image = self.question_maker('Available Images', 'image',
-                    [{'text': '%s - %s' % (image.id, image.name), 'obj': image} for image in images])
+                    [{'text': '%s - %s' % (img.id, img.name), 'obj': img} for img in images])
 
         # Key selection
         key = None
         all_keys = self.app.ec2_conn.get_all_key_pairs()
         if not all_keys:
             raise RuntimeError('No keys!\n')
-        if parsed_args.key and parsed_args.key in [key.name for key in all_keys]:
-            key = [key for key in all_keys if key.name == parsed_args.key][0]
+        if parsed_args.key and parsed_args.key in [k.name for k in all_keys]:
+            key = [k for k in all_keys if k.name == parsed_args.key][0]
 
         if not key:
             if len(all_keys) == 1:
                 key = all_keys[0]
             else:
                 key = self.question_maker('Available Keys', 'key',
-                        [{'text': key.name, 'obj': key} for key in all_keys])
+                        [{'text': k.name, 'obj': k} for k in all_keys])
 
         # Zone Selection
         if parsed_args.zone == 'No Preference':
@@ -141,7 +143,7 @@ class Launch(BaseCommand):
             if parsed_args.zone in [zone.name for zone in all_zones]:
                 zone = [zone for zone in all_zones if zone.name == parsed_args.zone][0]
             else:
-                zones = [{'text': zone.name, 'obj': zone} for zone in all_zones]
+                zones = [{'text': z.name, 'obj': z} for z in all_zones]
                 zones.insert(0, {'text': 'No Preference'})
                 zone = self.question_maker('Available Zones', 'zone', zones, start_at=0)
 
@@ -157,7 +159,7 @@ class Launch(BaseCommand):
             else:
                 security_groups = sorted(security_groups, key=lambda group: group.name.lower())
                 security_group = self.question_maker('Available Security Groups', 'security group',
-                        [{'text': security_group.name, 'obj': security_group} for security_group in security_groups])
+                        [{'text': sg.name, 'obj': sg} for sg in security_groups])
 
         kwargs = {
             'key_name': key.name,

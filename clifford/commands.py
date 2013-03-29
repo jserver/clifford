@@ -1,4 +1,5 @@
 import logging
+import os
 
 from cliff.command import Command
 
@@ -15,7 +16,11 @@ class BaseCommand(Command):
                 raise RuntimeError('No %s set!' % option)
             else:
                 return None
-        return self.app.cparser.get(section, option)
+        value = self.app.cparser.get(section, option)
+        if option.endswith('_path'):
+            value = os.path.expanduser(value)
+            value = os.path.expandvars(value)
+        return value
 
     def question_maker(self, question, item_type, dict_list, start_at=1):
         self.app.stdout.write(question + '\n')

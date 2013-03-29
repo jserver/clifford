@@ -135,11 +135,10 @@ class Instances(Lister):
                                   instance.instance_type,
                                   instance.root_device_type,
                                   instance.architecture,
-                                  instance.placement,
-                                  public_dns))
+                                  instance.placement))
                 instances = sorted(instances, key=lambda instance: instance[0].lower())
 
-        return (('Name', 'Id', 'State', 'Type', 'RootDevice', 'Arch', 'Zone', 'PublicDNS'),
+        return (('Name', 'Id', 'State', 'Type', 'RootDevice', 'Arch', 'Zone'),
                 (instance for instance in instances)
                 )
 
