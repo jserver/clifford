@@ -125,10 +125,6 @@ class Instances(Lister):
         instances = []
         for res in reservations:
             for instance in res.instances:
-                if instance.public_dns_name:
-                    public_dns = instance.public_dns_name
-                else:
-                    public_dns = ''
                 instances.append((instance.tags.get('Name'),
                                   instance.id,
                                   instance.state,
@@ -227,7 +223,7 @@ class Snapshots(Lister):
         snapshots = self.app.ec2_conn.get_all_snapshots(owner=owner)
 
         return (('Name', 'ID', 'Size', 'Status', 'Progress' ),
-                ((snapshot.tags.get('name', ''),
+                ((snapshot.tags.get('Name', ''),
                   snapshot.id,
                   '%s GiB' % snapshot.volume_size,
                   snapshot.status,

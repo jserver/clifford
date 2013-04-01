@@ -135,21 +135,40 @@ class CreateSnapshot(BaseCommand, SingleInstanceMixin):
         volumes = []
         instances = {}
         for volume in all_volumes:
-            instance_id = ''
+            instance_info = ''
             if volume.attachment_state() == 'attached':
                 instance = self.get_instance(volume.attach_data.instance_id, arg_is_id=True)
                 instances[instance.id] = instance
-                instance_id = ' - ' + instance.id + ' - ' + instance.tags.get('Name')
-            volumes.append({'text': '%s%s' % (volume.id, instance_id), 'obj': volume})
+                instance_info = ' - %s - %s - %s' % (instance.id, instance.tags.get('Name'), instance.state)
+            volumes.append({'text': '%s%s' % (volume.id, instance_info), 'obj': volume})
 
         volume = self.question_maker('Available Volumes', 'volume', volumes)
 
-        if volume.attachment_state() == 'attached' and instances[volume.attach_data.instance_id].state == 'running':
-            self.app.stdout.write('Stopping %s' % instances[volume.attach_data.instance_id].tags.get('Name'))
-            instances[volume.attach_data.instance_id].stop()
-            time.sleep(20)
+        if volume.attachment_state() == 'attached':
+            instance = instances[volume.attach_data.instance_id]
+            if instance.state == 'running':
+                if not self.sure_check('This will stop the attached instance! continue? '):
+                    raise RuntimeError('Aborting action')
+                self.app.stdout.write('Stopping %s\n' % instance.tags.get('Name'))
+                instance.stop()
+                time.sleep(30)
+                for i in range(3):
+                    status = instance.update()
+                    if status == 'stopped':
+                        break
+                    self.app.stdout.write('%s...\n' % status)
+                    time.sleep(20)
+                else:
+                    raise RuntimeError('Unable to stop instance!')
 
-        volume.create_snapshot('A really cool snapshot')
+        name = raw_input('Enter name: ')
+        description = raw_input('Enter description: ')
+        if not description:
+            raise RuntimeError('Description required')
+        snapshot = volume.create_snapshot(description)
+        time.sleep(5)
+        if name:
+            snapshot.add_tag('Name', name)
 
 
 class DeleteImage(BaseCommand):
@@ -173,6 +192,25 @@ class DeleteImage(BaseCommand):
             self.app.stdout.write('%s removed from images\n' % image['name'])
 
 
+class DeleteSnapshot(BaseCommand):
+    "Deletes a snapshot"
+
+    def take_action(self, parsed_args):
+        all_snapshots = self.app.ec2_conn.get_all_snapshots(owner='self')
+        if not all_snapshots:
+            raise RuntimeError('No snapshots found!')
+        snapshots = []
+        for snapshot in all_snapshots:
+            snapshot_info = snapshot.id
+            if snapshot.tags.get('Name'):
+                snapshot_info += ' - %s' % snapshot.tags.get('Name')
+            snapshots.append({'text': snapshot_info, 'obj': snapshot})
+        snapshot = self.question_maker('Available Snapshots', 'snapshot', snapshots)
+
+        if snapshot and self.sure_check():
+            snapshot.delete()
+
+
 class DeleteVolume(BaseCommand):
     "Deletes a volume"
 
@@ -183,4 +221,4 @@ class DeleteVolume(BaseCommand):
         volume = self.question_maker('Available Volumes', 'volume', volumes)
 
         if volume and self.sure_check():
-            volume.obj.delete()
+            volume.delete()

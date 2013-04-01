@@ -37,8 +37,8 @@ class BaseCommand(Command):
             return choice['obj']
         return choice['text']
 
-    def sure_check(self):
-        you_sure = raw_input('Are you sure? ')
+    def sure_check(self, question='Are you sure? '):
+        you_sure = raw_input(question)
         if you_sure.lower() not in ['y', 'yes']:
             return False
         return True

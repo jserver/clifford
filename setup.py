@@ -87,6 +87,7 @@ setup(
             'create image = clifford.actions:CreateImage',
             'create snapshot = clifford.actions:CreateSnapshot',
             'del image = clifford.actions:DeleteImage',
+            'del snapshot = clifford.actions:DeleteSnapshot',
             'del volume = clifford.actions:DeleteVolume',
 
             'build = clifford.build:Build',
