@@ -71,8 +71,8 @@ class Launch(BaseCommand):
             pass
         else:
             all_zones = self.app.ec2_conn.get_all_zones()
-            if parsed_args.zone in [zone.name for zone in all_zones]:
-                zone = [zone for zone in all_zones if zone.name == parsed_args.zone][0]
+            if parsed_args.zone in [item.name for item in all_zones]:
+                zone = [item for item in all_zones if item.name == parsed_args.zone][0]
             else:
                 zones = [{'text': item.name, 'obj': item} for item in all_zones]
                 zones.insert(0, {'text': 'No Preference'})
@@ -82,15 +82,15 @@ class Launch(BaseCommand):
         security_groups = self.app.ec2_conn.get_all_security_groups()
         if not security_groups:
             raise RuntimeError('No security groups!\n')
-        if parsed_args.security_group and parsed_args.security_group in [security_group.name for security_group in security_groups]:
-            security_group = [item for item in security_groups if security_group.name == parsed_args.security_group][0]
+        if parsed_args.security_group and parsed_args.security_group in [item.name for item in security_groups]:
+            security_group = [item for item in security_groups if item.name == parsed_args.security_group][0]
         else:
             if len(security_groups) == 1:
                 security_group = security_groups[0]
             else:
                 security_groups = sorted(security_groups, key=lambda group: group.name.lower())
                 security_group = self.question_maker('Available Security Groups', 'security group',
-                        [{'text': sg.name, 'obj': sg} for sg in security_groups])
+                        [{'text': item.name, 'obj': item} for item in security_groups])
 
         kwargs = {
             'key_name': key.name,
@@ -113,7 +113,7 @@ class Launch(BaseCommand):
         instance = reservation.instances[0]
 
         time.sleep(10)
-        self.app.stdout.write('Tagging instance...\n')
+        self.app.stdout.write('Add Name tag to instance\n')
         self.app.ec2_conn.create_tags([instance.id], {'Name': parsed_args.name})
 
         while True:

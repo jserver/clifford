@@ -77,7 +77,7 @@ class BundleInstall(RemoteCommand):
 
 
 class CreateUser(RemoteUserCommand):
-    "scp all public (*.pub) keys to the ec2 instance."
+    "run useradd and scp all public (*.pub) keys to the ec2 instance."
 
     def get_parser(self, prog_name):
         parser = super(CreateUser, self).get_parser(prog_name)

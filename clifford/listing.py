@@ -4,7 +4,7 @@ import os
 from cliff.lister import Lister
 
 
-ROWS, COLUMNS = [int(i) for i in os.popen('stty size', 'r').read().split()]
+ROWS, COLUMNS = [int(item) for item in os.popen('stty size', 'r').read().split()]
 
 
 class Addresses(Lister):
