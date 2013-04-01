@@ -78,27 +78,12 @@ class SetKeyPath(BaseCommand):
         return parser
 
     def take_action(self, parsed_args):
-        if not self.app.cparser.has_section('Key Path'):
-            self.app.cparser.add_section('Key Path')
+        if not self.app.cparser.has_section('General'):
+            self.app.cparser.add_section('General')
         key_path = parsed_args.key_path
         if key_path[-1:] == '/':
             key_path = key_path[:-1]
-        self.app.cparser.set('Key Path', 'key_path', key_path)
-        self.app.write_config()
-
-
-class SetOwner(BaseCommand):
-    "Adds owner to config."
-
-    def get_parser(self, prog_name):
-        parser = super(SetOwner, self).get_parser(prog_name)
-        parser.add_argument('owner_id')
-        return parser
-
-    def take_action(self, parsed_args):
-        if not self.app.cparser.has_section('Owner'):
-            self.app.cparser.add_section('Owner')
-        self.app.cparser.set('Owner', 'owner', parsed_args.owner_id)
+        self.app.cparser.set('General', 'key_path', key_path)
         self.app.write_config()
 
 
@@ -111,12 +96,12 @@ class SetScriptPath(BaseCommand):
         return parser
 
     def take_action(self, parsed_args):
-        if not self.app.cparser.has_section('Script Path'):
-            self.app.cparser.add_section('Script Path')
+        if not self.app.cparser.has_section('General'):
+            self.app.cparser.add_section('General')
         script_path = parsed_args.script_path
         if script_path[-1:] == '/':
             script_path = script_path[:-1]
-        self.app.cparser.set('Script Path', 'script_path', script_path)
+        self.app.cparser.set('General', 'script_path', script_path)
         self.app.write_config()
 
 

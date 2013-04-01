@@ -78,8 +78,6 @@ setup(
             # EC2
             'set key_path = clifford.actions:SetKeyPath',
             'show key_path = clifford.show:KeyPath',
-            'set owner = clifford.actions:SetOwner',
-            'show owner = clifford.show:Owner',
             'set script_path = clifford.actions:SetScriptPath',
             'show script_path = clifford.show:ScriptPath',
 

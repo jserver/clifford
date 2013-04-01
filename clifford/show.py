@@ -1,5 +1,3 @@
-import logging
-
 from cliff.show import ShowOne
 
 from commands import BaseCommand
@@ -16,7 +14,7 @@ class Bundle(BaseCommand):
         return parser
 
     def take_action(self, parsed_args):
-        section = 'Bundles' if not is_py_bundle else 'Python Bundles'
+        section = 'Bundles' if not parsed_args.is_py_bundle else 'Python Bundles'
         if not self.app.cparser.has_option(section, parsed_args.name):
             raise RuntimeError('No bundle named %s!' % parsed_args.name)
         self.app.stdout.write('%s\n' % self.app.cparser.get(section, parsed_args.name))
@@ -73,24 +71,11 @@ class KeyPath(BaseCommand):
     "Show the key_path saved to the config file."
 
     def take_action(self, parsed_args):
-        if not self.app.cparser.has_option('Key Path', 'key_path'):
-            raise RuntimeError('No key_path set!')
-        self.app.stdout.write('%s\n' % self.app.cparser.get('Key Path', 'key_path'))
-
-
-class Owner(BaseCommand):
-    "Show the owner saved to the config file."
-
-    def take_action(self, parsed_args):
-        if not self.app.cparser.has_option('Owner', 'owner'):
-            raise RuntimeError('No owner set!')
-        self.app.stdout.write('%s\n' % self.app.cparser.get('Owner', 'owner'))
+        self.app.stdout.write('%s\n' % self.key_path)
 
 
 class ScriptPath(BaseCommand):
     "Show the script_path saved to the config file."
 
     def take_action(self, parsed_args):
-        if not self.app.cparser.has_option('Script Path', 'script_path'):
-            raise RuntimeError('No script_path set!')
-        self.app.stdout.write('%s\n' % self.app.cparser.get('Script Path', 'script_path'))
+        self.app.stdout.write('%s\n' % self.script_path)

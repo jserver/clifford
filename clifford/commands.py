@@ -22,6 +22,14 @@ class BaseCommand(Command):
             value = os.path.expandvars(value)
         return value
 
+    @property
+    def key_path(self):
+        return self.get_option('General', 'key_path')
+
+    @property
+    def script_path(self):
+        return self.get_option('General', 'script_path')
+
     def question_maker(self, question, item_type, dict_list, start_at=1):
         self.app.stdout.write(question + '\n')
         self.app.stdout.write('-' * len(question) + '\n')
@@ -42,6 +50,13 @@ class BaseCommand(Command):
         if you_sure.lower() not in ['y', 'yes']:
             return False
         return True
+
+    def printOutError(self, out, error):
+        for line in out.readlines():
+            self.app.stdout.write('OUT: %s' % line)
+        for line in error.readlines():
+            self.app.stdout.write('ERROR: %s' % line)
+
 
 
 class InstanceCommand(BaseCommand, SingleInstanceMixin):

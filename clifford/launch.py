@@ -1,7 +1,5 @@
 import time
 
-import paramiko
-
 from commands import BaseCommand
 
 
@@ -125,16 +123,7 @@ class Launch(BaseCommand):
 
         time.sleep(20)
         self.app.stdout.write('Instance should now be running\n')
-        if self.app.cparser.has_option('Key Path', 'key_path'):
-            key_path = self.app.cparser.get('Key Path', 'key_path')
-            self.app.stdout.write('ssh -i %s/%s.pem ubuntu@%s\n' % (key_path, key.name, instance.public_dns_name))
+        if self.key_path:
+            self.app.stdout.write('ssh -i %s/%s.pem ubuntu@%s\n' % (self.key_path, key.name, instance.public_dns_name))
         else:
             self.app.stdout.write('Public DNS: %s\n' % instance.public_dns_name)
-
-        time.sleep(10)
-        key_path = self.get_option('Key Path', 'key_path')
-        ssh = paramiko.SSHClient()
-        ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-        ssh.connect(instance.public_dns_name, username='ubuntu', key_filename='%s/%s.pem' % (key_path, instance.key_name))
-        stdin, stdout, stderr = ssh.exec_command('sudo su -c "echo %s > /etc/hostname && hostname -F /etc/hostname"' % parsed_args.name)
-        ssh.close()
