@@ -69,6 +69,21 @@ class AddImage(BaseCommand):
         self.app.stdout.write('%s image added to config\n' % image.name)
 
 
+class SetDomainName(BaseCommand):
+    "Adds the domain_name to config."
+
+    def get_parser(self, prog_name):
+        parser = super(SetDomainName, self).get_parser(prog_name)
+        parser.add_argument('domain_name')
+        return parser
+
+    def take_action(self, parsed_args):
+        if not self.app.cparser.has_section('General'):
+            self.app.cparser.add_section('General')
+        self.app.cparser.set('General', 'domain_name', parsed_args.domain_name)
+        self.app.write_config()
+
+
 class SetKeyPath(BaseCommand):
     "Adds the key_path to config."
 

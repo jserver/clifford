@@ -20,6 +20,14 @@ class Bundle(BaseCommand):
         self.app.stdout.write('%s\n' % self.app.cparser.get(section, parsed_args.name))
 
 
+class DomainName(BaseCommand):
+    "Show the domain_name saved to the config file."
+
+    def take_action(self, parsed_args):
+        domain_name = self.app.cparser.get('General', 'domain_name')
+        self.app.stdout.write('%s\n' % domain_name)
+
+
 class Group(BaseCommand):
     "Display the items in a group."
 

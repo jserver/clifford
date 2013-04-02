@@ -76,6 +76,8 @@ setup(
             'ls volumes = clifford.listing:Volumes',
 
             # EC2
+            'set domain_name = clifford.actions:SetDomainName',
+            'show domain_name = clifford.show:DomainName',
             'set key_path = clifford.actions:SetKeyPath',
             'show key_path = clifford.show:KeyPath',
             'set script_path = clifford.actions:SetScriptPath',
