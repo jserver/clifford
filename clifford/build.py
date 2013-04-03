@@ -9,22 +9,27 @@ class Build(BaseCommand, SingleInstanceMixin):
 
     def get_parser(self, prog_name):
         parser = super(Build, self).get_parser(prog_name)
+        parser.add_argument('-y', dest='assume_yes', action='store_true')
+        parser.add_argument('--build')
         parser.add_argument('name')
         return parser
 
     def take_action(self, parsed_args):
-        build = self.question_maker('Select Build', 'build',
-                [{'text': build[6:]} for build in self.app.cparser.sections() if build.startswith('build:')])
-        if not self.app.cparser.has_section('build:%s' % build):
-            raise RuntimeError('No build with that name in config!\n')
+        if parsed_args.build:
+            build = parsed_args.build
+        else:
+            build = self.question_maker('Select Build', 'build',
+                    [{'text': section[6:]} for section in self.app.cparser.sections() if section.startswith('Build:')])
+            if not self.app.cparser.has_section('Build:%s' % build):
+                raise RuntimeError('No build with that name in config!\n')
 
-        if not self.sure_check():
+        if not parsed_args.assume_yes and not self.sure_check():
             return
 
-        option_list = self.app.cparser.options('build:%s' % build)
+        option_list = self.app.cparser.options('Build:%s' % build)
         options = {}
         for option in option_list:
-            options[option] = self.app.cparser.get('build:%s' % build, option)
+            options[option] = self.app.cparser.get('Build:%s' % build, option)
 
         cmd = 'launch -y'
         cmd += ' --size %s' % options['size']
@@ -62,21 +67,3 @@ class Build(BaseCommand, SingleInstanceMixin):
             cmd += ' --id %s' % instance.id
             cmd += ' ' + options['easy_install']
             self.app.run_subcommand(cmd.split(' '))
-
-        if 'user_name' in options:
-            cmd = 'remote create user -y'
-            cmd += ' --id %s' % instance.id
-            cmd += ' ' + options['user_name']
-            if 'user_fullname' in options:
-                cmd += ' --fullname %s' % options['user_fullname']
-            else:
-                cmd += ' --fullname %s' + options['user_name']
-            self.app.run_subcommand(cmd.split(' '))
-
-        # might need to wait until paramiko merges in the agent-forwarding
-        #if 'user_script' in options:
-        #    cmd = 'remote script -y'
-        #    cmd += ' --id %s' % instance.id
-        #    cmd += ' --script %s' % options['user_script']
-        #    cmd += ' --user %s' % options['user_name']
-        #    self.app.run_subcommand(cmd.split(' '))

@@ -92,6 +92,7 @@ setup(
 
             'build = clifford.build:Build',
             'launch = clifford.launch:Launch',
+            'project = clifford.project:Project',
             'show instance = clifford.show:Instance',
             'terminate = clifford.actions:Terminate',
             'reboot = clifford.actions:Reboot',

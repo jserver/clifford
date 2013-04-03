@@ -80,6 +80,7 @@ class CreateUser(RemoteUserCommand):
     def get_parser(self, prog_name):
         parser = super(CreateUser, self).get_parser(prog_name)
         parser.add_argument('--fullname', nargs='+')
+        parser.add_argument('--password', nargs='+')
         return parser
 
     def take_action(self, parsed_args):
@@ -91,9 +92,15 @@ class CreateUser(RemoteUserCommand):
             fullname = ' '.join(parsed_args.fullname)
         else:
             fullname = raw_input('Enter full name of user: ')
-
         if not fullname:
             raise RuntimeError('fullname not specified!')
+
+        if parsed_args.password:
+            password = ' '.join(parsed_args.password)
+        else:
+            password = raw_input('Enter password: ')
+        if not password:
+            raise RuntimeError('password not specified')
 
         self.app.stdout.write('The following keys will be copied:\n')
         for key in keys:
@@ -110,7 +117,11 @@ class CreateUser(RemoteUserCommand):
                 with open(key, 'r') as f:
                     contents += f.read()
 
-            stdin, stdout, stderr = ssh.exec_command('sudo su -c "useradd -m -g users -G sudo -c \'%s\' -s /bin/bash %s"' % (fullname, user))
+            cmd = 'sudo useradd -m -g users -G sudo -c \'%s\' -s /bin/bash' % fullname
+            if parsed_args.password:
+                cmd += ' -p $(perl -e \'print crypt("%s", "saltywords")\')' % password
+            cmd += ' ' + user
+            stdin, stdout, stderr = ssh.exec_command(cmd)
             self.printOutError(stdout, stderr)
 
             stdin, stdout, stderr = ssh.exec_command('sudo su -c "mkdir /home/%s/.ssh && chown %s:users /home/%s/.ssh && chmod 700 /home/%s/.ssh"' % (user, user, user, user))
@@ -196,6 +207,7 @@ class Script(InstanceCommand):
         parser = super(Script, self).get_parser(prog_name)
         parser.add_argument('--script')
         parser.add_argument('--user', default='ubuntu')
+        parser.add_argument('--copy-only', action='store_true')
         return parser
 
     def take_action(self, parsed_args):
@@ -203,10 +215,11 @@ class Script(InstanceCommand):
         scripts = glob.glob('%s/*.sh' % self.script_path)
 
         if parsed_args.script:
+            script_name = parsed_args.script
             script = '%s/%s' % (self.script_path, parsed_args.script)
         else:
-            script = self.question_maker('Select script', 'script', [{'text': item[len(self.script_path) + 1:]} for item in scripts])
-            script = '%s/%s' % (self.script_path, script)
+            script_name = self.question_maker('Select script', 'script', [{'text': item[len(self.script_path) + 1:]} for item in scripts])
+            script = '%s/%s' % (self.script_path, script_name)
 
         if parsed_args.assume_yes or self.sure_check():
             ssh = paramiko.SSHClient()
@@ -218,8 +231,11 @@ class Script(InstanceCommand):
                     eof = 'EOF'
                 else:
                     eof = '\nEOF'
-                stdin, stdout, stderr = ssh.exec_command('cat << EOF > clifford_script.sh\n%s%s' % (contents, eof))
-            stdin, stdout, stderr = ssh.exec_command('chmod 744 clifford_script.sh; ./clifford_script.sh')
+                stdin, stdout, stderr = ssh.exec_command('cat << EOF > %s\n%s%s' % (script_name, contents, eof))
+            cmd = 'chmod 744 %s' % script_name
+            if not parsed_args.copy_only:
+                cmd += '; ./%s' % script_name
+            stdin, stdout, stderr = ssh.exec_command(cmd)
             for line in stdout.readlines():
                 self.app.stdout.write(line)
             for line in stderr.readlines():
