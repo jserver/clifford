@@ -3,6 +3,8 @@ import os
 
 from cliff.lister import Lister
 
+from mixins import KeyMixin
+
 
 ROWS, COLUMNS = [int(item) for item in os.popen('stty size', 'r').read().split()]
 
@@ -178,7 +180,7 @@ class PythonBundles(Lister):
                 )
 
 
-class Scripts(Lister):
+class Scripts(Lister, KeyMixin):
     "List of scripts in script_path."
 
     log = logging.getLogger(__name__)

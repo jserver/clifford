@@ -1,34 +1,13 @@
 import logging
-import os
 
 from cliff.command import Command
 
-from mixins import PreseedMixin, SingleInstanceMixin
+from mixins import KeyMixin, PreseedMixin, SingleInstanceMixin
 
 
-class BaseCommand(Command):
+class BaseCommand(Command, KeyMixin):
 
     log = logging.getLogger(__name__)
-
-    def get_option(self, section, option, raise_error=True):
-        if not self.app.cparser.has_option(section, option):
-            if raise_error:
-                raise RuntimeError('No %s set!' % option)
-            else:
-                return None
-        value = self.app.cparser.get(section, option)
-        if option.endswith('_path'):
-            value = os.path.expanduser(value)
-            value = os.path.expandvars(value)
-        return value
-
-    @property
-    def key_path(self):
-        return self.get_option('General', 'key_path')
-
-    @property
-    def script_path(self):
-        return self.get_option('General', 'script_path')
 
     def question_maker(self, question, item_type, dict_list, start_at=1):
         self.app.stdout.write(question + '\n')

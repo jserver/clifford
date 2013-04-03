@@ -1,3 +1,28 @@
+import os
+
+
+class KeyMixin(object):
+    def get_option(self, section, option, raise_error=True):
+        if not self.app.cparser.has_option(section, option):
+            if raise_error:
+                raise RuntimeError('No %s set!' % option)
+            else:
+                return None
+        value = self.app.cparser.get(section, option)
+        if option.endswith('_path'):
+            value = os.path.expanduser(value)
+            value = os.path.expandvars(value)
+        return value
+
+    @property
+    def key_path(self):
+        return self.get_option('General', 'key_path')
+
+    @property
+    def script_path(self):
+        return self.get_option('General', 'script_path')
+
+
 class PreseedMixin(object):
     def get_preseeds(self, bundle):
         preseeds = []
