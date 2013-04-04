@@ -117,19 +117,27 @@ class CreateUser(RemoteUserCommand):
                 with open(key, 'r') as f:
                     contents += f.read()
 
+            if self.app.cparser.has_option('General', 'password_salt'):
+                password_salt = self.app.cparser.get('General', 'password_salt')
+            else:
+                password_salt = 'saltywords'
             cmd = 'sudo useradd -m -g users -G sudo -c \'%s\' -s /bin/bash' % fullname
             if parsed_args.password:
-                cmd += ' -p $(perl -e \'print crypt("%s", "saltywords")\')' % password
+                cmd += ' -p $(perl -e \'print crypt("%s", "%s")\')' % (password, password_salt)
             cmd += ' ' + user
+            self.app.stdout.write('Adding user...')
             stdin, stdout, stderr = ssh.exec_command(cmd)
             self.printOutError(stdout, stderr)
 
+            self.app.stdout.write('Making .ssh dir...')
             stdin, stdout, stderr = ssh.exec_command('sudo su -c "mkdir /home/%s/.ssh && chown %s:users /home/%s/.ssh && chmod 700 /home/%s/.ssh"' % (user, user, user, user))
             self.printOutError(stdout, stderr)
 
+            self.app.stdout.write('Copying authorized keys...')
             stdin, stdout, stderr = ssh.exec_command('sudo su -c "cat << EOF > /home/%s/.ssh/authorized_keys\n%sEOF"' % (user, contents))
             self.printOutError(stdout, stderr)
 
+            self.app.stdout.write('Cleanup...')
             stdin, stdout, stderr = ssh.exec_command('sudo su -c "chown %s:users /home/%s/.ssh/authorized_keys; chmod 600 /home/%s/.ssh/authorized_keys"' % (user, user, user))
             self.printOutError(stdout, stderr)
 
@@ -235,11 +243,9 @@ class Script(InstanceCommand):
             cmd = 'chmod 744 %s' % script_name
             if not parsed_args.copy_only:
                 cmd += '; ./%s' % script_name
+            self.app.stdout.write('Executing script...')
             stdin, stdout, stderr = ssh.exec_command(cmd)
-            for line in stdout.readlines():
-                self.app.stdout.write(line)
-            for line in stderr.readlines():
-                self.app.stdout.write('ERROR: %s' % line)
+            self.printOutError(stdout, stderr)
             ssh.close()
 
 
