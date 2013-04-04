@@ -48,7 +48,7 @@ class Launch(BaseCommand):
 
             images = sorted(images, key=lambda image: image.name.lower())
             image = self.question_maker('Available Images', 'image',
-                    [{'text': '%s - %s' % (img.id, self.app.cparser.get('Images', image.id)), 'obj': img} for img in images])
+                    [{'text': '%s - %s' % (img.id, self.app.cparser.get('Images', img.id)), 'obj': img} for img in images])
 
         # Key selection
         key = None
