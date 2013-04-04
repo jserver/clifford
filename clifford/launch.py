@@ -35,19 +35,20 @@ class Launch(BaseCommand):
                 pass
 
         if not image:
-            if not self.app.cparser.has_option('Images', 'images'):
-                raise RuntimeError('No images in config!\n')
+            if not self.app.cparser.has_section('Images'):
+                raise RuntimeError('No images found!\n')
 
-            image_ids = self.app.cparser.get('Images', 'images')
-            image_ids = image_ids.split(',')
-            if image_ids:
-                images = self.app.ec2_conn.get_all_images(image_ids=image_ids)
+            image_ids = self.app.cparser.options('Images')
+            if not image_ids:
+                raise RuntimeError('Now images found!')
+
+            images = self.app.ec2_conn.get_all_images(image_ids=image_ids)
             if not images:
-                raise RuntimeError('No images!\n')
+                raise RuntimeError('No images found!\n')
 
             images = sorted(images, key=lambda image: image.name.lower())
             image = self.question_maker('Available Images', 'image',
-                    [{'text': '%s - %s' % (img.id, img.name), 'obj': img} for img in images])
+                    [{'text': '%s - %s' % (img.id, self.app.cparser.get('Images', image.id)), 'obj': img} for img in images])
 
         # Key selection
         key = None

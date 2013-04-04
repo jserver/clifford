@@ -57,16 +57,18 @@ class AddImage(BaseCommand):
         if not image:
             raise RuntimeError('Image not found!')
 
+        self.app.stdout.write('Found the following image:\n')
+        self.app.stdout.write('name: %s\n' % image.name)
+        self.app.stdout.write('desc: %s\n' % image.description)
+        description = raw_input('Enter short description of image: ')
+        if not description:
+            raise RuntimeError('Description required')
+
         if not self.app.cparser.has_section('Images'):
             self.app.cparser.add_section('Images')
-        if self.app.cparser.has_option('Images', 'images'):
-            images = self.app.cparser.get('Images', 'images')
-            images += ',' + image.id
-            self.app.cparser.set('Images', 'images', images)
-        else:
-            self.app.cparser.set('Images', 'images', image.id)
+        self.app.cparser.set('Images', image.id, description)
         self.app.write_config()
-        self.app.stdout.write('%s image added to config\n' % image.name)
+        self.app.stdout.write('%s image added to config\n' % image.id)
 
 
 class SetDomainName(BaseCommand):
@@ -175,21 +177,18 @@ class DeleteImage(BaseCommand):
     "Deletes an image"
 
     def take_action(self, parsed_args):
-        if not self.app.cparser.has_option('Images', 'images'):
+        if not self.app.cparser.has_section('Images'):
             raise RuntimeError('No images found!')
 
-        images_str = self.app.cparser.get('Images', 'images')
-        image_ids = images_str.split(',')
+        image_ids = self.app.cparser.options('Images')
         if image_ids:
-            images = [{'text': '%s - %s' % (image.id, image.name)} for image in self.app.ec2_conn.get_all_images(image_ids=image_ids)]
+            images = [{'text': '%s - %s' % (image.id, image.name), 'obj': image} for image in self.app.ec2_conn.get_all_images(image_ids=image_ids)]
         image = self.question_maker('Available Images', 'image', images)
 
         if image and self.sure_check():
-            image_ids.remove(image['id'])
-            images = ','.join(image_ids)
-            self.app.cparser.set('Images', 'images', images)
+            self.app.cparser.remove_option('Images', image.id)
             self.app.write_config()
-            self.app.stdout.write('%s removed from images\n' % image['name'])
+            self.app.stdout.write('%s removed from Images\n' % image.id)
 
 
 class DeleteSnapshot(BaseCommand):

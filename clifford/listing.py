@@ -101,18 +101,17 @@ class Images(Lister):
     log = logging.getLogger(__name__)
 
     def take_action(self, parsed_args):
-        if not self.app.cparser.has_option('Images', 'images'):
-            raise RuntimeError('No images added!')
+        if not self.app.cparser.has_section('Images'):
+            raise RuntimeError('No images found!')
 
-        images_str = self.app.cparser.get('Images', 'images')
-        image_ids = images_str.split(',')
+        image_ids = self.app.cparser.options('Images')
         if not image_ids:
-            raise RuntimeError('No images added!')
+            raise RuntimeError('No images found!')
 
-        images = [(image.id, image.name) for image in self.app.ec2_conn.get_all_images(image_ids=image_ids)]
+        images = [(image.id, image.name, self.app.cparser.get('Images', image.id)) for image in self.app.ec2_conn.get_all_images(image_ids=image_ids)]
         images = sorted(images, key=lambda image: image[1].lower())
 
-        return (('Image ID', 'Name'),
+        return (('Image ID', 'Name', 'Short Description'),
                 tuple(images)
                 )
 
