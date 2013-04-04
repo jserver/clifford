@@ -86,7 +86,14 @@ class CreateUser(RemoteUserCommand):
     def take_action(self, parsed_args):
         instance = self.get_instance(parsed_args.name, parsed_args.arg_is_id)
         user = parsed_args.user
+
         keys = glob.glob('%s/*.pub' % self.key_path)
+        if not keys:
+            raise RuntimeError('No public keys found in script_path')
+
+        if not self.app.cparser.has_option('General', 'password_salt'):
+            raise RuntimeError('Set a password_salt to create a user')
+        password_salt = self.app.cparser.get('General', 'password_salt')
 
         if parsed_args.fullname:
             fullname = ' '.join(parsed_args.fullname)
@@ -117,27 +124,19 @@ class CreateUser(RemoteUserCommand):
                 with open(key, 'r') as f:
                     contents += f.read()
 
-            if self.app.cparser.has_option('General', 'password_salt'):
-                password_salt = self.app.cparser.get('General', 'password_salt')
-            else:
-                password_salt = 'saltywords'
             cmd = 'sudo useradd -m -g users -G sudo -c \'%s\' -s /bin/bash' % fullname
             if parsed_args.password:
                 cmd += ' -p $(perl -e \'print crypt("%s", "%s")\')' % (password, password_salt)
             cmd += ' ' + user
-            self.app.stdout.write('Adding user...')
             stdin, stdout, stderr = ssh.exec_command(cmd)
             self.printOutError(stdout, stderr)
 
-            self.app.stdout.write('Making .ssh dir...')
             stdin, stdout, stderr = ssh.exec_command('sudo su -c "mkdir /home/%s/.ssh && chown %s:users /home/%s/.ssh && chmod 700 /home/%s/.ssh"' % (user, user, user, user))
             self.printOutError(stdout, stderr)
 
-            self.app.stdout.write('Copying authorized keys...')
             stdin, stdout, stderr = ssh.exec_command('sudo su -c "cat << EOF > /home/%s/.ssh/authorized_keys\n%sEOF"' % (user, contents))
             self.printOutError(stdout, stderr)
 
-            self.app.stdout.write('Cleanup...')
             stdin, stdout, stderr = ssh.exec_command('sudo su -c "chown %s:users /home/%s/.ssh/authorized_keys; chmod 600 /home/%s/.ssh/authorized_keys"' % (user, user, user))
             self.printOutError(stdout, stderr)
 
@@ -232,7 +231,11 @@ class Script(InstanceCommand):
         if parsed_args.assume_yes or self.sure_check():
             ssh = paramiko.SSHClient()
             ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-            ssh.connect(instance.public_dns_name, username=parsed_args.user, key_filename='%s/%s.pem' % (self.key_path, instance.key_name))
+            if parsed_args.user == 'ubuntu':
+                ssh.connect(instance.public_dns_name, username=parsed_args.user, key_filename='%s/%s.pem' % (self.key_path, instance.key_name))
+            else:
+                ssh.connect(instance.public_dns_name, username=parsed_args.user)
+
             with open(script, 'r') as f:
                 contents = f.read()
                 if contents[-1:] == '\n':
@@ -240,10 +243,10 @@ class Script(InstanceCommand):
                 else:
                     eof = '\nEOF'
                 stdin, stdout, stderr = ssh.exec_command('cat << EOF > %s\n%s%s' % (script_name, contents, eof))
+
             cmd = 'chmod 744 %s' % script_name
             if not parsed_args.copy_only:
                 cmd += '; ./%s' % script_name
-            self.app.stdout.write('Executing script...')
             stdin, stdout, stderr = ssh.exec_command(cmd)
             self.printOutError(stdout, stderr)
             ssh.close()

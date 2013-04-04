@@ -56,7 +56,7 @@ class Project(BaseCommand, SingleInstanceMixin):
         if 'script' in options:
             cmd = 'remote script -y'
             cmd += ' --script %s' % options['script']
-            cmd += ' --user %s' % options['user']
+            cmd += ' --user %s' % options['user_name']
             cmd += ' --copy-only'
             cmd += ' --id %s' % instance.id
             self.app.run_subcommand(cmd.split(' '))

@@ -104,6 +104,21 @@ class SetKeyPath(BaseCommand):
         self.app.write_config()
 
 
+class SetPasswordSalt(BaseCommand):
+    "Adds the password_salt to config."
+
+    def get_parser(self, prog_name):
+        parser = super(SetPasswordSalt, self).get_parser(prog_name)
+        parser.add_argument('password_salt')
+        return parser
+
+    def take_action(self, parsed_args):
+        if not self.app.cparser.has_section('General'):
+            self.app.cparser.add_section('General')
+        self.app.cparser.set('General', 'password_salt', parsed_args.password_salt)
+        self.app.write_config()
+
+
 class SetScriptPath(BaseCommand):
     "Adds the script_path to config."
 

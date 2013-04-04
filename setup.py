@@ -80,6 +80,8 @@ setup(
             'show domain_name = clifford.show:DomainName',
             'set key_path = clifford.actions:SetKeyPath',
             'show key_path = clifford.show:KeyPath',
+            'set password_salt = clifford.actions:SetPasswordSalt',
+            'show password_salt = clifford.show:PasswordSalt',
             'set script_path = clifford.actions:SetScriptPath',
             'show script_path = clifford.show:ScriptPath',
 

@@ -82,6 +82,14 @@ class KeyPath(BaseCommand):
         self.app.stdout.write('%s\n' % self.key_path)
 
 
+class PasswordSalt(BaseCommand):
+    "Show the password_salt saved to the config file."
+
+    def take_action(self, parsed_args):
+        password_salt = self.app.cparser.get('General', 'password_salt')
+        self.app.stdout.write('%s\n' % password_salt)
+
+
 class ScriptPath(BaseCommand):
     "Show the script_path saved to the config file."
 
