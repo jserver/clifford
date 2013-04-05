@@ -91,9 +91,7 @@ class CreateUser(RemoteUserCommand):
         if not keys:
             raise RuntimeError('No public keys found in script_path')
 
-        if not self.app.cparser.has_option('General', 'password_salt'):
-            raise RuntimeError('Set a password_salt to create a user')
-        password_salt = self.app.cparser.get('General', 'password_salt')
+        password_salt = self.get_option('General', 'password_salt')
 
         if parsed_args.fullname:
             fullname = ' '.join(parsed_args.fullname)

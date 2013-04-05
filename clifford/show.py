@@ -15,17 +15,14 @@ class Bundle(BaseCommand):
 
     def take_action(self, parsed_args):
         section = 'Bundles' if not parsed_args.is_py_bundle else 'Python Bundles'
-        if not self.app.cparser.has_option(section, parsed_args.name):
-            raise RuntimeError('No bundle named %s!' % parsed_args.name)
-        self.app.stdout.write('%s\n' % self.app.cparser.get(section, parsed_args.name))
+        self.app.stdout.write('%s\n' % self.get_option(section, parsed_args.name))
 
 
 class DomainName(BaseCommand):
     "Show the domain_name saved to the config file."
 
     def take_action(self, parsed_args):
-        domain_name = self.app.cparser.get('General', 'domain_name')
-        self.app.stdout.write('%s\n' % domain_name)
+        self.app.stdout.write('%s\n' % self.get_option('General', 'domain_name'))
 
 
 class Group(BaseCommand):
@@ -37,9 +34,7 @@ class Group(BaseCommand):
         return parser
 
     def take_action(self, parsed_args):
-        if not self.app.cparser.has_option('Groups', parsed_args.name):
-            raise RuntimeError('No group named %s!' % parsed_args.name)
-        self.app.stdout.write('%s\n' % self.app.cparser.get('Groups', parsed_args.name))
+        self.app.stdout.write('%s\n' % self.get_option('Groups', parsed_args.name))
 
 
 class Instance(ShowOne, SingleInstanceMixin):
@@ -86,8 +81,7 @@ class PasswordSalt(BaseCommand):
     "Show the password_salt saved to the config file."
 
     def take_action(self, parsed_args):
-        password_salt = self.app.cparser.get('General', 'password_salt')
-        self.app.stdout.write('%s\n' % password_salt)
+        self.app.stdout.write('%s\n' % self.get_option('General', 'password_salt'))
 
 
 class ScriptPath(BaseCommand):
