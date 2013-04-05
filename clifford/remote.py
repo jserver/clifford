@@ -231,6 +231,7 @@ class Script(InstanceCommand):
         if parsed_args.assume_yes or self.sure_check():
             ssh = paramiko.SSHClient()
             ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+
             if parsed_args.user == 'ubuntu':
                 ssh.connect(instance.public_dns_name, username=parsed_args.user, key_filename='%s/%s.pem' % (self.key_path, instance.key_name))
             else:
@@ -242,13 +243,24 @@ class Script(InstanceCommand):
                     eof = 'EOF'
                 else:
                     eof = '\nEOF'
-                stdin, stdout, stderr = ssh.exec_command('cat << EOF > %s\n%s%s' % (script_name, contents, eof))
+                ssh.exec_command('cat << EOF > %s\n%s%s' % (script_name, contents, eof))
 
-            cmd = 'chmod 744 %s' % script_name
             if not parsed_args.copy_only:
-                cmd += '; ./%s' % script_name
-            stdin, stdout, stderr = ssh.exec_command(cmd)
-            self.printOutError(stdout, stderr)
+                channel = ssh.get_transport().open_session()
+                channel.settimeout(0.1)
+                channel.input_enabled = True
+                forward = paramiko.agent.AgentRequestHandler(channel)
+
+                channel.exec_command('sh %s' % script_name)
+                while True:
+                    if channel.exit_status_ready():
+                        break
+                status = channel.recv_exit_status()
+                self.app.stdout.write('Script status: %s\n' % status)
+
+                channel.close()
+                forward.close()
+
             ssh.close()
 
 
