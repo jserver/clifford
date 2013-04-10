@@ -178,11 +178,20 @@ class GroupInstall(RemoteCommand):
                 if self.app.cparser.has_option('Bundles', bundle_name):
                     bundle = self.app.cparser.get('Bundles', bundle_name)
                 else:
-                    if bundle_name.startswith('(') and bundle_name.endswith(')'):
-                        bundle = bundle_name[1:-1].replace(',', ' ')
+                    if bundle_name.startswith('&'):
+                        cmd = 'remote group install -y'
+                        cmd += ' --id %s' % instance.id
+                        cmd += ' ' + bundle_name[1:]
+                        self.app.run_subcommand(cmd.split(' '))
+                        time.sleep(5)
+                        continue
+
+                    if bundle_name.startswith('+'):
+                        bundle = bundle_name[1:]
                     else:
                         self.app.stdout.write('No bundle named %s\n' % bundle_name)
                         continue
+
                 preseeds = self.get_preseeds(bundle)
                 cmd = 'apt-get -y install %s' % bundle
                 if preseeds:
