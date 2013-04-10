@@ -1,3 +1,4 @@
+import getpass
 import glob
 import time
 
@@ -103,7 +104,7 @@ class CreateUser(RemoteUserCommand):
         if parsed_args.password:
             password = ' '.join(parsed_args.password)
         else:
-            password = raw_input('Enter password: ')
+            password = getpass.getpass('Enter password: ')
         if not password:
             raise RuntimeError('password not specified')
 
