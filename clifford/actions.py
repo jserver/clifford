@@ -156,7 +156,9 @@ class CreateSnapshot(BaseCommand, SingleInstanceMixin):
             if volume.attachment_state() == 'attached':
                 instance = self.get_instance(volume.attach_data.instance_id, arg_is_id=True)
                 instances[instance.id] = instance
-                instance_info = ' - %s - %s - %s' % (instance.id, instance.tags.get('Name'), instance.state)
+                name = instance.tags.get('Name')
+                name = '- %s ' % name if name else ''
+                instance_info = ' - %s %s- %s' % (instance.id, name, instance.state)
             volumes.append({'text': '%s%s' % (volume.id, instance_info), 'obj': volume})
 
         volume = self.question_maker('Available Volumes', 'volume', volumes)
@@ -166,7 +168,7 @@ class CreateSnapshot(BaseCommand, SingleInstanceMixin):
             if instance.state == 'running':
                 if not self.sure_check('This will stop the attached instance! continue? '):
                     raise RuntimeError('Aborting action')
-                self.app.stdout.write('Stopping %s\n' % instance.tags.get('Name'))
+                self.app.stdout.write('Stopping %s\n' % instance.tags.get('Name', instance.id))
                 instance.stop()
                 time.sleep(30)
                 for i in range(3):

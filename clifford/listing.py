@@ -23,7 +23,7 @@ class Addresses(Lister):
         instance_dict = {}
         for res in reservations:
             for instance in res.instances:
-                instance_dict[instance.id] = instance.tags.get('Name')
+                instance_dict[instance.id] = instance.tags.get('Name', '')
 
         return (('Public IP', 'Instance ID', 'Name'),
                 ((address.public_ip, address.instance_id, instance_dict.get(address.instance_id, '')) for address in addresses)
@@ -126,7 +126,7 @@ class Instances(Lister):
         instances = []
         for res in reservations:
             for instance in res.instances:
-                instances.append((instance.tags.get('Name'),
+                instances.append((instance.tags.get('Name', ''),
                                   instance.id,
                                   instance.state,
                                   instance.instance_type,
@@ -231,7 +231,7 @@ class Volumes(Lister):
         volumes = self.app.ec2_conn.get_all_volumes()
 
         return (('Name', 'ID', 'Size', 'Type', 'Snapshot ID', 'Zone', 'Status', 'Instance ID'),
-                ((volume.tags.get('name', ''),
+                ((volume.tags.get('Name', ''),
                   volume.id,
                   '%s GiB' % volume.size,
                   volume.type,

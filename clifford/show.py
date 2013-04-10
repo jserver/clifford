@@ -57,7 +57,7 @@ class Instance(ShowOne, SingleInstanceMixin):
                    'Zone',
                    'Public DNS'
                    )
-        data = (instance.tags.get('Name'),
+        data = (instance.tags.get('Name', ''),
                 instance.id,
                 instance.state,
                 instance.instance_type,
