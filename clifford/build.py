@@ -67,3 +67,11 @@ class Build(BaseCommand, SingleInstanceMixin):
             cmd += ' --id %s' % instance.id
             cmd += ' ' + options['easy_install']
             self.app.run_subcommand(cmd.split(' '))
+
+        if 'script_name' in options:
+            cmd = 'remote script -y'
+            cmd += ' --script %s' % options['script_name']
+            if 'script_action' in options and options['script_action'] == 'copy':
+                cmd += ' --copy-only'
+            cmd += ' --id %s' % instance.id
+            self.app.run_subcommand(cmd.split(' '))
