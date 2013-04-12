@@ -239,7 +239,7 @@ class PPAInstall(RemoteCommand):
             if not package_name:
                 raise RuntimeError('No PPA Selected')
 
-        ppa_name = self.app.cparser.get_option('PPAs', package_name)
+        ppa_name = self.get_option('PPAs', package_name)
         if not ppa_name:
             raise RuntimeError('PPA Name not found')
 
@@ -261,7 +261,7 @@ class PPAInstall(RemoteCommand):
         time.sleep(5)
         self.app.stdout.write('UPDATED\n')
 
-        stdin, stdout, stderr = ssh.exec_command('sudo apt-get install %s' % package_name)
+        stdin, stdout, stderr = ssh.exec_command('sudo apt-get -y install %s' % package_name)
         self.printOutError(stdout, stderr)
 
         ssh.close()
@@ -299,11 +299,7 @@ class Script(InstanceCommand):
 
             with open(script, 'r') as f:
                 contents = f.read()
-                if contents[-1:] == '\n':
-                    eof = 'EOF'
-                else:
-                    eof = '\nEOF'
-                ssh.exec_command('cat << EOF > %s\n%s%s' % (script_name, contents, eof))
+                ssh.exec_command('cat << EOF > %s\n%s\nEOF' % (script_name, contents))
 
             if not parsed_args.copy_only:
                 channel = ssh.get_transport().open_session()
