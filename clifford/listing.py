@@ -3,7 +3,7 @@ import os
 
 from cliff.lister import Lister
 
-from mixins import KeyMixin
+from mixins import KeyMixin, SingleInstanceMixin
 
 
 ROWS, COLUMNS = [int(item) for item in os.popen('stty size', 'r').read().split()]
@@ -113,6 +113,26 @@ class Images(Lister):
 
         return (('Image ID', 'Name', 'Short Description'),
                 tuple(images)
+                )
+
+
+class InstanceTags(Lister, SingleInstanceMixin):
+    "List of tags on an ec2 instance."
+
+    log = logging.getLogger(__name__)
+
+    def get_parser(self, prog_name):
+        parser = super(InstanceTags, self).get_parser(prog_name)
+        parser.add_argument('-y', dest='assume_yes', action='store_true')
+        parser.add_argument('--id', dest='arg_is_id', action='store_true')
+        parser.add_argument('name')
+        return parser
+
+    def take_action(self, parsed_args):
+        instance = self.get_instance(parsed_args.name, parsed_args.arg_is_id)
+
+        return (('Tag', 'Value'),
+                (instance.tags.iteritems())
                 )
 
 

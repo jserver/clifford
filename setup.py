@@ -61,21 +61,7 @@ setup(
             'clifford = clifford.main:main'
             ],
         'clifford': [
-            # Lister tools
-            'ls addresses = clifford.listing:Addresses',
-            'ls buckets = clifford.listing:Buckets',
-            'ls bundles = clifford.listing:Bundles',
-            'ls groups = clifford.listing:Groups',
-            'ls images = clifford.listing:Images',
-            'ls instances = clifford.listing:Instances',
-            'ls keys = clifford.listing:Keys',
-            'ls python bundles = clifford.listing:PythonBundles',
-            'ls scripts = clifford.listing:Scripts',
-            'ls security groups = clifford.listing:SecurityGroups',
-            'ls snapshots = clifford.listing:Snapshots',
-            'ls volumes = clifford.listing:Volumes',
-
-            # EC2
+            # General
             'set domain_name = clifford.actions:SetDomainName',
             'show domain_name = clifford.show:DomainName',
             'set key_path = clifford.actions:SetKeyPath',
@@ -85,6 +71,22 @@ setup(
             'set script_path = clifford.actions:SetScriptPath',
             'show script_path = clifford.show:ScriptPath',
 
+            # Lister tools
+            'ls addresses = clifford.listing:Addresses',
+            'ls buckets = clifford.listing:Buckets',
+            'ls bundles = clifford.listing:Bundles',
+            'ls groups = clifford.listing:Groups',
+            'ls images = clifford.listing:Images',
+            'ls instance tags = clifford.listing:InstanceTags',
+            'ls instances = clifford.listing:Instances',
+            'ls keys = clifford.listing:Keys',
+            'ls python bundles = clifford.listing:PythonBundles',
+            'ls scripts = clifford.listing:Scripts',
+            'ls security groups = clifford.listing:SecurityGroups',
+            'ls snapshots = clifford.listing:Snapshots',
+            'ls volumes = clifford.listing:Volumes',
+
+            # EC2
             'add image = clifford.actions:AddImage',
             'create image = clifford.actions:CreateImage',
             'create snapshot = clifford.actions:CreateSnapshot',
@@ -100,6 +102,8 @@ setup(
             'reboot = clifford.actions:Reboot',
             'stop = clifford.actions:Stop',
             'start = clifford.actions:Start',
+            'set tag = clifford.actions:SetTag',
+            'del tag = clifford.actions:DeleteTag',
 
             'remote apt-get install = clifford.remote:AptGetInstall',
             'remote bundle install = clifford.remote:BundleInstall',

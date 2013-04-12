@@ -4,6 +4,39 @@ from commands import BaseCommand, InstanceCommand
 from mixins import SingleInstanceMixin
 
 
+class DeleteTag(InstanceCommand):
+    "Deletes an instance tag."
+
+    def take_action(self, parsed_args):
+        instance = self.get_instance(parsed_args.name, parsed_args.arg_is_id)
+        if not instance:
+            raise RuntimeError('Instance not found!')
+
+        tag_name = raw_input('Tag: ')
+        if not tag_name or tag_name == 'Name':
+            raise RuntimeError('Invalid Tag')
+
+        instance.remove_tag(tag_name)
+
+
+class SetTag(InstanceCommand):
+    "Sets the value of an instance tag."
+
+    def take_action(self, parsed_args):
+        instance = self.get_instance(parsed_args.name, parsed_args.arg_is_id)
+        if not instance:
+            raise RuntimeError('Instance not found!')
+
+        tag_name = raw_input('Tag: ')
+        if not tag_name:
+            raise RuntimeError('Invalid Tag')
+        value = raw_input('Value: ')
+        if not value:
+            raise RuntimeError('Invalid Value')
+
+        instance.add_tag(tag_name, value)
+
+
 class Terminate(InstanceCommand):
     "Terminates an instance."
 

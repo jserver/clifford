@@ -113,7 +113,7 @@ class Launch(BaseCommand):
 
         time.sleep(10)
         self.app.stdout.write('Add Name tag to instance\n')
-        self.app.ec2_conn.create_tags([instance.id], {'Name': parsed_args.name})
+        instance.add_tag('Name', parsed_args.name)
 
         while True:
             time.sleep(20)
