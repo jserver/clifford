@@ -106,6 +106,7 @@ setup(
             'remote create user = clifford.remote:CreateUser',
             'remote easy_install = clifford.remote:EasyInstall',
             'remote group install = clifford.remote:GroupInstall',
+            'remote ppa install = clifford.remote:PPAInstall',
             'remote script = clifford.remote:Script',
             'remote upgrade = clifford.remote:Upgrade',
 
