@@ -247,22 +247,15 @@ class PPAInstall(RemoteCommand):
         ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
         ssh.connect(instance.public_dns_name, username='ubuntu', key_filename='%s/%s.pem' % (self.key_path, instance.key_name))
 
-        stdin, stdout, stderr = ssh.exec_command('sudo add-apt-repository -y ppa:%s"' % ppa_name)
-        time.sleep(5)
+        stdin, stdout, stderr = ssh.exec_command('sudo add-apt-repository -y ppa:%s' % ppa_name)
+        time.sleep(3)
 
-        has_error = False
         stdin, stdout, stderr = ssh.exec_command('sudo apt-get -y update')
-        for line in stderr.readlines():
-            if line.startswith('E: '):
-                self.app.stdout.write(line)
-                has_error = True
-        if has_error:
-            raise RuntimeError("Unable to continue...")
-        time.sleep(5)
+        time.sleep(3)
         self.app.stdout.write('UPDATED\n')
 
-        stdin, stdout, stderr = ssh.exec_command('sudo apt-get -y install %s' % package_name)
-        self.printOutError(stdout, stderr)
+        cmd = 'sudo apt-get -y install %s' % package_name
+        stdin, stdout, stderr = ssh.exec_command('sudo su -c "DEBIAN_FRONTEND=noninteractive; %s"' % cmd)
 
         ssh.close()
 
