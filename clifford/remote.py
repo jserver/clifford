@@ -27,7 +27,7 @@ class AptGetInstall(InstanceCommand, PreseedMixin):
             cmd = 'apt-get -y install %s' % packages
             if preseeds:
                 stdin, stdout, stderr = ssh.exec_command('cat << EOF | sudo debconf-set-selections\n%s\nEOF' % '\n'.join(preseeds))
-                stdin, stdout, stderr = ssh.exec_command('sudo su -c "DEBIAN_FRONTEND=noninteractive; %s"' % cmd)
+                stdin, stdout, stderr = ssh.exec_command('sudo su -c "env DEBIAN_FRONTEND=noninteractive %s"' % cmd)
             else:
                 stdin, stdout, stderr = ssh.exec_command('sudo %s' % cmd)
             for line in stdout.readlines():
@@ -59,7 +59,7 @@ class BundleInstall(RemoteCommand):
             cmd = 'apt-get -y install %s' % bundle
             if preseeds:
                 stdin, stdout, stderr = ssh.exec_command('cat << EOF | sudo debconf-set-selections\n%s\nEOF' % '\n'.join(preseeds))
-                stdin, stdout, stderr = ssh.exec_command('sudo su -c "DEBIAN_FRONTEND=noninteractive; %s"' % cmd)
+                stdin, stdout, stderr = ssh.exec_command('sudo su -c "env DEBIAN_FRONTEND=noninteractive %s"' % cmd)
             else:
                 stdin, stdout, stderr = ssh.exec_command('sudo %s' % cmd)
             for line in stdout.readlines():
@@ -204,7 +204,7 @@ class GroupInstall(RemoteCommand):
                 cmd = 'apt-get -y install %s' % bundle
                 if preseeds:
                     stdin, stdout, stderr = ssh.exec_command('cat << EOF | sudo debconf-set-selections\n%s\nEOF' % '\n'.join(preseeds))
-                    stdin, stdout, stderr = ssh.exec_command('sudo su -c "DEBIAN_FRONTEND=noninteractive; %s"' % cmd)
+                    stdin, stdout, stderr = ssh.exec_command('sudo su -c "env DEBIAN_FRONTEND=noninteractive %s"' % cmd)
                 else:
                     stdin, stdout, stderr = ssh.exec_command('sudo %s' % cmd)
                 for line in stdout.readlines():
@@ -247,15 +247,18 @@ class PPAInstall(RemoteCommand):
         ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
         ssh.connect(instance.public_dns_name, username='ubuntu', key_filename='%s/%s.pem' % (self.key_path, instance.key_name))
 
-        stdin, stdout, stderr = ssh.exec_command('sudo add-apt-repository -y ppa:%s' % ppa_name)
-        time.sleep(3)
+        stdin, stdout, stderr = ssh.exec_command('sudo add-apt-repository -y ppa:%s 2>&1' % ppa_name)
+        self.printOutError(stdout, stderr)
+        time.sleep(5)
 
-        stdin, stdout, stderr = ssh.exec_command('sudo apt-get -y update')
-        time.sleep(3)
+        stdin, stdout, stderr = ssh.exec_command('sudo apt-get -y update 2>&1')
+        self.printOutError(stdout, stderr)
+        time.sleep(5)
         self.app.stdout.write('UPDATED\n')
 
-        cmd = 'sudo apt-get -y install %s' % package_name
-        stdin, stdout, stderr = ssh.exec_command('sudo su -c "DEBIAN_FRONTEND=noninteractive; %s"' % cmd)
+        cmd = 'apt-get -y install %s' % package_name
+        stdin, stdout, stderr = ssh.exec_command('sudo su -c "env DEBIAN_FRONTEND=noninteractive %s 2>&1"' % cmd)
+        self.printOutError(stdout, stderr)
 
         ssh.close()
 
