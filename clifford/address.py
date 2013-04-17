@@ -25,7 +25,7 @@ class Associate(InstanceCommand):
             ssh.connect(instance.public_dns_name, username='ubuntu', key_filename='%s/%s.pem' % (self.key_path, instance.key_name))
             stdin, stdout, stderr = ssh.exec_command('sudo su -c "echo %s > /etc/hostname && hostname -F /etc/hostname"' % parsed_args.name)
             fqdn = '%s.%s' % (parsed_args.name, self.app.cparser.get('General', 'domain_name'))
-            stdin, stdout, stderr = ssh.exec_command('sudo su -c "echo \'\n### CLIFFORD\n%s\t%s\t%s\' >> /etc/hosts"' % (address.public_ip, fqdn, parsed_args.name))
+            stdin, stdout, stderr = ssh.exec_command('sudo su -c "echo \'\n### CLIFFORD\n127.0.1.1\t%s\n%s\t%s\t%s\' >> /etc/hosts"' % (parsed_args.name, address.public_ip, fqdn, parsed_args.name))
             ssh.close()
 
 
