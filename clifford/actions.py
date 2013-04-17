@@ -235,7 +235,7 @@ class DeleteImage(BaseCommand):
             images = [{'text': '%s - %s' % (image.id, image.name), 'obj': image} for image in self.app.ec2_conn.get_all_images(image_ids=image_ids)]
         image = self.question_maker('Available Images', 'image', images)
 
-        if image and self.sure_check():
+        if self.sure_check():
             self.app.cparser.remove_option('Images', image.id)
             self.app.write_config()
             self.app.stdout.write('%s removed from Images\n' % image.id)
@@ -256,7 +256,7 @@ class DeleteSnapshot(BaseCommand):
             snapshots.append({'text': snapshot_info, 'obj': snapshot})
         snapshot = self.question_maker('Available Snapshots', 'snapshot', snapshots)
 
-        if snapshot and self.sure_check():
+        if self.sure_check():
             snapshot.delete()
 
 
@@ -269,5 +269,5 @@ class DeleteVolume(BaseCommand):
             raise RuntimeError('No available volumes found!')
         volume = self.question_maker('Available Volumes', 'volume', volumes)
 
-        if volume and self.sure_check():
+        if self.sure_check():
             volume.delete()

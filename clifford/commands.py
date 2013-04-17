@@ -17,8 +17,7 @@ class BaseCommand(Command, KeyMixin):
             self.app.stdout.write('%s) %s\n' % (qnum, item['text']))
         item_choice = raw_input('Enter number of %s: ' % item_type)
         if not item_choice.isdigit() or int(item_choice) - start_at >= len(dict_list):
-            self.app.stdout.write('Not a valid %s!\n' % item_type)
-            return {}
+            raise RuntimeError('Not a valid %s!\n' % item_type)
         choice = dict_list[int(item_choice) - start_at]
         if 'obj' in choice:
             return choice['obj']

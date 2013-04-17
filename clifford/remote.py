@@ -236,8 +236,6 @@ class PPAInstall(RemoteCommand):
         else:
             options = self.app.cparser.options('PPAs')
             package_name = self.question_maker('Select PPA', 'ppa', [{'text': item} for item in options])
-            if not package_name:
-                raise RuntimeError('No PPA Selected')
 
         ppa_name = self.get_option('PPAs', package_name)
         if not ppa_name:
