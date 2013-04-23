@@ -90,7 +90,7 @@ class CreateUser(RemoteUserCommand):
 
         keys = glob.glob('%s/*.pub' % self.key_path)
         if not keys:
-            raise RuntimeError('No public keys found in script_path')
+            raise RuntimeError('No public keys found in key_path')
 
         password_salt = self.get_option('General', 'password_salt')
 
@@ -273,12 +273,12 @@ class Script(InstanceCommand):
 
     def take_action(self, parsed_args):
         instance = self.get_instance(parsed_args.name, parsed_args.arg_is_id)
-        scripts = glob.glob('%s/*.sh' % self.script_path)
 
         if parsed_args.script:
             script_name = parsed_args.script
             script = '%s/%s' % (self.script_path, parsed_args.script)
         else:
+            scripts = glob.glob('%s/*.sh' % self.script_path)
             script_name = self.question_maker('Select script', 'script', [{'text': item[len(self.script_path) + 1:]} for item in scripts])
             script = '%s/%s' % (self.script_path, script_name)
 

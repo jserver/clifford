@@ -1,3 +1,4 @@
+import glob
 import time
 
 from commands import BaseCommand
@@ -13,7 +14,8 @@ class Launch(BaseCommand):
         parser.add_argument('--image')
         parser.add_argument('--key')
         parser.add_argument('--zone')
-        parser.add_argument('--security_group')
+        parser.add_argument('--security-group')
+        parser.add_argument('--user-data')
         parser.add_argument('name')
         return parser
 
@@ -91,16 +93,27 @@ class Launch(BaseCommand):
                 security_group = self.question_maker('Available Security Groups', 'security group',
                         [{'text': item.name, 'obj': item} for item in security_groups])
 
+        if parsed_args.user_data:
+            user_data = open('%s/%s' % (self.script_path, parsed_args.user_data), 'r').read()
+        else:
+            script_files = glob.glob('%s/*.sh' % self.script_path)
+            scripts = [{'text': 'Skip Step'}]
+            scripts.extend([{'text': item[len(self.script_path) + 1:]} for item in script_files])
+            script = self.question_maker('Select user-data script', 'script', scripts, start_at=0)
+            if script == 'Skip Step':
+                user_data = None
+            else:
+                user_data = open('%s/%s' % (self.script_path, script), 'r').read()
+
         kwargs = {
             'key_name': key.name,
             'instance_type': instance_type,
             'security_group_ids': [security_group.id],
         }
+        if user_data:
+            kwargs['user_data'] = user_data
         if zone:
             kwargs['placement'] = zone.name
-
-        # user-data
-        # TODO: should at least give the option
 
         if not parsed_args.assume_yes and not self.sure_check():
             raise RuntimeError('Instance not created!')

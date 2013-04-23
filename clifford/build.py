@@ -36,7 +36,9 @@ class Build(BaseCommand, SingleInstanceMixin):
         cmd += ' --image %s' % options['image']
         cmd += ' --key %s' % options['key']
         cmd += ' --zone %s' % options['zone']
-        cmd += ' --security_group %s' % options['security_group']
+        cmd += ' --security-group %s' % options['security_group']
+        if 'user_data' in options:
+            cmd += ' --user-data %s' % options['user_data']
         cmd += ' ' + parsed_args.name
         self.app.run_subcommand(cmd.split(' '))
         time.sleep(10)
