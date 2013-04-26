@@ -8,6 +8,45 @@ from commands import InstanceCommand, RemoteCommand, RemoteUserCommand
 from mixins import PreseedMixin
 
 
+class AddAptInstall(RemoteCommand):
+    "Add an apt repo and install a package from it."
+
+    def take_action(self, parsed_args):
+        instance = self.get_instance(parsed_args.name, parsed_args.arg_is_id)
+        section = 'Apt:%s' % parsed_args.option
+
+        if not self.app.cparser.has_section(section):
+            raise RuntimeError('No apt repo named %s' % parsed_args.option)
+        options = self.app.cparser.options(section)
+
+        ssh = paramiko.SSHClient()
+        ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+        ssh.connect(instance.public_dns_name, username='ubuntu', key_filename='%s/%s.pem' % (self.key_path, instance.key_name))
+
+        if 'keyserver' in options:
+            stdin, stdout, stderr = ssh.exec_command('sudo apt-key adv --keyserver keyserver.ubuntu.com --recv %s' % self.get_option(section, 'keyserver'))
+        elif 'publickey' in options:
+            key = self.get_option(section, 'publickey')
+            stdin, stdout, stderr = ssh.exec_command('wget %s' % key)
+            stdin, stdout, stderr = ssh.exec_command('sudo apt-key add %s' % key.split('/').pop())
+        else:
+            raise RuntimeError('Invalid apt section')
+
+        package = self.get_option(section, 'package')
+        stdin, stdout, stderr = ssh.exec_command('sudo su -c "echo \'deb %s\' > /etc/apt/sources.list.d/%s.list"' % (self.get_option(section, 'deb'), package))
+
+        stdin, stdout, stderr = ssh.exec_command('sudo apt-get -y update 2>&1')
+        self.printOutError(stdout, stderr)
+        time.sleep(5)
+        self.app.stdout.write('UPDATED\n')
+
+        cmd = 'apt-get -y install %s' % package
+        stdin, stdout, stderr = ssh.exec_command('sudo su -c "env DEBIAN_FRONTEND=noninteractive %s 2>&1"' % cmd)
+        self.printOutError(stdout, stderr)
+
+        ssh.close()
+
+
 class AptGetInstall(InstanceCommand, PreseedMixin):
     "Install packages on a remote ec2 instance."
 
@@ -186,6 +225,13 @@ class GroupInstall(RemoteCommand):
                         self.app.run_subcommand(cmd.split(' '))
                         time.sleep(5)
                         continue
+                    elif bundle_name.startswith('+'):
+                        cmd = 'remote add-apt install'
+                        cmd += ' --id %s' % instance.id
+                        cmd += ' ' + bundle_name[1:]
+                        self.app.run_subcommand(cmd.split(' '))
+                        time.sleep(5)
+                        continue
                     elif bundle_name.startswith('@'):
                         cmd = 'remote ppa install -y'
                         cmd += ' --id %s' % instance.id
@@ -194,7 +240,7 @@ class GroupInstall(RemoteCommand):
                         time.sleep(5)
                         continue
 
-                    if bundle_name.startswith('+'):
+                    if bundle_name.startswith('$'):
                         bundle = bundle_name[1:]
                     else:
                         self.app.stdout.write('No bundle named %s\n' % bundle_name)
@@ -330,6 +376,8 @@ class Upgrade(InstanceCommand):
             ssh = paramiko.SSHClient()
             ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
             ssh.connect(instance.public_dns_name, username='ubuntu', key_filename='%s/%s.pem' % (self.key_path, instance.key_name))
+
+            stdin, stdout, stderr = ssh.exec_command('sudo su -c "echo \'\n### CLIFFORD\n127.0.1.1\t%s\' >> /etc/hosts"' % instance.tags.get('Name'))
 
             has_error = False
             stdin, stdout, stderr = ssh.exec_command('sudo apt-get -y update')

@@ -105,6 +105,7 @@ setup(
             'set tag = clifford.actions:SetTag',
             'del tag = clifford.actions:DeleteTag',
 
+            'remote add-apt install = clifford.remote:AddAptInstall',
             'remote apt-get install = clifford.remote:AptGetInstall',
             'remote bundle install = clifford.remote:BundleInstall',
             'remote create user = clifford.remote:CreateUser',

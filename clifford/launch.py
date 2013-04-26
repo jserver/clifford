@@ -95,6 +95,8 @@ class Launch(BaseCommand):
 
         if parsed_args.user_data:
             user_data = open('%s/%s' % (self.script_path, parsed_args.user_data), 'r').read()
+        elif parsed_args.assume_yes:
+            user_data = None
         else:
             script_files = glob.glob('%s/*.sh' % self.script_path)
             scripts = [{'text': 'Skip Step'}]
