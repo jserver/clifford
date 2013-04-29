@@ -24,15 +24,20 @@ class AddAptInstall(RemoteCommand):
         ssh.connect(instance.public_dns_name, username='ubuntu', key_filename='%s/%s.pem' % (self.key_path, instance.key_name))
 
         if 'keyserver' in options:
-            stdin, stdout, stderr = ssh.exec_command('sudo apt-key adv --keyserver keyserver.ubuntu.com --recv %s' % self.get_option(section, 'keyserver'))
+            stdin, stdout, stderr = ssh.exec_command('sudo apt-key adv --keyserver keyserver.ubuntu.com --recv %s 2>&1' % self.get_option(section, 'keyserver'))
+            self.printOutError(stdout, stderr)
         elif 'publickey' in options:
             key = self.get_option(section, 'publickey')
-            stdin, stdout, stderr = ssh.exec_command('wget %s' % key)
-            stdin, stdout, stderr = ssh.exec_command('sudo apt-key add %s' % key.split('/').pop())
+            stdin, stdout, stderr = ssh.exec_command('wget %s 2>&1' % key)
+            self.printOutError(stdout, stderr)
+            time.sleep(2)
+            stdin, stdout, stderr = ssh.exec_command('sudo apt-key add %s 2>&1' % key.split('/').pop())
+            self.printOutError(stdout, stderr)
         else:
             raise RuntimeError('Invalid apt section')
 
         package = self.get_option(section, 'package')
+        time.sleep(5)
         stdin, stdout, stderr = ssh.exec_command('sudo su -c "echo \'deb %s\' > /etc/apt/sources.list.d/%s.list"' % (self.get_option(section, 'deb'), package))
 
         stdin, stdout, stderr = ssh.exec_command('sudo apt-get -y update 2>&1')
