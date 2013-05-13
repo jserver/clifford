@@ -14,7 +14,7 @@ class Launch(BaseCommand):
         parser.add_argument('--image')
         parser.add_argument('--key')
         parser.add_argument('--zone')
-        parser.add_argument('--security-group')
+        parser.add_argument('--security-groups')
         parser.add_argument('--user-data')
         parser.add_argument('name')
         return parser
@@ -80,19 +80,28 @@ class Launch(BaseCommand):
                 zone = self.question_maker('Available Zones', 'zone', zones, start_at=0)
 
         # Security Group selection
-        security_groups = self.app.ec2_conn.get_all_security_groups()
-        if not security_groups:
+        all_security_groups = self.app.ec2_conn.get_all_security_groups()
+        security_group_ids = []
+        if not all_security_groups:
             raise RuntimeError('No security groups!\n')
-        if parsed_args.security_group and parsed_args.security_group in [item.name for item in security_groups]:
-            security_group = [item for item in security_groups if item.name == parsed_args.security_group][0]
-        else:
-            if len(security_groups) == 1:
-                security_group = security_groups[0]
-            else:
-                security_groups = sorted(security_groups, key=lambda group: group.name.lower())
-                security_group = self.question_maker('Available Security Groups', 'security group',
-                        [{'text': item.name, 'obj': item} for item in security_groups])
 
+        if parsed_args.security_groups:
+            parsed_groups = parsed_args.security_groups.split(',')
+            for security_group in all_security_groups:
+                for parsed_group in parsed_groups:
+                    if parsed_group == security_group.name:
+                        security_group_ids.append(security_group.id)
+
+        if not security_group_ids:
+            if len(all_security_groups) == 1:
+                security_group_ids.append(all_security_groups[0].id)
+            else:
+                sorted_groups = sorted(all_security_groups, key=lambda group: group.name.lower())
+                security_group = self.question_maker('Available Security Groups', 'security group',
+                        [{'text': item.name, 'obj': item} for item in sorted_groups])
+                security_group_ids.append(security_group.id)
+
+        # user_data script
         if parsed_args.user_data:
             user_data = open('%s/%s' % (self.script_path, parsed_args.user_data), 'r').read()
         elif parsed_args.assume_yes:
@@ -110,7 +119,7 @@ class Launch(BaseCommand):
         kwargs = {
             'key_name': key.name,
             'instance_type': instance_type,
-            'security_group_ids': [security_group.id],
+            'security_group_ids': security_group_ids,
         }
         if user_data:
             kwargs['user_data'] = user_data

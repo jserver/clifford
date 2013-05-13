@@ -36,7 +36,7 @@ class Build(BaseCommand, SingleInstanceMixin):
         cmd += ' --image %s' % options['image']
         cmd += ' --key %s' % options['key']
         cmd += ' --zone %s' % options['zone']
-        cmd += ' --security-group %s' % options['security_group']
+        cmd += ' --security-groups %s' % options['security_groups']
         if 'user_data' in options:
             cmd += ' --user-data %s' % options['user_data']
         cmd += ' ' + parsed_args.name
