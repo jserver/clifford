@@ -60,4 +60,6 @@ class SingleInstanceMixin(object):
             raise RuntimeError('No instances wth name %s' % name)
         elif len(res.instances) > 1:
             raise RuntimeError('More than one instance in reservation!' % name)
-        return res.instances[0]
+
+        instance = res.instances[0]
+        return instance

@@ -29,12 +29,21 @@ class BaseCommand(Command, KeyMixin):
             return False
         return True
 
+    def get_user(self, instance):
+        image = self.app.ec2_conn.get_image(instance.image_id)
+        if image.name.startswith('debian'):
+            user = 'admin'
+        elif image.name.startswith('ubuntu'):
+            user = 'ubuntu'
+        else:
+            user = None
+        return user
+
     def printOutError(self, out, error):
         for line in out.readlines():
             self.app.stdout.write('OUT: %s' % line)
         for line in error.readlines():
             self.app.stdout.write('ERROR: %s' % line)
-
 
 
 class InstanceCommand(BaseCommand, SingleInstanceMixin):

@@ -21,7 +21,7 @@ class AddAptInstall(RemoteCommand):
 
         ssh = paramiko.SSHClient()
         ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-        ssh.connect(instance.public_dns_name, username='ubuntu', key_filename='%s/%s.pem' % (self.key_path, instance.key_name))
+        ssh.connect(instance.public_dns_name, username=self.get_user(instance), key_filename='%s/%s.pem' % (self.key_path, instance.key_name))
 
         if 'keyserver' in options:
             stdin, stdout, stderr = ssh.exec_command('sudo apt-key adv --keyserver keyserver.ubuntu.com --recv %s 2>&1' % self.get_option(section, 'keyserver'))
@@ -65,7 +65,7 @@ class AptGetInstall(InstanceCommand, PreseedMixin):
         if self.sure_check():
             ssh = paramiko.SSHClient()
             ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-            ssh.connect(instance.public_dns_name, username='ubuntu', key_filename='%s/%s.pem' % (self.key_path, instance.key_name))
+            ssh.connect(instance.public_dns_name, username=self.get_user(instance), key_filename='%s/%s.pem' % (self.key_path, instance.key_name))
 
             preseeds = self.get_preseeds(packages)
             cmd = 'apt-get -y install %s' % packages
@@ -97,7 +97,7 @@ class BundleInstall(RemoteCommand):
         if self.sure_check():
             ssh = paramiko.SSHClient()
             ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-            ssh.connect(instance.public_dns_name, username='ubuntu', key_filename='%s/%s.pem' % (self.key_path, instance.key_name))
+            ssh.connect(instance.public_dns_name, username=self.get_user(instance), key_filename='%s/%s.pem' % (self.key_path, instance.key_name))
 
             preseeds = self.get_preseeds(bundle)
             cmd = 'apt-get -y install %s' % bundle
@@ -160,7 +160,7 @@ class CreateUser(RemoteUserCommand):
         if parsed_args.assume_yes or self.sure_check():
             ssh = paramiko.SSHClient()
             ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-            ssh.connect(instance.public_dns_name, username='ubuntu', key_filename='%s/%s.pem' % (self.key_path, instance.key_name))
+            ssh.connect(instance.public_dns_name, username=self.get_user(instance), key_filename='%s/%s.pem' % (self.key_path, instance.key_name))
 
             contents = ''
             for key in keys:
@@ -196,7 +196,7 @@ class EasyInstall(RemoteCommand):
         if parsed_args.assume_yes or self.sure_check():
             ssh = paramiko.SSHClient()
             ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-            ssh.connect(instance.public_dns_name, username='ubuntu', key_filename='%s/%s.pem' % (self.key_path, instance.key_name))
+            ssh.connect(instance.public_dns_name, username=self.get_user(instance), key_filename='%s/%s.pem' % (self.key_path, instance.key_name))
             stdin, stdout, stderr = ssh.exec_command('sudo easy_install %s' % bundle)
             for line in stdout.readlines():
                 if line.startswith('Installed') or line.startswith('Finished'):
@@ -216,7 +216,7 @@ class GroupInstall(RemoteCommand):
         if bundle_names and (parsed_args.assume_yes or self.sure_check()):
             ssh = paramiko.SSHClient()
             ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-            ssh.connect(instance.public_dns_name, username='ubuntu', key_filename='%s/%s.pem' % (self.key_path, instance.key_name))
+            ssh.connect(instance.public_dns_name, username=self.get_user(instance), key_filename='%s/%s.pem' % (self.key_path, instance.key_name))
 
             has_error = False
             for bundle_name in bundle_names:
@@ -294,7 +294,7 @@ class PPAInstall(RemoteCommand):
 
         ssh = paramiko.SSHClient()
         ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-        ssh.connect(instance.public_dns_name, username='ubuntu', key_filename='%s/%s.pem' % (self.key_path, instance.key_name))
+        ssh.connect(instance.public_dns_name, username=self.get_user(instance), key_filename='%s/%s.pem' % (self.key_path, instance.key_name))
 
         stdin, stdout, stderr = ssh.exec_command('sudo add-apt-repository -y ppa:%s 2>&1' % ppa_name)
         self.printOutError(stdout, stderr)
@@ -318,7 +318,7 @@ class Script(InstanceCommand):
     def get_parser(self, prog_name):
         parser = super(Script, self).get_parser(prog_name)
         parser.add_argument('--script')
-        parser.add_argument('--user', default='ubuntu')
+        parser.add_argument('--user')
         parser.add_argument('--copy-only', action='store_true')
         return parser
 
@@ -337,14 +337,15 @@ class Script(InstanceCommand):
             ssh = paramiko.SSHClient()
             ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
 
-            if parsed_args.user == 'ubuntu':
-                ssh.connect(instance.public_dns_name, username=parsed_args.user, key_filename='%s/%s.pem' % (self.key_path, instance.key_name))
-            else:
+            if parsed_args.user:
                 ssh.connect(instance.public_dns_name, username=parsed_args.user)
+            else:
+                ssh.connect(instance.public_dns_name, username=self.get_user(instance), key_filename='%s/%s.pem' % (self.key_path, instance.key_name))
 
             with open(script, 'r') as f:
                 contents = f.read()
                 ssh.exec_command('cat << EOF > %s\n%s\nEOF' % (script_name, contents))
+                ssh.exec_command('chmod 744 %s' % script_name)
 
             if not parsed_args.copy_only:
                 channel = ssh.get_transport().open_session()
@@ -352,10 +353,15 @@ class Script(InstanceCommand):
                 channel.input_enabled = True
                 forward = paramiko.agent.AgentRequestHandler(channel)
 
-                channel.exec_command('sh %s' % script_name)
+                if parsed_args.user:
+                    channel.exec_command('/home/%s/%s' % (parsed_args.user, script_name))
+                else:
+                    channel.exec_command('/home/%s/%s' % (self.get_user(instance), script_name))
+
                 while True:
                     if channel.exit_status_ready():
                         break
+                    time.sleep(10)
                 status = channel.recv_exit_status()
                 self.app.stdout.write('Script status: %s\n' % status)
 
@@ -380,7 +386,7 @@ class Upgrade(InstanceCommand):
         if parsed_args.assume_yes or self.sure_check():
             ssh = paramiko.SSHClient()
             ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-            ssh.connect(instance.public_dns_name, username='ubuntu', key_filename='%s/%s.pem' % (self.key_path, instance.key_name))
+            ssh.connect(instance.public_dns_name, username=self.get_user(instance), key_filename='%s/%s.pem' % (self.key_path, instance.key_name))
 
             stdin, stdout, stderr = ssh.exec_command('sudo su -c "echo \'\n### CLIFFORD\n127.0.1.1\t%s\' >> /etc/hosts"' % instance.tags.get('Name'))
 

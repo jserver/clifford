@@ -149,6 +149,6 @@ class Launch(BaseCommand):
         time.sleep(20)
         self.app.stdout.write('Instance should now be running\n')
         if self.key_path:
-            self.app.stdout.write('ssh -i %s/%s.pem ubuntu@%s\n' % (self.key_path, key.name, instance.public_dns_name))
+            self.app.stdout.write('ssh -i %s/%s.pem %s@%s\n' % (self.key_path, key.name, self.get_user(instance), instance.public_dns_name))
         else:
             self.app.stdout.write('Public DNS: %s\n' % instance.public_dns_name)
