@@ -123,7 +123,7 @@ class Launch(BaseCommand):
         }
         if user_data:
             kwargs['user_data'] = user_data
-        if zone:
+        if hasattr(zone, 'name'):
             kwargs['placement'] = zone.name
 
         if not parsed_args.assume_yes and not self.sure_check():
