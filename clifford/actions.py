@@ -99,7 +99,7 @@ class AddImage(BaseCommand):
 
         if not self.app.cparser.has_section('Images'):
             self.app.cparser.add_section('Images')
-        self.app.cparser.set('Images', image.id, description)
+        self.app.cparser.set('Images', description, image.id)
         self.app.write_config()
         self.app.stdout.write('%s image added to config\n' % image.id)
 
@@ -228,17 +228,18 @@ class DeleteImage(BaseCommand):
 
     def take_action(self, parsed_args):
         if not self.app.cparser.has_section('Images'):
-            raise RuntimeError('No images found!')
+            raise RuntimeError('No image section found!')
 
-        image_ids = self.app.cparser.options('Images')
-        if image_ids:
-            images = [{'text': '%s - %s' % (image.id, image.name), 'obj': image} for image in self.app.ec2_conn.get_all_images(image_ids=image_ids)]
+        items = self.app.cparser.items('Images')
+        if not items:
+            raise RuntimeError('No images found')
+        images = [{'text': '%s - %s' % (image[0], image[1]), 'obj': image[0]} for image in items]
         image = self.question_maker('Available Images', 'image', images)
 
         if self.sure_check():
-            self.app.cparser.remove_option('Images', image.id)
+            self.app.cparser.remove_option('Images', image)
             self.app.write_config()
-            self.app.stdout.write('%s removed from Images\n' % image.id)
+            self.app.stdout.write('%s removed from Images\n' % image)
 
 
 class DeleteSnapshot(BaseCommand):

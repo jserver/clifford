@@ -102,16 +102,18 @@ class Images(Lister):
 
     def take_action(self, parsed_args):
         if not self.app.cparser.has_section('Images'):
+            raise RuntimeError('No image section found!')
+
+        items = self.app.cparser.items('Images')
+        if not items:
             raise RuntimeError('No images found!')
 
-        image_ids = self.app.cparser.options('Images')
-        if not image_ids:
-            raise RuntimeError('No images found!')
+        image_ids = [value[1] for value in items]
 
-        images = [(image.id, image.name, self.app.cparser.get('Images', image.id)) for image in self.app.ec2_conn.get_all_images(image_ids=image_ids)]
-        images = sorted(images, key=lambda image: image[1].lower())
+        images = [(items[image_ids.index(image.id)][0], image.id, image.name) for image in self.app.ec2_conn.get_all_images(image_ids=image_ids)]
+        images = sorted(images, key=lambda image: image[0].lower())
 
-        return (('Image ID', 'Name', 'Short Description'),
+        return (('Option', 'Image ID', 'Name'),
                 tuple(images)
                 )
 

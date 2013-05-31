@@ -33,7 +33,7 @@ class Build(BaseCommand, SingleInstanceMixin):
 
         cmd = 'launch -y'
         cmd += ' --size %s' % options['size']
-        cmd += ' --image %s' % options['image']
+        cmd += ' --image %s' % self.app.cparser.get('Images', options['image'])
         cmd += ' --key %s' % options['key']
         cmd += ' --zone %s' % options['zone']
         cmd += ' --security-groups %s' % options['security_groups']
