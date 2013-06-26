@@ -16,7 +16,11 @@ class KeyMixin(object):
 
     @property
     def key_path(self):
-        return self.get_option('General', 'key_path')
+        return self.get_option('General', 'aws_key_path')
+
+    @property
+    def pub_key_path(self):
+        return self.get_option('General', 'pub_key_path')
 
     @property
     def script_path(self):

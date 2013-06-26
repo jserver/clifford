@@ -132,7 +132,7 @@ class CreateUser(RemoteUserCommand):
         instance = self.get_instance(parsed_args.name, parsed_args.arg_is_id)
         user = parsed_args.user
 
-        keys = glob.glob('%s/*.pub' % self.key_path)
+        keys = glob.glob('%s/*.pub' % self.pub_key_path)
         if not keys:
             raise RuntimeError('No public keys found in key_path')
 
