@@ -36,7 +36,7 @@ class CliffordApp(App):
             self.log.debug('got an error: %s', err)
 
     def write_config(self):
-        with open('%s/.clifford' % expanduser("~"), 'wb') as configfile:
+        with open(self.config_file, 'wb') as configfile:
             self.cparser.write(configfile)
         self.cparser.read(self.config_file)
 

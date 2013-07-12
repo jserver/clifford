@@ -111,6 +111,9 @@ class Images(Lister):
         image_ids = [value[1] for value in items]
 
         images = [(items[image_ids.index(image.id)][0], image.id, image.name) for image in self.app.ec2_conn.get_all_images(image_ids=image_ids)]
+        my_images = self.app.ec2_conn.get_all_images(owners=['self'])
+        if my_images:
+            images.extend([('', image.id, image.name) for image in my_images])
         images = sorted(images, key=lambda image: image[0].lower())
 
         return (('Option', 'Image ID', 'Name'),

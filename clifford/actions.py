@@ -174,7 +174,14 @@ class CreateImage(InstanceCommand):
     "Create an Image of an instance."
 
     def take_action(self, parsed_args):
-        pass
+        instance = self.get_instance(parsed_args.name, parsed_args.arg_is_id)
+        name = raw_input('Enter name: ')
+        desc = raw_input('Enter desc: ')
+        if instance and name and self.sure_check():
+            if not desc:
+                desc = None
+            image_id = instance.create_image(name, desc)
+            self.app.stdout.write(image_id)
 
 
 class CreateSnapshot(BaseCommand, SingleInstanceMixin):

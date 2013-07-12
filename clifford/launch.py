@@ -65,8 +65,8 @@ class Launch(BaseCommand):
                         [{'text': item.name, 'obj': item} for item in all_keys])
 
         # Zone Selection
-        if parsed_args.zone == 'No Preference':
-            pass
+        if parsed_args.zone == 'NoPreference':
+            zone = None
         else:
             all_zones = self.app.ec2_conn.get_all_zones()
             if parsed_args.zone in [item.name for item in all_zones]:
