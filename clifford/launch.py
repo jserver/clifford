@@ -16,6 +16,7 @@ class Launch(BaseCommand, LaunchOptionsMixin):
         parser.add_argument('--zone')
         parser.add_argument('--security-groups')
         parser.add_argument('--user-data')
+        parser.add_argument('--count', type=int, default=1)
         parser.add_argument('name')
         return parser
 
@@ -37,29 +38,46 @@ class Launch(BaseCommand, LaunchOptionsMixin):
         if hasattr(zone, 'name'):
             kwargs['placement'] = zone.name
 
+        count = parsed_args.count
+        if count > 1:
+            plural = 's'
+            kwargs['min_count'] = count
+            kwargs['max_count'] = count
+        else:
+            plural = ''
+
         if not parsed_args.assume_yes and not self.sure_check():
-            raise RuntimeError('Instance not created!')
+            raise RuntimeError('Instance%s not created!' % plural)
 
         # Launch this thing
-        self.app.stdout.write('Launching instance...\n')
+        self.app.stdout.write('Launching instance%s...\n' % plural)
         reservation = image.run(**kwargs)
         time.sleep(10)
-        instance = reservation.instances[0]
 
+
+        instances = reservation.instances
         time.sleep(10)
-        self.app.stdout.write('Add Name tag to instance\n')
-        instance.add_tag('Name', parsed_args.name)
+        self.app.stdout.write('Add Name tag to instance%s\n' % plural)
+        for idx, inst in enumerate(reservation.instances):
+            inst.add_tag('Name', parsed_args.name)
+            inst.add_tag('Clifford', '%s-%s' % (parsed_args.name, idx + 1))
 
         while True:
             time.sleep(20)
-            status = instance.update()
-            if status == 'running':
+            ready = True
+            for inst in instances:
+                status = inst.update()
+                if status != 'running':
+                    self.app.stdout.write('%s\n' % status)
+                    ready = False
+                    break
+            if ready:
                 break
-            self.app.stdout.write('%s\n' % status)
 
         time.sleep(20)
-        self.app.stdout.write('Instance should now be running\n')
-        if self.aws_key_path:
-            self.app.stdout.write('ssh -i %s/%s.pem %s@%s\n' % (self.aws_key_path, key.name, self.get_user(instance), instance.public_dns_name))
-        else:
-            self.app.stdout.write('Public DNS: %s\n' % instance.public_dns_name)
+        self.app.stdout.write('Instance%s should now be running\n' % plural)
+        for inst in instances:
+            if self.aws_key_path:
+                self.app.stdout.write('ssh -i %s/%s.pem %s@%s\n' % (self.aws_key_path, key.name, self.get_user(inst), inst.public_dns_name))
+            else:
+                self.app.stdout.write('Public DNS: %s\n' % inst.public_dns_name)

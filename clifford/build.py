@@ -11,6 +11,7 @@ class Build(BaseCommand, LaunchOptionsMixin, SingleInstanceMixin):
         parser = super(Build, self).get_parser(prog_name)
         parser.add_argument('-y', dest='assume_yes', action='store_true')
         parser.add_argument('--build')
+        parser.add_argument('--count', type=int, default=1)
         parser.add_argument('--create', action='store_true')
         parser.add_argument('name')
         return parser
@@ -22,6 +23,19 @@ class Build(BaseCommand, LaunchOptionsMixin, SingleInstanceMixin):
         zone = self.get_zone()
         security_groups = self.get_security_groups(return_names=True)
         user_data = self.get_user_data(return_name=True)
+
+        upgrade_options = [{'text': 'Skip Step'}, {'text': 'upgrade'}, {'text': 'dist-upgrade'}]
+        upgrade_option = self.question_maker('Select upgrade option', 'upgrade', upgrade_options, start_at=0)
+
+        groups = self.app.cparser.options('Groups')
+        group_options = [{'text': 'Skip Step'}]
+        group_options.extend([{'text': group} for group in groups])
+        group_option = self.question_maker('Select group to install', 'group', group_options, start_at=0)
+
+        bundles = self.app.cparser.options('Python Bundles')
+        bundle_options = [{'text': 'Skip Step'}]
+        bundle_options.extend([{'text': bundle} for bundle in bundles])
+        bundle_option = self.question_maker('Select python bundle to install', 'bundle', bundle_options, start_at=0)
 
         section = 'Build:' + name
         self.app.cparser.add_section(section)
@@ -37,22 +51,12 @@ class Build(BaseCommand, LaunchOptionsMixin, SingleInstanceMixin):
         if user_data:
             self.app.cparser.set(section, 'user_data', user_data)
 
-        upgrade_options = [{'text': 'Skip Step'}, {'text': 'upgrade'}, {'text': 'dist-upgrade'}]
-        upgrade_option = self.question_maker('Select upgrade option', 'upgrade', upgrade_options, start_at=0)
         if upgrade_option != 'Skip Step':
             self.app.cparser.set(section, 'upgrade', upgrade_option)
 
-        groups = self.app.cparser.options('Groups')
-        group_options = [{'text': 'Skip Step'}]
-        group_options.extend([{'text': group} for group in groups])
-        group_option = self.question_maker('Select group to install', 'group', group_options, start_at=0)
         if group_option != 'Skip Step':
             self.app.cparser.set(section, 'group', group_option)
 
-        bundles = self.app.cparser.options('Python Bundles')
-        bundle_options = [{'text': 'Skip Step'}]
-        bundle_options.extend([{'text': bundle} for bundle in bundles])
-        bundle_option = self.question_maker('Select python bundle to install', 'bundle', bundle_options, start_at=0)
         if bundle_option != 'Skip Step':
             self.app.cparser.set(section, 'pip', bundle_option)
 
@@ -79,6 +83,8 @@ class Build(BaseCommand, LaunchOptionsMixin, SingleInstanceMixin):
         for option in option_list:
             options[option] = self.app.cparser.get('Build:%s' % build, option)
 
+        count = parsed_args.count
+
         cmd = 'launch -y'
         cmd += ' --size %s' % options['size']
         cmd += ' --image %s' % self.app.cparser.get('Images', options['image'])
@@ -87,14 +93,16 @@ class Build(BaseCommand, LaunchOptionsMixin, SingleInstanceMixin):
         cmd += ' --security-groups %s' % options['security_groups']
         if 'user_data' in options:
             cmd += ' --user-data %s' % options['user_data']
+        cmd +=' --count %s' % count
         cmd += ' ' + parsed_args.name
         self.app.run_subcommand(cmd.split(' '))
         time.sleep(10)
 
-        instance = self.get_instance(parsed_args.name)
-        if not instance:
-            raise RuntimeError('Cannot find instance')
+        reservation = self.get_reservation(parsed_args.name)
 
+        # begin the mutliprocessing
+
+        '''
         if 'upgrade' in options and options['upgrade'] in ['upgrade', 'dist-upgrade']:
             cmd = 'remote upgrade -y'
             cmd += ' --id %s' % instance.id
@@ -125,3 +133,4 @@ class Build(BaseCommand, LaunchOptionsMixin, SingleInstanceMixin):
                 cmd += ' --copy-only'
             cmd += ' --id %s' % instance.id
             self.app.run_subcommand(cmd.split(' '))
+        '''

@@ -201,3 +201,13 @@ class SingleInstanceMixin(object):
 
         instance = res.instances[0]
         return instance
+
+    def get_reservation(self, name):
+        reservations = self.app.ec2_conn.get_all_instances(filters={'tag:Name': name})
+        if not reservations:
+            raise RuntimeError('No instances found')
+
+        if len(reservations) > 1:
+            raise RuntimeError('More than one reservation found!')
+
+        return reservations[0]

@@ -21,16 +21,18 @@ class Project(BaseCommand, SingleInstanceMixin):
         if not self.sure_check():
             return
 
-        option_list = self.app.cparser.options('Project:%s' % project)
+        items = self.app.cparser.items('Project:%s' % project)
         options = {}
-        for option in option_list:
-            options[option] = self.app.cparser.get('Project:%s' % project, option)
+        for item in items:
+            options[item[0]] = item[1]
 
         if 'build' not in options:
             raise RuntimeError('No build in project')
 
         cmd = 'build -y'
         cmd += ' --build %s' % options['build']
+        if 'count' in options:
+            cmd += ' --count %s' % options['count']
         cmd += ' ' + parsed_args.name
         self.app.run_subcommand(cmd.split(' '))
         time.sleep(15)
