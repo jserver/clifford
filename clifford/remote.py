@@ -21,7 +21,7 @@ class AddAptInstall(RemoteCommand):
 
         ssh = paramiko.SSHClient()
         ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-        ssh.connect(instance.public_dns_name, username=self.get_user(instance), key_filename='%s/%s.pem' % (self.key_path, instance.key_name))
+        ssh.connect(instance.public_dns_name, username=self.get_user(instance), key_filename='%s/%s.pem' % (self.aws_key_path, instance.key_name))
 
         if 'keyserver' in options:
             stdin, stdout, stderr = ssh.exec_command('sudo apt-key adv --keyserver keyserver.ubuntu.com --recv %s 2>&1' % self.get_option(section, 'keyserver'))
@@ -65,7 +65,7 @@ class AptGetInstall(InstanceCommand, PreseedMixin):
         if self.sure_check():
             ssh = paramiko.SSHClient()
             ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-            ssh.connect(instance.public_dns_name, username=self.get_user(instance), key_filename='%s/%s.pem' % (self.key_path, instance.key_name))
+            ssh.connect(instance.public_dns_name, username=self.get_user(instance), key_filename='%s/%s.pem' % (self.aws_key_path, instance.key_name))
 
             preseeds = self.get_preseeds(packages)
             cmd = 'apt-get -y install %s' % packages
@@ -97,7 +97,7 @@ class BundleInstall(RemoteCommand):
         if self.sure_check():
             ssh = paramiko.SSHClient()
             ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-            ssh.connect(instance.public_dns_name, username=self.get_user(instance), key_filename='%s/%s.pem' % (self.key_path, instance.key_name))
+            ssh.connect(instance.public_dns_name, username=self.get_user(instance), key_filename='%s/%s.pem' % (self.aws_key_path, instance.key_name))
 
             preseeds = self.get_preseeds(bundle)
             cmd = 'apt-get -y install %s' % bundle
@@ -154,13 +154,13 @@ class CreateUser(RemoteUserCommand):
 
         self.app.stdout.write('The following keys will be copied:\n')
         for key in keys:
-            key = key[len(self.key_path) + 1:]
+            key = key[len(self.pub_key_path) + 1:]
             self.app.stdout.write(key + '\n')
 
         if parsed_args.assume_yes or self.sure_check():
             ssh = paramiko.SSHClient()
             ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-            ssh.connect(instance.public_dns_name, username=self.get_user(instance), key_filename='%s/%s.pem' % (self.key_path, instance.key_name))
+            ssh.connect(instance.public_dns_name, username=self.get_user(instance), key_filename='%s/%s.pem' % (self.aws_key_path, instance.key_name))
 
             contents = ''
             for key in keys:
@@ -186,8 +186,8 @@ class CreateUser(RemoteUserCommand):
             ssh.close()
 
 
-class EasyInstall(RemoteCommand):
-    "Python easy_install a bundle on a remote ec2 instance."
+class PipInstall(RemoteCommand):
+    "Python pip install a bundle on a remote ec2 instance."
 
     def take_action(self, parsed_args):
         instance = self.get_instance(parsed_args.name, parsed_args.arg_is_id)
@@ -196,8 +196,8 @@ class EasyInstall(RemoteCommand):
         if parsed_args.assume_yes or self.sure_check():
             ssh = paramiko.SSHClient()
             ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-            ssh.connect(instance.public_dns_name, username=self.get_user(instance), key_filename='%s/%s.pem' % (self.key_path, instance.key_name))
-            stdin, stdout, stderr = ssh.exec_command('sudo easy_install %s' % bundle)
+            ssh.connect(instance.public_dns_name, username=self.get_user(instance), key_filename='%s/%s.pem' % (self.aws_key_path, instance.key_name))
+            stdin, stdout, stderr = ssh.exec_command('sudo pip install %s' % bundle)
             for line in stdout.readlines():
                 if line.startswith('Installed') or line.startswith('Finished'):
                     self.app.stdout.write(line)
@@ -216,7 +216,7 @@ class GroupInstall(RemoteCommand):
         if bundle_names and (parsed_args.assume_yes or self.sure_check()):
             ssh = paramiko.SSHClient()
             ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-            ssh.connect(instance.public_dns_name, username=self.get_user(instance), key_filename='%s/%s.pem' % (self.key_path, instance.key_name))
+            ssh.connect(instance.public_dns_name, username=self.get_user(instance), key_filename='%s/%s.pem' % (self.aws_key_path, instance.key_name))
 
             has_error = False
             for bundle_name in bundle_names:
@@ -294,7 +294,7 @@ class PPAInstall(RemoteCommand):
 
         ssh = paramiko.SSHClient()
         ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-        ssh.connect(instance.public_dns_name, username=self.get_user(instance), key_filename='%s/%s.pem' % (self.key_path, instance.key_name))
+        ssh.connect(instance.public_dns_name, username=self.get_user(instance), key_filename='%s/%s.pem' % (self.aws_key_path, instance.key_name))
 
         stdin, stdout, stderr = ssh.exec_command('sudo add-apt-repository -y ppa:%s 2>&1' % ppa_name)
         self.printOutError(stdout, stderr)
@@ -340,7 +340,7 @@ class Script(InstanceCommand):
             if parsed_args.user:
                 ssh.connect(instance.public_dns_name, username=parsed_args.user)
             else:
-                ssh.connect(instance.public_dns_name, username=self.get_user(instance), key_filename='%s/%s.pem' % (self.key_path, instance.key_name))
+                ssh.connect(instance.public_dns_name, username=self.get_user(instance), key_filename='%s/%s.pem' % (self.aws_key_path, instance.key_name))
 
             with open(script, 'r') as f:
                 contents = f.read()
@@ -386,7 +386,7 @@ class Upgrade(InstanceCommand):
         if parsed_args.assume_yes or self.sure_check():
             ssh = paramiko.SSHClient()
             ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-            ssh.connect(instance.public_dns_name, username=self.get_user(instance), key_filename='%s/%s.pem' % (self.key_path, instance.key_name))
+            ssh.connect(instance.public_dns_name, username=self.get_user(instance), key_filename='%s/%s.pem' % (self.aws_key_path, instance.key_name))
 
             stdin, stdout, stderr = ssh.exec_command('sudo su -c "echo \'\n### CLIFFORD\n127.0.1.1\t%s\' >> /etc/hosts"' % instance.tags.get('Name'))
 

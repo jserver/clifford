@@ -18,13 +18,6 @@ class Bundle(BaseCommand):
         self.app.stdout.write('%s\n' % self.get_option(section, parsed_args.name))
 
 
-class DomainName(BaseCommand):
-    "Show the domain_name saved to the config file."
-
-    def take_action(self, parsed_args):
-        self.app.stdout.write('%s\n' % self.get_option('General', 'domain_name'))
-
-
 class Group(BaseCommand):
     "Display the items in a group."
 
@@ -68,24 +61,3 @@ class Instance(ShowOne, SingleInstanceMixin):
                 )
 
         return (columns, data)
-
-
-class KeyPath(BaseCommand):
-    "Show the key_path saved to the config file."
-
-    def take_action(self, parsed_args):
-        self.app.stdout.write('%s\n' % self.key_path)
-
-
-class PasswordSalt(BaseCommand):
-    "Show the password_salt saved to the config file."
-
-    def take_action(self, parsed_args):
-        self.app.stdout.write('%s\n' % self.get_option('General', 'password_salt'))
-
-
-class ScriptPath(BaseCommand):
-    "Show the script_path saved to the config file."
-
-    def take_action(self, parsed_args):
-        self.app.stdout.write('%s\n' % self.script_path)

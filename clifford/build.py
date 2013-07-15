@@ -1,20 +1,68 @@
 import time
 
 from commands import BaseCommand
-from mixins import SingleInstanceMixin
+from mixins import LaunchOptionsMixin, SingleInstanceMixin
 
 
-class Build(BaseCommand, SingleInstanceMixin):
+class Build(BaseCommand, LaunchOptionsMixin, SingleInstanceMixin):
     "Launch and bootstrap a new ec2 instance"
 
     def get_parser(self, prog_name):
         parser = super(Build, self).get_parser(prog_name)
         parser.add_argument('-y', dest='assume_yes', action='store_true')
         parser.add_argument('--build')
+        parser.add_argument('--create', action='store_true')
         parser.add_argument('name')
         return parser
 
+    def create(self, name):
+        instance_type = self.get_instance_type()
+        image = self.get_image(return_name=True)
+        key = self.get_key()
+        zone = self.get_zone()
+        security_groups = self.get_security_groups(return_names=True)
+        user_data = self.get_user_data(return_name=True)
+
+        section = 'Build:' + name
+        self.app.cparser.add_section(section)
+        self.app.cparser.set(section, 'size', instance_type)
+        self.app.cparser.set(section, 'image', image)
+        self.app.cparser.set(section, 'key', key.name)
+
+        if hasattr(zone, 'name'):
+            self.app.cparser.set(section, 'zone', zone.name)
+
+        self.app.cparser.set(section, 'security_groups', security_groups)
+
+        if user_data:
+            self.app.cparser.set(section, 'user_data', user_data)
+
+        upgrade_options = [{'text': 'Skip Step'}, {'text': 'upgrade'}, {'text': 'dist-upgrade'}]
+        upgrade_option = self.question_maker('Select upgrade option', 'upgrade', upgrade_options, start_at=0)
+        if upgrade_option != 'Skip Step':
+            self.app.cparser.set(section, 'upgrade', upgrade_option)
+
+        groups = self.app.cparser.options('Groups')
+        group_options = [{'text': 'Skip Step'}]
+        group_options.extend([{'text': group} for group in groups])
+        group_option = self.question_maker('Select group to install', 'group', group_options, start_at=0)
+        if group_option != 'Skip Step':
+            self.app.cparser.set(section, 'group', group_option)
+
+        bundles = self.app.cparser.options('Python Bundles')
+        bundle_options = [{'text': 'Skip Step'}]
+        bundle_options.extend([{'text': bundle} for bundle in bundles])
+        bundle_option = self.question_maker('Select python bundle to install', 'bundle', bundle_options, start_at=0)
+        if bundle_option != 'Skip Step':
+            self.app.cparser.set(section, 'pip', bundle_option)
+
+        self.app.write_config()
+
     def take_action(self, parsed_args):
+        if parsed_args.create:
+            self.create(parsed_args.name)
+            return
+
         if parsed_args.build:
             build = parsed_args.build
         else:
@@ -64,10 +112,10 @@ class Build(BaseCommand, SingleInstanceMixin):
             self.app.run_subcommand(cmd.split(' '))
             time.sleep(5)
 
-        if 'easy_install' in options:
-            cmd = 'remote easy_install -y'
+        if 'pip' in options:
+            cmd = 'remote pip install -y'
             cmd += ' --id %s' % instance.id
-            cmd += ' ' + options['easy_install']
+            cmd += ' ' + options['pip']
             self.app.run_subcommand(cmd.split(' '))
 
         if 'script_name' in options:

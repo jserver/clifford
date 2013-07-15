@@ -25,6 +25,10 @@ postgres = postgresql postgresql-client libpq-dev
 basic = virtualenv virtualenvwrapper
 
 [Groups]
+# $ = install single package
+# & = install another group
+# @ = add/install from ppa
+# + = add/install from 3rd-party repo
 base = dev etc img-libs libs vcs
 postgres-rabbit = &base postgres $rabbitmq-server $supervisor
 rethink = &base @rethinkdb $rabbitmq-server
@@ -47,45 +51,45 @@ rethinkdb = rethinkdb/ppa
 [Build:basic]
 size = t1.micro
 image = raring
-key = jserver
+key = <pem keyname>
 zone = NoPreference
 security_groups = ssh-only
 
 [Build:django]
 size = m1.small
 image = raring
-key = jserver
+key = <pem keyname>
 zone = us-east-1b
 security_groups = django-dev
+user_data = build.sh
 upgrade = dist-upgrade
 group = postgres-rabbit
-easy_install = basic
-script_name = build.sh
+pip = basic
 
 [Build:flask]
 size = t1.micro
 image = raring
-key = jserver
+key = <pem keyname>
 zone = us-east-1b
 security_groups = flask-dev,eighty-eighty-dev
+user_data = build.sh
 upgrade = dist-upgrade
 group = rethink
-easy_install = basic
-script_name = build.sh
+pip = basic
 
 [Project:django]
 build = django
-user_name = joe
-user_fullname = Joseph Server
-user_password = flypy23
-script_name = ubuntu_dotfiles_go.sh
+user_name = <username>
+user_fullname = <fullname>
+user_password = <password>
+script_name = dotfiles.sh
 
 [Project:flask]
 build = flask
-user_name = joe
-user_fullname = Joseph Server
-user_password = flypy23
-script_name = ubuntu_dotfiles_go.sh
+user_name = <username>
+user_fullname = <fullname>
+user_password = <password>
+script_name = dotfiles.sh
 
 [debconf:golang]
 dashboard = golang-go golang-go/dashboard boolean false

@@ -9,19 +9,35 @@ class BaseCommand(Command, KeyMixin):
 
     log = logging.getLogger(__name__)
 
-    def question_maker(self, question, item_type, dict_list, start_at=1):
+    def question_maker(self, question, item_type, dict_list, start_at=1, multiple_answers=False):
         self.app.stdout.write(question + '\n')
         self.app.stdout.write('-' * len(question) + '\n')
         for index, item in enumerate(dict_list):
             qnum = index + start_at
             self.app.stdout.write('%s) %s\n' % (qnum, item['text']))
-        item_choice = raw_input('Enter number of %s: ' % item_type)
-        if not item_choice.isdigit() or int(item_choice) - start_at >= len(dict_list):
-            raise RuntimeError('Not a valid %s!\n' % item_type)
-        choice = dict_list[int(item_choice) - start_at]
-        if 'obj' in choice:
-            return choice['obj']
-        return choice['text']
+
+        if multiple_answers:
+            item_choices = raw_input('Enter comma separated choices: ')
+            item_choices = [choice.strip() for choice in item_choices.split(',')]
+            choices = []
+            for item_choice in item_choices:
+                if not item_choice.isdigit() or int(item_choice) - start_at >= len(dict_list):
+                    raise RuntimeError('Not a valid %s!\n' % item_type)
+                item = dict_list[int(item_choice) - start_at]
+                if 'obj' in item:
+                    choices.append(item['obj'])
+                else:
+                    choices.append(item['text'])
+            return choices
+
+        else:
+            item_choice = raw_input('Enter number of %s: ' % item_type)
+            if not item_choice.isdigit() or int(item_choice) - start_at >= len(dict_list):
+                raise RuntimeError('Not a valid %s!\n' % item_type)
+            choice = dict_list[int(item_choice) - start_at]
+            if 'obj' in choice:
+                return choice['obj']
+            return choice['text']
 
     def sure_check(self, question='Are you sure? '):
         you_sure = raw_input(question)
