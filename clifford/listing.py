@@ -154,13 +154,14 @@ class Instances(Lister):
                 instances.append((instance.tags.get('Name', ''),
                                   instance.id,
                                   instance.state,
-                                  instance.instance_type,
-                                  instance.root_device_type,
-                                  instance.architecture,
-                                  instance.placement))
+                                  instance.instance_type[3:],
+                                  'Y' if instance.root_device_type == 'ebs' else 'N',
+                                  'Y' if instance.architecture == 'x86_64' else 'N',
+                                  instance.placement,
+                                  instance.public_dns_name))
                 instances = sorted(instances, key=lambda instance: instance[0].lower())
 
-        return (('Name', 'Id', 'State', 'Type', 'RootDevice', 'Arch', 'Zone'),
+        return (('Name', 'Id', 'State', 'Type', 'ebs', '64', 'Zone', 'Public DNS'),
                 (instance for instance in instances)
                 )
 
