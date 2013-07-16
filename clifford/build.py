@@ -1,3 +1,4 @@
+from multiprocessing import Pool
 import time
 
 from commands import BaseCommand
@@ -101,18 +102,35 @@ class Build(BaseCommand, LaunchOptionsMixin, SingleInstanceMixin):
         reservation = self.get_reservation(parsed_args.name)
 
         # begin the mutliprocessing
+        pool = Pool(processes=len(reservation.instances))
 
-        '''
         if 'upgrade' in options and options['upgrade'] in ['upgrade', 'dist-upgrade']:
             cmd = 'remote upgrade -y'
-            cmd += ' --id %s' % instance.id
+            cmd += ' --id %s'
             if options['upgrade'] == 'upgrade':
                 cmd += ' --upgrade'
             if options['upgrade'] == 'dist-upgrade':
                 cmd += ' --dist-upgrade'
-            self.app.run_subcommand(cmd.split(' '))
-            time.sleep(35)
 
+            results = []
+            for inst in reservation.instances:
+                inst_cmd = cmd % inst.id
+                self.app.stdout.write('Starting: %s' % inst.id)
+                results.append(pool.apply_async(self.app.run_subcommand, inst_cmd.split(' ')))
+
+            completed = []
+            while results:
+                time.sleep(20)
+                results = [result for result in results if result not in completed]
+                for result in results:
+                    if result.ready():
+                        self.app.stdout.write('Result: %s' % result.get())
+                        result.append(completed)
+
+            self.app.stdout.write('Finished')
+            time.sleep(10)
+
+        '''
         if 'group' in options:
             cmd = 'remote group install -y'
             cmd += ' --id %s' % instance.id
