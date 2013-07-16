@@ -37,6 +37,7 @@ class Project(BaseCommand, SingleInstanceMixin):
         self.app.run_subcommand(cmd.split(' '))
         time.sleep(15)
 
+        '''
         instance = self.get_instance(parsed_args.name)
         if not instance:
             raise RuntimeError('Cannot find instance')
@@ -63,3 +64,4 @@ class Project(BaseCommand, SingleInstanceMixin):
                 cmd += ' --copy-only'
             cmd += ' --id %s' % instance.id
             self.app.run_subcommand(cmd.split(' '))
+        '''

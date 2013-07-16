@@ -1,3 +1,4 @@
+import os
 import time
 
 from commands import BaseCommand
@@ -54,7 +55,6 @@ class Launch(BaseCommand, LaunchOptionsMixin):
         reservation = image.run(**kwargs)
         time.sleep(10)
 
-
         instances = reservation.instances
         time.sleep(10)
         self.app.stdout.write('Add Name tag to instance%s\n' % plural)
@@ -62,7 +62,9 @@ class Launch(BaseCommand, LaunchOptionsMixin):
             inst.add_tag('Name', parsed_args.name)
             inst.add_tag('Clifford', '%s-%s' % (parsed_args.name, idx + 1))
 
-        while True:
+        cnt = 0
+        while cnt < 6:
+            cnt += 1
             time.sleep(20)
             ready = True
             for inst in instances:
@@ -73,11 +75,13 @@ class Launch(BaseCommand, LaunchOptionsMixin):
                     break
             if ready:
                 break
+        if cnt == 6:
+            raise RuntimeError('All instance%s are not created equal!' % plural)
 
         time.sleep(20)
         self.app.stdout.write('Instance%s should now be running\n' % plural)
         for inst in instances:
             if self.aws_key_path:
-                self.app.stdout.write('ssh -i %s/%s.pem %s@%s\n' % (self.aws_key_path, key.name, self.get_user(inst), inst.public_dns_name))
+                self.app.stdout.write('ssh -i %s.pem %s@%s\n' % (os.path.join(self.aws_key_path, key.name), self.get_user(inst), inst.public_dns_name))
             else:
                 self.app.stdout.write('Public DNS: %s\n' % inst.public_dns_name)

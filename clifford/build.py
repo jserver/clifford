@@ -1,9 +1,10 @@
 from multiprocessing import Pool
+import os
 import time
 
+from activity import group_installer, pip_installer, script_runner, upgrade
 from commands import BaseCommand
 from mixins import LaunchOptionsMixin, SingleInstanceMixin
-
 
 class Build(BaseCommand, LaunchOptionsMixin, SingleInstanceMixin):
     "Launch and bootstrap a new ec2 instance"
@@ -63,6 +64,22 @@ class Build(BaseCommand, LaunchOptionsMixin, SingleInstanceMixin):
 
         self.app.write_config()
 
+    def run_activity(self, reservation, pool, func, arg_list):
+        results = []
+        for inst in reservation.instances:
+            self.app.stdout.write('%s Starting: %s\n' % (func.func_name, inst.id))
+            results.append(pool.apply_async(func, [inst] + arg_list))
+
+        completed = []
+        while results:
+            time.sleep(20)
+            results = [result for result in results if result not in completed]
+            for result in results:
+                if result.ready():
+                    self.app.stdout.write('-------------------------\n')
+                    self.app.stdout.write('Result: %s\n' % result.get())
+                    completed.append(result)
+
     def take_action(self, parsed_args):
         if parsed_args.create:
             self.create(parsed_args.name)
@@ -105,50 +122,36 @@ class Build(BaseCommand, LaunchOptionsMixin, SingleInstanceMixin):
         pool = Pool(processes=len(reservation.instances))
 
         if 'upgrade' in options and options['upgrade'] in ['upgrade', 'dist-upgrade']:
-            cmd = 'remote upgrade -y'
-            cmd += ' --id %s'
-            if options['upgrade'] == 'upgrade':
-                cmd += ' --upgrade'
-            if options['upgrade'] == 'dist-upgrade':
-                cmd += ' --dist-upgrade'
-
-            results = []
-            for inst in reservation.instances:
-                inst_cmd = cmd % inst.id
-                self.app.stdout.write('Starting: %s' % inst.id)
-                results.append(pool.apply_async(self.app.run_subcommand, inst_cmd.split(' ')))
-
-            completed = []
-            while results:
-                time.sleep(20)
-                results = [result for result in results if result not in completed]
-                for result in results:
-                    if result.ready():
-                        self.app.stdout.write('Result: %s' % result.get())
-                        result.append(completed)
-
-            self.app.stdout.write('Finished')
+            self.run_activity(reservation, pool, upgrade, [options['upgrade'], self.aws_key_path])
+            self.app.stdout.write('Upgrade Finished\n')
             time.sleep(10)
 
-        '''
         if 'group' in options:
-            cmd = 'remote group install -y'
-            cmd += ' --id %s' % instance.id
-            cmd += ' ' + options['group']
-            self.app.run_subcommand(cmd.split(' '))
-            time.sleep(5)
+            group = self.get_option('Groups', options['group'])
+            bundle_names = group.split(' ')
+            bundles = []
+            for bundle_name in bundle_names:
+                bundle = self.get_option('Bundles', bundle_name, raise_error=False)
+                if bundle:
+                    bundles.append((bundle_name, bundle))
+
+            for bundle in bundles:
+                self.app.stdout.write('bundle: %s [%s]\n' % (bundle[0], bundle[1]))
+
+            self.run_activity(reservation, pool, group_installer, [bundles, self.aws_key_path])
+            self.app.stdout.write('Group Installer Finished\n')
+            time.sleep(10)
 
         if 'pip' in options:
-            cmd = 'remote pip install -y'
-            cmd += ' --id %s' % instance.id
-            cmd += ' ' + options['pip']
-            self.app.run_subcommand(cmd.split(' '))
+            python_packages = self.get_option('Python Bundles', options['pip'])
+            self.app.stdout.write('python: %s [%s]\n' % (options['pip'], python_packages))
 
-        if 'script_name' in options:
-            cmd = 'remote script -y'
-            cmd += ' --script %s' % options['script_name']
-            if 'script_action' in options and options['script_action'] == 'copy':
-                cmd += ' --copy-only'
-            cmd += ' --id %s' % instance.id
-            self.app.run_subcommand(cmd.split(' '))
-        '''
+            self.run_activity(reservation, pool, pip_installer, [python_packages, self.aws_key_path])
+            self.app.stdout.write('Pip Installer Finished\n')
+            time.sleep(10)
+
+        if 'script' in options:
+            self.run_activity(reservation, pool, script_runner, [os.path.join(self.script_path, options['script']), self.aws_key_path])
+
+        pool.close()
+        pool.join()
