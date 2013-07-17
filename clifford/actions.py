@@ -112,7 +112,7 @@ class Domain(BaseCommand):
 
     def take_action(self, parsed_args):
         if not parsed_args.update:
-            self.app.stdout.write('%s\n' % self.get_option('General', 'domain'))
+            self.app.stdout.write('%s\n' % self.app.get_option('General', 'domain'))
             return
 
         if not self.app.cparser.has_section('General'):
@@ -133,8 +133,8 @@ class KeyPaths(BaseCommand):
 
     def take_action(self, parsed_args):
         if not parsed_args.aws and not parsed_args.pub:
-            self.app.stdout.write('aws: %s\n' % self.aws_key_path)
-            self.app.stdout.write('pub: %s\n' % self.pub_key_path)
+            self.app.stdout.write('aws: %s\n' % self.app.aws_key_path)
+            self.app.stdout.write('pub: %s\n' % self.app.pub_key_path)
             return
 
         if not self.app.cparser.has_section('General'):
@@ -158,7 +158,7 @@ class Salt(BaseCommand):
 
     def take_action(self, parsed_args):
         if not parsed_args.update:
-            self.app.stdout.write('%s\n' % self.get_option('General', 'salt'))
+            self.app.stdout.write('%s\n' % self.app.get_option('General', 'salt'))
             return
 
         if not self.app.cparser.has_section('General'):
@@ -178,7 +178,7 @@ class ScriptPath(BaseCommand):
 
     def take_action(self, parsed_args):
         if not parsed_args.update:
-            self.app.stdout.write('%s\n' % self.script_path)
+            self.app.stdout.write('%s\n' % self.app.script_path)
             return
 
         if not self.app.cparser.has_section('General'):

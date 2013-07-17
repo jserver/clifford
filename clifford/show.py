@@ -15,7 +15,7 @@ class Bundle(BaseCommand):
 
     def take_action(self, parsed_args):
         section = 'Bundles' if not parsed_args.is_py_bundle else 'Python Bundles'
-        self.app.stdout.write('%s\n' % self.get_option(section, parsed_args.name))
+        self.app.stdout.write('%s\n' % self.app.get_option(section, parsed_args.name))
 
 
 class Group(BaseCommand):
@@ -27,7 +27,7 @@ class Group(BaseCommand):
         return parser
 
     def take_action(self, parsed_args):
-        self.app.stdout.write('%s\n' % self.get_option('Groups', parsed_args.name))
+        self.app.stdout.write('%s\n' % self.app.get_option('Groups', parsed_args.name))
 
 
 class Instance(ShowOne, SingleInstanceMixin):

@@ -1,4 +1,5 @@
 import logging
+import os
 import sys
 from ConfigParser import SafeConfigParser
 from os.path import expanduser
@@ -34,6 +35,35 @@ class CliffordApp(App):
         self.log.debug('clean_up %s', cmd.__class__.__name__)
         if err:
             self.log.debug('got an error: %s', err)
+
+    def get_option(self, section, option, raise_error=True):
+        if not self.app.cparser.has_option(section, option):
+            if raise_error:
+                raise RuntimeError('No %s set!' % option)
+            else:
+                return None
+        value = self.app.cparser.get(section, option)
+        if option.endswith('_path'):
+            value = os.path.expanduser(value)
+            value = os.path.expandvars(value)
+        return value
+
+    def add_slash(self, key_path):
+        if key_path[-1] != '/':
+            key_path = key_path + '/'
+        return key_path
+
+    @property
+    def aws_key_path(self):
+        return self.get_option('General', 'aws_key_path')
+
+    @property
+    def pub_key_path(self):
+        return self.get_option('General', 'pub_key_path')
+
+    @property
+    def script_path(self):
+        return self.get_option('General', 'script_path')
 
     def write_config(self):
         with open(self.config_file, 'wb') as configfile:

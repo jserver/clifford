@@ -1,5 +1,3 @@
-import logging
-
 from commands import BaseCommand
 
 
@@ -13,7 +11,7 @@ class BundleAdd(BaseCommand):
 
     def take_action(self, parsed_args):
         section = 'Bundles' if not parsed_args.is_py_bundle else 'Python Bundles'
-        bundle = self.get_option(section, parsed_args.name)
+        bundle = self.app.get_option(section, parsed_args.name)
         packages = bundle.split(' ')
 
         new_packages = raw_input('Enter packages to add: ')
@@ -36,7 +34,7 @@ class BundleRemove(BaseCommand):
 
     def take_action(self, parsed_args):
         section = 'Bundles' if not parsed_args.is_py_bundle else 'Python Bundles'
-        bundle = self.get_option(section, parsed_args.name)
+        bundle = self.app.get_option(section, parsed_args.name)
         packages = bundle.split(' ')
 
         packages_to_remove = raw_input('Enter packages to remove: ')
@@ -133,7 +131,7 @@ class GroupAdd(BaseCommand):
         return parser
 
     def take_action(self, parsed_args):
-        group = self.get_option('Groups', parsed_args.name)
+        group = self.app.get_option('Groups', parsed_args.name)
         bundles = group.split(' ')
 
         new_bundles = raw_input('Enter bundles to add: ')
@@ -155,7 +153,7 @@ class GroupRemove(BaseCommand):
         return parser
 
     def take_action(self, parsed_args):
-        group = self.get_option('Groups', parsed_args.name)
+        group = self.app.get_option('Groups', parsed_args.name)
         bundles = group.split(' ')
 
         bundles_to_remove = raw_input('Enter bundles to remove: ')

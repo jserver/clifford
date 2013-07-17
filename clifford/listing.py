@@ -3,7 +3,7 @@ import os
 
 from cliff.lister import Lister
 
-from mixins import KeyMixin, SingleInstanceMixin
+from mixins import SingleInstanceMixin
 
 
 ROWS, COLUMNS = [int(item) for item in os.popen('stty size', 'r').read().split()]
@@ -205,14 +205,14 @@ class PythonBundles(Lister):
                 )
 
 
-class Scripts(Lister, KeyMixin):
+class Scripts(Lister):
     "List of scripts in script_path."
 
     log = logging.getLogger(__name__)
 
     def take_action(self, parsed_args):
         return (('Name',),
-                ((script,) for script in os.listdir(self.script_path) if not script.startswith('.'))
+                ((script,) for script in os.listdir(self.app.script_path) if not script.startswith('.'))
                 )
 
 

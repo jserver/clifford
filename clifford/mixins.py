@@ -1,36 +1,4 @@
 import glob
-import os
-
-
-class KeyMixin(object):
-    def get_option(self, section, option, raise_error=True):
-        if not self.app.cparser.has_option(section, option):
-            if raise_error:
-                raise RuntimeError('No %s set!' % option)
-            else:
-                return None
-        value = self.app.cparser.get(section, option)
-        if option.endswith('_path'):
-            value = os.path.expanduser(value)
-            value = os.path.expandvars(value)
-        return value
-
-    def add_slash(self, key_path):
-        if key_path[-1] != '/':
-            key_path = key_path + '/'
-        return key_path
-
-    @property
-    def aws_key_path(self):
-        return self.get_option('General', 'aws_key_path')
-
-    @property
-    def pub_key_path(self):
-        return self.get_option('General', 'pub_key_path')
-
-    @property
-    def script_path(self):
-        return self.get_option('General', 'script_path')
 
 
 class LaunchOptionsMixin(object):
@@ -142,21 +110,22 @@ class LaunchOptionsMixin(object):
         return security_groups
 
     def get_user_data(self, filename='', assume_yes=False, return_name=False):
+        script_path = self.app.script_path
         if filename:
-            user_data = open('%s/%s' % (self.script_path, filename), 'r').read()
+            user_data = open('%s/%s' % (script_path, filename), 'r').read()
         elif assume_yes:
             user_data = None
         else:
-            script_files = glob.glob('%s/*.sh' % self.script_path)
+            script_files = glob.glob('%s/*.sh' % script_path)
             scripts = [{'text': 'Skip Step'}]
-            scripts.extend([{'text': item[len(self.script_path) + 1:]} for item in script_files])
+            scripts.extend([{'text': item[len(script_path) + 1:]} for item in script_files])
             script = self.question_maker('Select user-data script', 'script', scripts, start_at=0)
             if script == 'Skip Step':
                 user_data = None
             elif return_name:
                 user_data = script
             else:
-                user_data = open('%s/%s' % (self.script_path, script), 'r').read()
+                user_data = open('%s/%s' % (script_path, script), 'r').read()
 
         return user_data
 

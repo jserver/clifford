@@ -122,36 +122,36 @@ class Build(BaseCommand, LaunchOptionsMixin, SingleInstanceMixin):
         pool = Pool(processes=len(reservation.instances))
 
         if 'upgrade' in options and options['upgrade'] in ['upgrade', 'dist-upgrade']:
-            self.run_activity(reservation, pool, upgrade, [options['upgrade'], self.aws_key_path])
+            self.run_activity(reservation, pool, upgrade, [options['upgrade'], self.app.aws_key_path])
             self.app.stdout.write('Upgrade Finished\n')
             time.sleep(10)
 
         if 'group' in options:
-            group = self.get_option('Groups', options['group'])
+            group = self.app.get_option('Groups', options['group'])
             bundle_names = group.split(' ')
             bundles = []
             for bundle_name in bundle_names:
-                bundle = self.get_option('Bundles', bundle_name, raise_error=False)
+                bundle = self.app.get_option('Bundles', bundle_name, raise_error=False)
                 if bundle:
                     bundles.append((bundle_name, bundle))
 
             for bundle in bundles:
                 self.app.stdout.write('bundle: %s [%s]\n' % (bundle[0], bundle[1]))
 
-            self.run_activity(reservation, pool, group_installer, [bundles, self.aws_key_path])
+            self.run_activity(reservation, pool, group_installer, [bundles, self.app.aws_key_path])
             self.app.stdout.write('Group Installer Finished\n')
             time.sleep(10)
 
         if 'pip' in options:
-            python_packages = self.get_option('Python Bundles', options['pip'])
+            python_packages = self.app.get_option('Python Bundles', options['pip'])
             self.app.stdout.write('python: %s [%s]\n' % (options['pip'], python_packages))
 
-            self.run_activity(reservation, pool, pip_installer, [python_packages, self.aws_key_path])
+            self.run_activity(reservation, pool, pip_installer, [python_packages, self.app.aws_key_path])
             self.app.stdout.write('Pip Installer Finished\n')
             time.sleep(10)
 
         if 'script' in options:
-            self.run_activity(reservation, pool, script_runner, [os.path.join(self.script_path, options['script']), self.aws_key_path])
+            self.run_activity(reservation, pool, script_runner, [os.path.join(self.app.script_path, options['script']), self.app.aws_key_path])
 
         pool.close()
         pool.join()

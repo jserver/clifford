@@ -81,7 +81,7 @@ class Launch(BaseCommand, LaunchOptionsMixin):
         time.sleep(20)
         self.app.stdout.write('Instance%s should now be running\n' % plural)
         for inst in instances:
-            if self.aws_key_path:
-                self.app.stdout.write('ssh -i %s.pem %s@%s\n' % (os.path.join(self.aws_key_path, key.name), self.get_user(inst), inst.public_dns_name))
+            if self.app.aws_key_path:
+                self.app.stdout.write('ssh -i %s.pem %s@%s\n' % (os.path.join(self.app.aws_key_path, key.name), self.get_user(inst), inst.public_dns_name))
             else:
                 self.app.stdout.write('Public DNS: %s\n' % inst.public_dns_name)
