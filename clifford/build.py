@@ -68,7 +68,7 @@ class Build(BaseCommand, LaunchOptionsMixin, SingleInstanceMixin):
         results = []
         for inst in reservation.instances:
             self.app.stdout.write('%s Starting: %s\n' % (func.func_name, inst.id))
-            results.append(pool.apply_async(func, [inst] + arg_list))
+            results.append(pool.apply_async(func, [self.get_user(inst), inst] + arg_list))
 
         completed = []
         while results:

@@ -5,7 +5,7 @@ import time
 import paramiko
 
 
-def group_installer(instance, bundles, aws_key_path):
+def group_installer(username, instance, bundles, aws_key_path):
     logname = 'group_installer.%s' % instance.id
     logger = logging.getLogger(logname)
     logger.setLevel(logging.ERROR)
@@ -17,7 +17,7 @@ def group_installer(instance, bundles, aws_key_path):
     ssh = paramiko.SSHClient()
     ssh.set_log_channel(logname)
     ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-    ssh.connect(instance.public_dns_name, username='ubuntu', key_filename='%s.pem' % os.path.join(aws_key_path, instance.key_name))
+    ssh.connect(instance.public_dns_name, username=username, key_filename='%s.pem' % os.path.join(aws_key_path, instance.key_name))
 
     has_error = False
     for bundle in bundles:
@@ -43,7 +43,7 @@ def group_installer(instance, bundles, aws_key_path):
     return output
 
 
-def pip_installer(instance, packages, aws_key_path):
+def pip_installer(username, instance, packages, aws_key_path):
     logname = 'pip_installer.%s' % instance.id
     logger = logging.getLogger(logname)
     logger.setLevel(logging.ERROR)
@@ -55,7 +55,7 @@ def pip_installer(instance, packages, aws_key_path):
     ssh = paramiko.SSHClient()
     ssh.set_log_channel(logname)
     ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-    ssh.connect(instance.public_dns_name, username='ubuntu', key_filename='%s.pem' % os.path.join(aws_key_path, instance.key_name))
+    ssh.connect(instance.public_dns_name, username=username, key_filename='%s.pem' % os.path.join(aws_key_path, instance.key_name))
 
     stdin, stdout, stderr = ssh.exec_command('sudo pip install %s' % packages)
     for line in stdout.readlines():
@@ -66,7 +66,7 @@ def pip_installer(instance, packages, aws_key_path):
     return output
 
 
-def script_runner(instance, script, aws_key_path, user=None, copy_only=False):
+def script_runner(username, instance, script, aws_key_path, copy_only=False):
     logname = 'script_runner.%s' % instance.id
     logger = logging.getLogger(logname)
     logger.setLevel(logging.ERROR)
@@ -79,10 +79,11 @@ def script_runner(instance, script, aws_key_path, user=None, copy_only=False):
     ssh.set_log_channel(logname)
     ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
 
-    if user:
-        ssh.connect(instance.public_dns_name, username=user)
+    # quite fragile, what if an ubuntu machine has a user named admin
+    if username in ['admin', 'ubuntu']:
+        ssh.connect(instance.public_dns_name, username=username, key_filename='%s.pem' % os.path.join(aws_key_path, instance.key_name))
     else:
-        ssh.connect(instance.public_dns_name, username='ubuntu', key_filename='%s.pem' % os.path.join(aws_key_path, instance.key_name))
+        ssh.connect(instance.public_dns_name, username=username)
 
     script_name = os.path.basename(script)
 
@@ -97,10 +98,7 @@ def script_runner(instance, script, aws_key_path, user=None, copy_only=False):
         channel.input_enabled = True
         forward = paramiko.agent.AgentRequestHandler(channel)
 
-        if user:
-            channel.exec_command('/home/%s/%s' % (user, script_name))
-        else:
-            channel.exec_command('/home/ubuntu/%s' % script_name)
+        channel.exec_command('/home/%s/%s' % (username, script_name))
 
         while True:
             time.sleep(5)
@@ -116,7 +114,7 @@ def script_runner(instance, script, aws_key_path, user=None, copy_only=False):
     return output
 
 
-def upgrade(instance, action, aws_key_path):
+def upgrade(username, instance, action, aws_key_path):
     logname = 'upgrade.%s' % instance.id
     logger = logging.getLogger(logname)
     logger.setLevel(logging.ERROR)
@@ -128,7 +126,7 @@ def upgrade(instance, action, aws_key_path):
     ssh = paramiko.SSHClient()
     ssh.set_log_channel(logname)
     ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-    ssh.connect(instance.public_dns_name, username='ubuntu', key_filename='%s.pem' % os.path.join(aws_key_path, instance.key_name))
+    ssh.connect(instance.public_dns_name, username=username, key_filename='%s.pem' % os.path.join(aws_key_path, instance.key_name))
 
     stdin, stdout, stderr = ssh.exec_command('sudo su -c "echo \'\n### CLIFFORD\n127.0.1.1\t%s\' >> /etc/hosts"' % instance.tags.get('Name'))
 

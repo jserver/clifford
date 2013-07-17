@@ -46,14 +46,9 @@ class BaseCommand(Command):
         return True
 
     def get_user(self, instance):
-        image = self.app.ec2_conn.get_image(instance.image_id)
-        if image.name.startswith('debian'):
-            user = 'admin'
-        elif image.name.startswith('ubuntu'):
-            user = 'ubuntu'
-        else:
-            user = None
-        return user
+        aws_image = self.app.ec2_conn.get_image(instance.image_id)
+        user_name = [value[1].split('@')[0] for value in self.app.cparser.items('Images') if value[1].split('@')[1] == aws_image.id][0]
+        return user_name
 
     def printOutError(self, out, error):
         for line in out.readlines():

@@ -80,6 +80,7 @@ class AddImage(BaseCommand):
 
     def get_parser(self, prog_name):
         parser = super(AddImage, self).get_parser(prog_name)
+        parser.add_argument('user')
         parser.add_argument('ami_id')
         return parser
 
@@ -97,7 +98,7 @@ class AddImage(BaseCommand):
 
         if not self.app.cparser.has_section('Images'):
             self.app.cparser.add_section('Images')
-        self.app.cparser.set('Images', description, image.id)
+        self.app.cparser.set('Images', description, '%s@%s' % (parsed_args.user, image.id))
         self.app.write_config()
         self.app.stdout.write('%s image added to config\n' % image.id)
 

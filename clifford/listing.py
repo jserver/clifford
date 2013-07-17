@@ -108,15 +108,15 @@ class Images(Lister):
         if not items:
             raise RuntimeError('No images found!')
 
-        image_ids = [value[1] for value in items]
+        image_ids = [value[1].split('@')[1] for value in items]
 
-        images = [(items[image_ids.index(image.id)][0], image.id, image.name) for image in self.app.ec2_conn.get_all_images(image_ids=image_ids)]
+        images = [(items[image_ids.index(image.id)][0], items[image_ids.index(image.id)][1].split('@')[0], image.id, image.name) for image in self.app.ec2_conn.get_all_images(image_ids=image_ids)]
         my_images = self.app.ec2_conn.get_all_images(owners=['self'])
         if my_images:
-            images.extend([('', image.id, image.name) for image in my_images])
+            images.extend([('', '', image.id, image.name) for image in my_images if image.id not in image_ids])
         images = sorted(images, key=lambda image: image[0].lower())
 
-        return (('Option', 'Image ID', 'Name'),
+        return (('Option', 'User', 'Image ID', 'Name'),
                 tuple(images)
                 )
 
