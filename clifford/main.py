@@ -28,6 +28,33 @@ class CliffordApp(App):
     def initialize_app(self, argv):
         self.log.debug('initialize_app')
 
+        changes_made = False
+
+        if not self.cparser.has_section('General'):
+            self.cparser.add_section('General')
+            changes_made = True
+
+        if not self.get_option('General', 'aws_key_path', raise_error=False):
+            aws_key_path = raw_input('Enter aws_key_path: ')
+            cmd = 'key_paths --aws %s' % aws_key_path
+            self.run_subcommand(cmd.split(' '))
+            changes_made = True
+
+        if not self.get_option('General', 'pub_key_path', raise_error=False):
+            pub_key_path = raw_input('Enter pub_key_path: ')
+            cmd = 'key_paths --pub %s' % pub_key_path
+            self.run_subcommand(cmd.split(' '))
+            changes_made = True
+
+        if not self.get_option('General', 'script_path', raise_error=False):
+            script_path = raw_input('Enter script_path: ')
+            cmd = 'script_path -u %s' % script_path
+            self.run_subcommand(cmd.split(' '))
+            changes_made = True
+
+        if changes_made:
+            self.write_config()
+
     def prepare_to_run_command(self, cmd):
         self.log.debug('prepare_to_run_command %s', cmd.__class__.__name__)
 
@@ -37,21 +64,16 @@ class CliffordApp(App):
             self.log.debug('got an error: %s', err)
 
     def get_option(self, section, option, raise_error=True):
-        if not self.app.cparser.has_option(section, option):
+        if not self.cparser.has_option(section, option):
             if raise_error:
                 raise RuntimeError('No %s set!' % option)
             else:
                 return None
-        value = self.app.cparser.get(section, option)
+        value = self.cparser.get(section, option)
         if option.endswith('_path'):
             value = os.path.expanduser(value)
             value = os.path.expandvars(value)
         return value
-
-    def add_slash(self, key_path):
-        if key_path[-1] != '/':
-            key_path = key_path + '/'
-        return key_path
 
     @property
     def aws_key_path(self):

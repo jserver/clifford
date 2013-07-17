@@ -20,7 +20,7 @@ class Build(BaseCommand, LaunchOptionsMixin, SingleInstanceMixin):
 
     def create(self, name):
         instance_type = self.get_instance_type()
-        image = self.get_image(return_name=True)
+        image_item = self.get_image(return_item=True)
         key = self.get_key()
         zone = self.get_zone()
         security_groups = self.get_security_groups(return_names=True)
@@ -29,20 +29,27 @@ class Build(BaseCommand, LaunchOptionsMixin, SingleInstanceMixin):
         upgrade_options = [{'text': 'Skip Step'}, {'text': 'upgrade'}, {'text': 'dist-upgrade'}]
         upgrade_option = self.question_maker('Select upgrade option', 'upgrade', upgrade_options, start_at=0)
 
-        groups = self.app.cparser.options('Groups')
-        group_options = [{'text': 'Skip Step'}]
-        group_options.extend([{'text': group} for group in groups])
-        group_option = self.question_maker('Select group to install', 'group', group_options, start_at=0)
+        if self.app.cparser.has_section('Groups'):
+            groups = self.app.cparser.options('Groups')
+            group_options = [{'text': 'Skip Step'}]
+            group_options.extend([{'text': group} for group in groups])
+            group_option = self.question_maker('Select group to install', 'group', group_options, start_at=0)
+        else:
+            group_option = 'Skip Step'
 
-        bundles = self.app.cparser.options('Python Bundles')
-        bundle_options = [{'text': 'Skip Step'}]
-        bundle_options.extend([{'text': bundle} for bundle in bundles])
-        bundle_option = self.question_maker('Select python bundle to install', 'bundle', bundle_options, start_at=0)
+        if self.app.cparser.has_section('Python Bundles'):
+            bundles = self.app.cparser.options('Python Bundles')
+            bundle_options = [{'text': 'Skip Step'}]
+            bundle_options.extend([{'text': bundle} for bundle in bundles])
+            bundle_option = self.question_maker('Select python bundle to install', 'bundle', bundle_options, start_at=0)
+        else:
+            bundle_option = 'Skip Step'
 
         section = 'Build:' + name
         self.app.cparser.add_section(section)
         self.app.cparser.set(section, 'size', instance_type)
-        self.app.cparser.set(section, 'image', image)
+        self.app.cparser.set(section, 'login', image_item[1].split('@')[0])
+        self.app.cparser.set(section, 'image', image_item[1].split('@')[1])
         self.app.cparser.set(section, 'key', key.name)
 
         if hasattr(zone, 'name'):
@@ -68,7 +75,7 @@ class Build(BaseCommand, LaunchOptionsMixin, SingleInstanceMixin):
         results = []
         for inst in reservation.instances:
             self.app.stdout.write('%s Starting: %s\n' % (func.func_name, inst.id))
-            results.append(pool.apply_async(func, [self.get_user(inst), inst] + arg_list))
+            results.append(pool.apply_async(func, [inst] + arg_list))
 
         completed = []
         while results:
@@ -122,7 +129,7 @@ class Build(BaseCommand, LaunchOptionsMixin, SingleInstanceMixin):
         pool = Pool(processes=len(reservation.instances))
 
         if 'upgrade' in options and options['upgrade'] in ['upgrade', 'dist-upgrade']:
-            self.run_activity(reservation, pool, upgrade, [options['upgrade'], self.app.aws_key_path])
+            self.run_activity(reservation, pool, upgrade, [options['login'], options['upgrade'], self.app.aws_key_path])
             self.app.stdout.write('Upgrade Finished\n')
             time.sleep(10)
 
@@ -138,7 +145,7 @@ class Build(BaseCommand, LaunchOptionsMixin, SingleInstanceMixin):
             for bundle in bundles:
                 self.app.stdout.write('bundle: %s [%s]\n' % (bundle[0], bundle[1]))
 
-            self.run_activity(reservation, pool, group_installer, [bundles, self.app.aws_key_path])
+            self.run_activity(reservation, pool, group_installer, [options['login'], bundles, self.app.aws_key_path])
             self.app.stdout.write('Group Installer Finished\n')
             time.sleep(10)
 
@@ -146,12 +153,12 @@ class Build(BaseCommand, LaunchOptionsMixin, SingleInstanceMixin):
             python_packages = self.app.get_option('Python Bundles', options['pip'])
             self.app.stdout.write('python: %s [%s]\n' % (options['pip'], python_packages))
 
-            self.run_activity(reservation, pool, pip_installer, [python_packages, self.app.aws_key_path])
+            self.run_activity(reservation, pool, pip_installer, [options['login'], python_packages, self.app.aws_key_path])
             self.app.stdout.write('Pip Installer Finished\n')
             time.sleep(10)
 
         if 'script' in options:
-            self.run_activity(reservation, pool, script_runner, [os.path.join(self.app.script_path, options['script']), self.app.aws_key_path])
+            self.run_activity(reservation, pool, script_runner, [options['login'], os.path.join(self.app.script_path, options['script']), self.app.aws_key_path])
 
         pool.close()
         pool.join()

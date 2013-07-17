@@ -142,9 +142,9 @@ class KeyPaths(BaseCommand):
             self.app.cparser.add_section('General')
 
         if parsed_args.aws:
-            self.app.cparser.set('General', 'aws_key_path', self.add_slash(parsed_args.aws))
+            self.app.cparser.set('General', 'aws_key_path', parsed_args.aws)
         if parsed_args.pub:
-            self.app.cparser.set('General', 'pub_key_path', self.add_slash(parsed_args.pub))
+            self.app.cparser.set('General', 'pub_key_path', parsed_args.pub)
 
         self.app.write_config()
 
@@ -185,7 +185,7 @@ class ScriptPath(BaseCommand):
         if not self.app.cparser.has_section('General'):
             self.app.cparser.add_section('General')
 
-        self.app.cparser.set('General', 'script_path', self.add_slash(parsed_args.update))
+        self.app.cparser.set('General', 'script_path', parsed_args.update)
         self.app.write_config()
 
 

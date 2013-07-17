@@ -12,7 +12,7 @@ class LaunchOptionsMixin(object):
 
         return instance_type
 
-    def get_image(self, image_id='', return_name=False):
+    def get_image(self, image_id='', return_item=False):
         image = None
         if image_id:
             try:
@@ -25,18 +25,16 @@ class LaunchOptionsMixin(object):
                 raise RuntimeError('No image section found!\n')
 
             items = self.app.cparser.items('Images')
-            image_ids = [item[1] for item in items]
+            image_ids = [item[1].split('@')[1] for item in items]
             if not image_ids:
                 raise RuntimeError('No images found!')
-            if len(items) == 1:
-                return image_ids[0]
 
             images = [{'text': '%s - %s' % (items[image_ids.index(img.id)][0], img.id), 'obj': img} for img in self.app.ec2_conn.get_all_images(image_ids=image_ids)]
             images = sorted(images, key=lambda image: image['text'].lower())
             image = self.question_maker('Available Images', 'image', images)
 
-            if return_name:
-                image = [item[0] for item in items if item[1] == image.id][0]
+            if return_item:
+                return [item for item in items if item[1].split('@')[1] == image.id][0]
 
         return image
 

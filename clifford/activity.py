@@ -5,7 +5,7 @@ import time
 import paramiko
 
 
-def group_installer(username, instance, bundles, aws_key_path):
+def group_installer(instance, username, bundles, aws_key_path):
     logname = 'group_installer.%s' % instance.id
     logger = logging.getLogger(logname)
     logger.setLevel(logging.ERROR)
@@ -43,7 +43,7 @@ def group_installer(username, instance, bundles, aws_key_path):
     return output
 
 
-def pip_installer(username, instance, packages, aws_key_path):
+def pip_installer(instance, username, packages, aws_key_path):
     logname = 'pip_installer.%s' % instance.id
     logger = logging.getLogger(logname)
     logger.setLevel(logging.ERROR)
@@ -66,7 +66,7 @@ def pip_installer(username, instance, packages, aws_key_path):
     return output
 
 
-def script_runner(username, instance, script, aws_key_path, copy_only=False):
+def script_runner(instance, username, script, aws_key_path, copy_only=False):
     logname = 'script_runner.%s' % instance.id
     logger = logging.getLogger(logname)
     logger.setLevel(logging.ERROR)
@@ -114,7 +114,7 @@ def script_runner(username, instance, script, aws_key_path, copy_only=False):
     return output
 
 
-def upgrade(username, instance, action, aws_key_path):
+def upgrade(instance, username, action, aws_key_path):
     logname = 'upgrade.%s' % instance.id
     logger = logging.getLogger(logname)
     logger.setLevel(logging.ERROR)
