@@ -9,27 +9,21 @@ class Project(BaseCommand, SingleInstanceMixin):
 
     def get_parser(self, prog_name):
         parser = super(Project, self).get_parser(prog_name)
-        parser.add_argument('-n', '--name')
-        parser.add_argument('-p', '--project')
+        parser.add_argument('project')
+        parser.add_argument('name')
         return parser
 
     def take_action(self, parsed_args):
-        name = raw_input('Enter name to tag instances with: ')
-        if not name or not self.is_ok(name):
+        if not self.is_ok(parsed_args.name):
             raise RuntimeError('Inavlid Name!\n')
 
-        if not parsed_args.project:
-            project = self.question_maker('Select Project', 'project',
-                    [{'text': section[8:]} for section in self.app.cparser.sections() if section.startswith('Project:')])
-        else:
-            project = parsed_args.project
-        if not self.app.cparser.has_section('Project:%s' % project):
-            raise RuntimeError('No project with that name in config!\n')
+        if not self.app.cparser.has_section('Project:%s' % parsed_args.project):
+            raise RuntimeError('Project not found!')
 
         if not self.sure_check():
             return
 
-        items = self.app.cparser.items('Project:%s' % project)
+        items = self.app.cparser.items('Project:%s' % parsed_args.project)
         options = {}
         for item in items:
             options[item[0]] = item[1]

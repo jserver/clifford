@@ -9,6 +9,21 @@ class BaseCommand(Command):
 
     log = logging.getLogger(__name__)
 
+    def get_user(self, instance):
+        aws_image = self.app.ec2_conn.get_image(instance.image_id)
+        user_name = [value[1].split('@')[0] for value in self.app.cparser.items('Images') if value[1].split('@')[1] == aws_image.id][0]
+        return user_name
+
+    def is_ok(self, name):
+        if not name:
+            return False
+        reservations = self.app.ec2_conn.get_all_instances()
+        for reservation in reservations:
+            for instance in reservation.instances:
+                if name == instance.tags.get('Name', ''):
+                    return False
+        return True
+
     def question_maker(self, question, item_type, dict_list, start_at=1, multiple_answers=False):
         self.app.stdout.write(question + '\n')
         self.app.stdout.write('-' * len(question) + '\n')
@@ -44,11 +59,6 @@ class BaseCommand(Command):
         if you_sure.lower() not in ['y', 'yes']:
             return False
         return True
-
-    def get_user(self, instance):
-        aws_image = self.app.ec2_conn.get_image(instance.image_id)
-        user_name = [value[1].split('@')[0] for value in self.app.cparser.items('Images') if value[1].split('@')[1] == aws_image.id][0]
-        return user_name
 
     def printOutError(self, out, error):
         for line in out.readlines():

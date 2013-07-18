@@ -43,6 +43,31 @@ class Buckets(Lister):
                 )
 
 
+class Builds(Lister):
+    "List of builds in config."
+
+    log = logging.getLogger(__name__)
+
+    def take_action(self, parsed_args):
+        builds = [section for section in self.app.cparser.sections() if section.startswith('Build:')]
+        if not builds:
+            raise RuntimeError('No builds found!')
+
+        build_tuples = []
+        for build in builds:
+            build_tuples.append((build.split(':')[1],
+                                 self.app.get_option(build, 'size', raise_error=False),
+                                 self.app.get_option(build, 'image', raise_error=False),
+                                 self.app.get_option(build, 'key', raise_error=False),
+                                 self.app.get_option(build, 'zone', raise_error=False),
+                                 self.app.get_option(build, 'group', raise_error=False)))
+
+        return (('Name', 'Size', 'Image', 'Key', 'Zone', 'Group'),
+                build_tuples
+                )
+
+
+
 class Bundles(Lister):
     "List of bundles in config."
 
@@ -177,6 +202,28 @@ class Keys(Lister):
         return (('Name',),
                 ((key.name,) for key in keys)
                 )
+
+
+class Projects(Lister):
+    "List of projects in config."
+
+    log = logging.getLogger(__name__)
+
+    def take_action(self, parsed_args):
+        projects = [section for section in self.app.cparser.sections() if section.startswith('Project:')]
+        if not projects:
+            raise RuntimeError('No projects found!')
+
+        project_tuples = []
+        for project in projects:
+            project_tuples.append((project.split(':')[1],
+                                   self.app.get_option(project, 'build', raise_error=False) or '',
+                                   self.app.get_option(project, 'count', raise_error=False) or ''))
+
+        return (('Name', 'Build', 'Count'),
+                project_tuples
+                )
+
 
 
 class PythonBundles(Lister):
