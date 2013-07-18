@@ -71,6 +71,7 @@ setup(
             'ls = clifford.listing:Instances',
 
             'addresses = clifford.listing:Addresses',
+            'aws_images = clifford.listing:AwsImages',
             'buckets = clifford.listing:Buckets',
             'builds = clifford.listing:Builds',
             'bundles = clifford.listing:Bundles',
@@ -80,7 +81,6 @@ setup(
             'instances = clifford.listing:Instances',
             'keys = clifford.listing:Keys',
             'projects = clifford.listing:Projects',
-            'python bundles = clifford.listing:PythonBundles',
             'scripts = clifford.listing:Scripts',
             'security groups = clifford.listing:SecurityGroups',
             'snapshots = clifford.listing:Snapshots',
@@ -114,17 +114,8 @@ setup(
             'remote script = clifford.remote:Script',
             'remote upgrade = clifford.remote:Upgrade',
 
-            'create bundle = clifford.package:CreateBundle',
-            'bundle add = clifford.package:BundleAdd',
-            'bundle rm = clifford.package:BundleRemove',
-            'del bundle = clifford.package:DeleteBundle',
-            'show bundle = clifford.show:Bundle',
-
-            'create group = clifford.package:CreateGroup',
-            'group add = clifford.package:GroupAdd',
-            'group rm = clifford.package:GroupRemove',
-            'del group = clifford.package:DeleteGroup',
-            'show group = clifford.show:Group',
+            'bundle = clifford.package:Bundle',
+            'group = clifford.package:Group',
 
             # Elastic IPs
             'associate = clifford.address:Associate',

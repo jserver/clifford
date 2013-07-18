@@ -1,7 +1,7 @@
+import json
 import logging
 import os
 import sys
-from ConfigParser import SafeConfigParser
 from os.path import expanduser
 
 import boto
@@ -19,37 +19,26 @@ class CliffordApp(App):
             version='0.1',
             command_manager=CommandManager('clifford', convert_underscores=False),
             )
-        self.config_file = '%s/.clifford/config' % expanduser("~")
         self.ec2_conn = boto.connect_ec2()
         self.s3_conn = boto.connect_s3()
-        self.cparser = SafeConfigParser()
-        self.cparser.read(self.config_file)
+        self.json_config_file = '%s/.clifford/config.json' % expanduser("~")
+        self.config = self.read_config()
 
     def initialize_app(self, argv):
         self.log.debug('initialize_app')
 
         changes_made = False
 
-        if not self.cparser.has_section('General'):
-            self.cparser.add_section('General')
+        if 'AwsKeyPath' not in self.config:
+            self.config['AwsKeyPath'] = self.input_valid_path('AwsKeyPath')
             changes_made = True
 
-        if not self.get_option('General', 'aws_key_path', raise_error=False):
-            aws_key_path = raw_input('Enter aws_key_path: ')
-            cmd = 'key_paths --aws %s' % aws_key_path
-            self.run_subcommand(cmd.split(' '))
+        if 'PubKeyPath' not in self.config:
+            self.config['PubKeyPath']  = self.input_valid_path('PubKeyPath')
             changes_made = True
 
-        if not self.get_option('General', 'pub_key_path', raise_error=False):
-            pub_key_path = raw_input('Enter pub_key_path: ')
-            cmd = 'key_paths --pub %s' % pub_key_path
-            self.run_subcommand(cmd.split(' '))
-            changes_made = True
-
-        if not self.get_option('General', 'script_path', raise_error=False):
-            script_path = raw_input('Enter script_path: ')
-            cmd = 'script_path -u %s' % script_path
-            self.run_subcommand(cmd.split(' '))
+        if 'ScriptPath' not in self.config:
+            self.config['ScriptPath']  = self.input_valid_path('ScriptPath')
             changes_made = True
 
         if changes_made:
@@ -63,34 +52,53 @@ class CliffordApp(App):
         if err:
             self.log.debug('got an error: %s', err)
 
-    def get_option(self, section, option, raise_error=True):
-        if not self.cparser.has_option(section, option):
-            if raise_error:
-                raise RuntimeError('No %s set!' % option)
-            else:
-                return None
-        value = self.cparser.get(section, option)
-        if option.endswith('_path'):
-            value = os.path.expanduser(value)
+    def input_valid_path(self, name):
+        while True:
+            path = raw_input('Enter %s: ' % name)
+            if not path:
+                self.stdout.write('This field is required!\n')
+                continue
+            value = os.path.expanduser(path)
             value = os.path.expandvars(value)
+            if not os.path.exists(value):
+                self.stdout.write('Directory does not exist!\n')
+                continue
+            break
+        return path
+
+    def get_path(self, key):
+        if key not in self.config:
+            raise RuntimeError('%s not found!' % key)
+        value = self.config[key]
+        value = os.path.expanduser(value)
+        value = os.path.expandvars(value)
         return value
 
     @property
     def aws_key_path(self):
-        return self.get_option('General', 'aws_key_path')
+        return self.get_path('AwsKeyPath')
 
     @property
     def pub_key_path(self):
-        return self.get_option('General', 'pub_key_path')
+        return self.get_path('PubKeyPath')
 
     @property
     def script_path(self):
-        return self.get_option('General', 'script_path')
+        return self.get_path('ScriptPath')
+
+    def read_config(self):
+        if not os.path.exists(self.json_config_file):
+            basedir = os.path.dirname(self.json_config_file)
+            if not os.path.exists(basedir):
+                os.makedirs(basedir)
+            with open(self.json_config_file, 'a') as configfile:
+                json.dump({}, configfile)
+        with open(self.json_config_file, 'r') as configfile:
+            return json.load(configfile)
 
     def write_config(self):
-        with open(self.config_file, 'wb') as configfile:
-            self.cparser.write(configfile)
-        self.cparser.read(self.config_file)
+        with open(self.json_config_file, 'wb') as configfile:
+            json.dump(self.config, configfile, indent=2)
 
 
 def main(argv=sys.argv[1:]):

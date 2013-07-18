@@ -12,12 +12,13 @@ class Launch(BaseCommand, LaunchOptionsMixin):
         parser = super(Launch, self).get_parser(prog_name)
         parser.add_argument('-y', dest='assume_yes', action='store_true')
         parser.add_argument('--size')
+        parser.add_argument('--login')
         parser.add_argument('--image')
         parser.add_argument('--key')
         parser.add_argument('--zone')
         parser.add_argument('--security-groups')
         parser.add_argument('--user-data')
-        parser.add_argument('--count', type=int, default=1)
+        parser.add_argument('--num', type=int, default=1)
         parser.add_argument('name')
         return parser
 
@@ -39,11 +40,10 @@ class Launch(BaseCommand, LaunchOptionsMixin):
         if hasattr(zone, 'name'):
             kwargs['placement'] = zone.name
 
-        count = parsed_args.count
-        if count > 1:
+        if parsed_args.num > 1:
             plural = 's'
-            kwargs['min_count'] = count
-            kwargs['max_count'] = count
+            kwargs['min_count'] = parsed_args.num
+            kwargs['max_count'] = parsed_args.num
         else:
             plural = ''
 
@@ -82,6 +82,6 @@ class Launch(BaseCommand, LaunchOptionsMixin):
         self.app.stdout.write('Instance%s should now be running\n' % plural)
         for inst in instances:
             if self.app.aws_key_path:
-                self.app.stdout.write('ssh -i %s.pem %s@%s\n' % (os.path.join(self.app.aws_key_path, key.name), self.get_user(inst), inst.public_dns_name))
+                self.app.stdout.write('ssh -i %s.pem %s@%s\n' % (os.path.join(self.app.aws_key_path, key.name), parsed_args.login, inst.public_dns_name))
             else:
                 self.app.stdout.write('Public DNS: %s\n' % inst.public_dns_name)

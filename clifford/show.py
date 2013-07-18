@@ -1,33 +1,6 @@
 from cliff.show import ShowOne
 
-from commands import BaseCommand
 from mixins import SingleInstanceMixin
-
-
-class Bundle(BaseCommand):
-    "Display the packages in a bundle."
-
-    def get_parser(self, prog_name):
-        parser = super(Bundle, self).get_parser(prog_name)
-        parser.add_argument('--py', dest='is_py_bundle', action='store_true')
-        parser.add_argument('name')
-        return parser
-
-    def take_action(self, parsed_args):
-        section = 'Bundles' if not parsed_args.is_py_bundle else 'Python Bundles'
-        self.app.stdout.write('%s\n' % self.app.get_option(section, parsed_args.name))
-
-
-class Group(BaseCommand):
-    "Display the items in a group."
-
-    def get_parser(self, prog_name):
-        parser = super(Group, self).get_parser(prog_name)
-        parser.add_argument('name')
-        return parser
-
-    def take_action(self, parsed_args):
-        self.app.stdout.write('%s\n' % self.app.get_option('Groups', parsed_args.name))
 
 
 class Instance(ShowOne, SingleInstanceMixin):

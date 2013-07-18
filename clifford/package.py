@@ -1,167 +1,136 @@
 from commands import BaseCommand
 
 
-class BundleAdd(BaseCommand):
+class Bundle(BaseCommand):
 
     def get_parser(self, prog_name):
-        parser = super(BundleAdd, self).get_parser(prog_name)
+        parser = super(Bundle, self).get_parser(prog_name)
         parser.add_argument('--py', dest='is_py_bundle', action='store_true')
+        parser.add_argument('-s', '--show', action='store_true')
+        parser.add_argument('-c', '--create', action='store_true')
+        parser.add_argument('-d', '--delete', action='store_true')
+        parser.add_argument('-u', '--update', action='store_true')
         parser.add_argument('name')
         return parser
 
     def take_action(self, parsed_args):
-        section = 'Bundles' if not parsed_args.is_py_bundle else 'Python Bundles'
-        bundle = self.app.get_option(section, parsed_args.name)
-        packages = bundle.split(' ')
+        section = 'Bundles' if not parsed_args.is_py_bundle else 'PythonBundles'
+        if section not in self.app.config:
+            self.app.config[section] = {}
 
-        new_packages = raw_input('Enter packages to add: ')
-        if not new_packages:
-            raise RuntimeError('No packages to add!\n')
-        new_packages = new_packages.split(' ')
-        packages = list(set(packages).union(set(new_packages)))
-        packages.sort()
-        self.app.cparser.set(section, parsed_args.name, ' '.join(packages))
-        self.app.write_config()
+        if parsed_args.create:
+            if parsed_args.name in self.app.config[section]:
+                raise RuntimeError('%s already exists!' % parsed_args.name)
 
+            packages = raw_input('Enter package names: ')
+            if not packages:
+                raise RuntimeError('No package names given!\n')
 
-class BundleRemove(BaseCommand):
-
-    def get_parser(self, prog_name):
-        parser = super(BundleRemove, self).get_parser(prog_name)
-        parser.add_argument('--py', dest='is_py_bundle', action='store_true')
-        parser.add_argument('name')
-        return parser
-
-    def take_action(self, parsed_args):
-        section = 'Bundles' if not parsed_args.is_py_bundle else 'Python Bundles'
-        bundle = self.app.get_option(section, parsed_args.name)
-        packages = bundle.split(' ')
-
-        packages_to_remove = raw_input('Enter packages to remove: ')
-        if not packages_to_remove:
-            raise RuntimeError('No packages to remove!\n')
-        packages_to_remove = packages_to_remove.split(' ')
-        packages = list(set(packages).difference(set(packages_to_remove)))
-        packages.sort()
-        self.app.cparser.set(section, parsed_args.name, ' '.join(packages))
-        self.app.write_config()
-
-
-class CreateBundle(BaseCommand):
-
-    def get_parser(self, prog_name):
-        parser = super(CreateBundle, self).get_parser(prog_name)
-        parser.add_argument('--py', dest='is_py_bundle', action='store_true')
-        parser.add_argument('name')
-        return parser
-
-    def take_action(self, parsed_args):
-        section = 'Bundles' if not parsed_args.is_py_bundle else 'Python Bundles'
-
-        if self.app.cparser.has_option(section, parsed_args.name):
-            raise RuntimeError('Bundle already exists!\n')
-
-        packages = raw_input('Enter package names: ')
-        if not packages:
-            raise RuntimeError('No package names given!\n')
-        if not self.app.cparser.has_section(section):
-            self.app.cparser.add_section(section)
-        self.app.cparser.set(section, parsed_args.name, packages)
-        self.app.write_config()
-
-
-class CreateGroup(BaseCommand):
-
-    def get_parser(self, prog_name):
-        parser = super(CreateGroup, self).get_parser(prog_name)
-        parser.add_argument('name')
-        return parser
-
-    def take_action(self, parsed_args):
-        if self.app.cparser.has_option('Groups', parsed_args.name):
-            raise RuntimeError('Group already exists!\n')
-        bundles = raw_input('Enter bundles: ')
-        if not bundles:
-            raise RuntimeError('No bundles given!\n')
-        if not self.app.cparser.has_section('Groups'):
-            self.app.cparser.add_section('Groups')
-        self.app.cparser.set('Groups', parsed_args.name, bundles)
-        self.app.write_config()
-
-
-class DeleteBundle(BaseCommand):
-
-    def get_parser(self, prog_name):
-        parser = super(DeleteBundle, self).get_parser(prog_name)
-        parser.add_argument('--py', dest='is_py_bundle', action='store_true')
-        parser.add_argument('name')
-        return parser
-
-    def take_action(self, parsed_args):
-        section = 'Bundles' if not parsed_args.is_py_bundle else 'Python Bundles'
-
-        if not self.app.cparser.has_option(section, parsed_args.name):
-            raise RuntimeError('Bundle does not exist!\n')
-
-        if self.sure_check():
-            self.app.cparser.remove_option(section, parsed_args.name)
+            self.app.config[section][parsed_args.name] = packages
             self.app.write_config()
 
+        else:
+            if parsed_args.name not in self.app.config[section]:
+                raise RuntimeError('No %s %s found!' % (parsed_args.name, section[:-1]))
 
-class DeleteGroup(BaseCommand):
+            if parsed_args.show:
+                self.app.stdout.write(self.app.config[section][parsed_args.name] + '\n')
+
+            elif parsed_args.update:
+                packages = raw_input('Enter package names: ')
+                if not packages:
+                    raise RuntimeError('No package names given!\n')
+
+                self.app.config[section][parsed_args.name] = packages
+                self.app.write_config()
+
+            elif parsed_args.delete:
+                del(self.app.config[section][parsed_args.name])
+                self.app.write_config()
+
+
+class Group(BaseCommand):
 
     def get_parser(self, prog_name):
-        parser = super(DeleteGroup, self).get_parser(prog_name)
+        parser = super(Group, self).get_parser(prog_name)
+        parser.add_argument('-s', '--show', action='store_true')
+        parser.add_argument('-c', '--create', action='store_true')
+        parser.add_argument('-d', '--delete', action='store_true')
+        parser.add_argument('-u', '--update', action='store_true')
         parser.add_argument('name')
         return parser
 
+    def get_group_items(self):
+        group_items = []
+        while True:
+            type_options = [{'text': 'Finished'}]
+            if 'Bundles' in self.app.config and self.app.config['Bundles'].keys():
+                type_options.append({'text': 'Bundle'})
+            if 'Groups' in self.app.config and self.app.config['Groups'].keys():
+                type_options.append({'text': 'Group'})
+            type_options.append({'text': 'Packages'})
+
+            type_option = self.question_maker('Select item type', 'item_type', type_options, start_at=0)
+            if type_option == 'Bundle':
+                bundle_options = [{'text': bundle} for bundle in self.app.config['Bundles'].keys()]
+                bundle_option = self.question_maker('Select bundle', 'bundle', bundle_options)
+                if not bundle_option:
+                    self.app.stdout.write('Fail!')
+                    continue
+                group_items.append({'Type': 'bundle', 'Value': bundle_option})
+
+            elif type_option == 'Group':
+                group_options = [{'text': group} for group in self.app.config['Groups'].keys()]
+                group_option = self.question_maker('Select group', 'group', group_options)
+                if not group_option:
+                    self.app.stdout.write('Fail!')
+                    continue
+                group_items.append({'Type': 'group', 'Value': group_option})
+
+            elif type_option == 'Packages':
+                package = raw_input('Enter package names: ')
+                if not package:
+                    self.app.stdout.write('Fail!')
+                    continue
+                group_items.append({'Type': 'packages', 'Value': package})
+
+            else:
+                break
+
+        return group_items
+
     def take_action(self, parsed_args):
-        if not self.app.cparser.has_option('Groups', parsed_args.name):
-            raise RuntimeError('Group does not exist!\n')
-        if self.sure_check():
-            self.app.cparser.remove_option('Groups', parsed_args.name)
+        section = 'Groups'
+        if section not in self.app.config:
+            self.app.config[section] = {}
+
+        if parsed_args.create:
+            if parsed_args.name in self.app.config[section]:
+                raise RuntimeError('%s already exists!' % parsed_args.name)
+
+            group_items = self.get_group_items()
+            if not group_items:
+                raise RuntimeError('Nothing to save!\n')
+
+            self.app.config[section][parsed_args.name] = group_items
             self.app.write_config()
 
+        else:
+            if parsed_args.name not in self.app.config[section]:
+                raise RuntimeError('No %s %s found!' % (parsed_args.name, section[:-1]))
 
-class GroupAdd(BaseCommand):
+            if parsed_args.show:
+                for item in self.app.config[section][parsed_args.name]:
+                    self.app.stdout.write('[%s] %s\n' % (item['Type'], item['Value']))
 
-    def get_parser(self, prog_name):
-        parser = super(GroupAdd, self).get_parser(prog_name)
-        parser.add_argument('name')
-        return parser
+            elif parsed_args.update:
+                group_items = self.get_group_items()
+                if not group_items:
+                    raise RuntimeError('Nothing to save!\n')
 
-    def take_action(self, parsed_args):
-        group = self.app.get_option('Groups', parsed_args.name)
-        bundles = group.split(' ')
+                self.app.config[section][parsed_args.name] = group_items
+                self.app.write_config()
 
-        new_bundles = raw_input('Enter bundles to add: ')
-        if not new_bundles:
-            raise RuntimeError('No new bundles given!\n')
-        new_bundles = new_bundles.split(' ')
-        for new_bundle in new_bundles:
-            if new_bundle not in bundles:
-                bundles.append(new_bundle)
-        self.app.cparser.set('Groups', parsed_args.name, ' '.join(bundles))
-        self.app.write_config()
-
-
-class GroupRemove(BaseCommand):
-
-    def get_parser(self, prog_name):
-        parser = super(GroupRemove, self).get_parser(prog_name)
-        parser.add_argument('name')
-        return parser
-
-    def take_action(self, parsed_args):
-        group = self.app.get_option('Groups', parsed_args.name)
-        bundles = group.split(' ')
-
-        bundles_to_remove = raw_input('Enter bundles to remove: ')
-        if not bundles_to_remove:
-            raise RuntimeError('No bundles to remove!\n')
-        bundles_to_remove = bundles_to_remove.split(' ')
-        for bundle_to_remove in bundles_to_remove:
-            if bundle_to_remove in bundles:
-                bundles.remove(bundle_to_remove)
-        self.app.cparser.set('Groups', parsed_args.name, ' '.join(bundles))
-        self.app.write_config()
+            elif parsed_args.delete:
+                del(self.app.config[section][parsed_args.name])
+                self.app.write_config()

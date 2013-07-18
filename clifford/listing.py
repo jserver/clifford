@@ -30,6 +30,19 @@ class Addresses(Lister):
                 )
 
 
+class AwsImages(Lister):
+    "List of AWS images associated with owner."
+
+    log = logging.getLogger(__name__)
+
+    def take_action(self, parsed_args):
+        images = self.app.ec2_conn.get_all_images(owners=['self'])
+
+        return (('Image ID', 'Name'),
+                ((image.id, image.name) for image in images)
+                )
+
+
 class Buckets(Lister):
     "List of Buckets in S3."
 
@@ -49,18 +62,18 @@ class Builds(Lister):
     log = logging.getLogger(__name__)
 
     def take_action(self, parsed_args):
-        builds = [section for section in self.app.cparser.sections() if section.startswith('Build:')]
-        if not builds:
+        if 'Builds' not in self.app.config:
             raise RuntimeError('No builds found!')
+        builds = self.app.config['Builds']
 
         build_tuples = []
-        for build in builds:
-            build_tuples.append((build.split(':')[1],
-                                 self.app.get_option(build, 'size', raise_error=False),
-                                 self.app.get_option(build, 'image', raise_error=False),
-                                 self.app.get_option(build, 'key', raise_error=False),
-                                 self.app.get_option(build, 'zone', raise_error=False),
-                                 self.app.get_option(build, 'group', raise_error=False)))
+        for build in builds.keys():
+            build_tuples.append((build,
+                                 builds[build].get('size', ''),
+                                 builds[build].get('image', ''),
+                                 builds[build].get('key', ''),
+                                 builds[build].get('zone', ''),
+                                 builds[build].get('group', '')))
 
         return (('Name', 'Size', 'Image', 'Key', 'Zone', 'Group'),
                 build_tuples
@@ -73,21 +86,30 @@ class Bundles(Lister):
 
     log = logging.getLogger(__name__)
 
-    def take_action(self, parsed_args):
-        if not self.app.cparser.has_section('Bundles'):
-            raise RuntimeError('No bundles found!')
+    def get_parser(self, prog_name):
+        parser = super(Bundles, self).get_parser(prog_name)
+        parser.add_argument('--py', dest='is_py_bundle', action='store_true')
+        return parser
 
-        bundles = self.app.cparser.items('Bundles')
-        max_name_len = max(4, max([len(bundle[0]) for bundle in bundles]))
+
+    def take_action(self, parsed_args):
+        section = 'Bundles' if not parsed_args.is_py_bundle else 'PythonBundles'
+        if section not in self.app.config:
+            raise RuntimeError('No %s found!' % section)
+
+        bundles = self.app.config[section]
+        if not bundles:
+            raise RuntimeError('No %s found!!' % section)
+
+        max_name_len = max(4, max([len(bundle) for bundle in bundles.keys()]))
         max_bundles_len = COLUMNS - max_name_len - 7
 
         bundle_tuples = []
-        for bundle in bundles:
-            if len(bundle[1]) > max_bundles_len:
-                bundle_tuples.append((bundle[0], bundle[1][:max_bundles_len - 3] + '...'))
+        for bundle in bundles.keys():
+            if len(bundles[bundle]) > max_bundles_len:
+                bundle_tuples.append((bundle, bundles[bundle][:max_bundles_len - 3] + '...'))
             else:
-                bundle_tuples.append((bundle[0], bundle[1]))
-
+                bundle_tuples.append((bundle, bundles[bundle]))
 
         return (('Name', 'Packages'),
                 bundle_tuples
@@ -100,22 +122,38 @@ class Groups(Lister):
     log = logging.getLogger(__name__)
 
     def take_action(self, parsed_args):
-        if not self.app.cparser.has_section('Groups'):
-            raise RuntimeError('No groups found!')
+        section = 'Groups'
+        if section not in self.app.config:
+            raise RuntimeError('No %s found!' % section)
 
-        groups = self.app.cparser.items('Groups')
-        max_name_len = max(4, max([len(group[0]) for group in groups]))
+        groups = self.app.config[section]
+        if not groups:
+            raise RuntimeError('No %s found!!' % section)
+
+        max_name_len = max(4, max([len(group) for group in groups.keys()]))
         max_groups_len = COLUMNS - max_name_len - 7
 
         group_tuples = []
-        for group in groups:
-            if len(group[1]) > max_groups_len:
-                group_tuples.append((group[0], group[1][:max_groups_len - 3] + '...'))
+        import pdb; pdb.set_trace()
+        for group in groups.keys():
+            items = ''
+            for item in groups[group]:
+                if item['Type'] == 'bundle':
+                    items += item['Value'] + ' '
+                elif item['Type'] == 'group':
+                    items += '&' + item['Value'] + ' '
+                elif item['Type'] == 'packages':
+                    items += '$' + item['Value'] + ' '
+            if items:
+                items = items[:-1]
+
+            if len(items) > max_groups_len:
+                group_tuples.append((group, items[:max_groups_len - 3] + '...'))
             else:
-                group_tuples.append((group[0], group[1]))
+                group_tuples.append((group, items))
 
 
-        return (('Name', 'Bundles'),
+        return (('Name', 'Items'),
                 group_tuples
                 )
 
@@ -126,23 +164,25 @@ class Images(Lister):
     log = logging.getLogger(__name__)
 
     def take_action(self, parsed_args):
-        if not self.app.cparser.has_section('Images'):
-            raise RuntimeError('No image section found!')
-
-        items = self.app.cparser.items('Images')
-        if not items:
+        if 'Images' not in self.app.config:
             raise RuntimeError('No images found!')
 
-        image_ids = [value[1].split('@')[1] for value in items]
+        images = self.app.config['Images']
 
-        images = [(items[image_ids.index(image.id)][0], items[image_ids.index(image.id)][1].split('@')[0], image.id, image.name) for image in self.app.ec2_conn.get_all_images(image_ids=image_ids)]
-        my_images = self.app.ec2_conn.get_all_images(owners=['self'])
-        if my_images:
-            images.extend([('', '', image.id, image.name) for image in my_images if image.id not in image_ids])
-        images = sorted(images, key=lambda image: image[0].lower())
+        image_tuples = []
 
-        return (('Option', 'User', 'Image ID', 'Name'),
-                tuple(images)
+        image_ids = [images[image]['Id'] for image in images.keys()]
+        for aws_image in self.app.ec2_conn.get_all_images(image_ids=image_ids):
+            for image in images.keys():
+                if images[image]['Id'] == aws_image.id:
+                    images[image]['Name'] = aws_image.name
+                    break
+
+        for image in images.keys():
+            image_tuples.append((image, images[image].get('Login', ''), images[image].get('Id', ''), images[image].get('Name', '')))
+
+        return (('Nickname', 'Login', 'AMI ID', 'Name'),
+                image_tuples
                 )
 
 
@@ -210,45 +250,18 @@ class Projects(Lister):
     log = logging.getLogger(__name__)
 
     def take_action(self, parsed_args):
-        projects = [section for section in self.app.cparser.sections() if section.startswith('Project:')]
-        if not projects:
+        if 'Projects' not in self.app.config:
             raise RuntimeError('No projects found!')
+        projects = self.app.config['Projects']
 
         project_tuples = []
-        for project in projects:
-            project_tuples.append((project.split(':')[1],
-                                   self.app.get_option(project, 'build', raise_error=False) or '',
-                                   self.app.get_option(project, 'count', raise_error=False) or ''))
+        for project in projects.keys():
+            project_tuples.append((project,
+                                 projects[project].get('Build', ''),
+                                 projects[project].get('Count', '')))
 
         return (('Name', 'Build', 'Count'),
                 project_tuples
-                )
-
-
-
-class PythonBundles(Lister):
-    "List of python bundles in config."
-
-    log = logging.getLogger(__name__)
-
-    def take_action(self, parsed_args):
-        if not self.app.cparser.has_section('Python Bundles'):
-            raise RuntimeError('No bundles found!')
-
-        bundles = self.app.cparser.items('Python Bundles')
-        max_name_len = max(4, max([len(bundle[0]) for bundle in bundles]))
-        max_bundles_len = COLUMNS - max_name_len - 7
-
-        bundle_tuples = []
-        for bundle in bundles:
-            if len(bundle[1]) > max_bundles_len:
-                bundle_tuples.append((bundle[0], bundle[1][:max_bundles_len - 3] + '...'))
-            else:
-                bundle_tuples.append((bundle[0], bundle[1]))
-
-
-        return (('Name', 'Packages'),
-                bundle_tuples
                 )
 
 

@@ -9,11 +9,6 @@ class BaseCommand(Command):
 
     log = logging.getLogger(__name__)
 
-    def get_user(self, instance):
-        aws_image = self.app.ec2_conn.get_image(instance.image_id)
-        user_name = [value[1].split('@')[0] for value in self.app.cparser.items('Images') if value[1].split('@')[1] == aws_image.id][0]
-        return user_name
-
     def is_ok(self, name):
         if not name:
             return False

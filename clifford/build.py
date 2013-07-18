@@ -12,64 +12,83 @@ class Build(BaseCommand, LaunchOptionsMixin, SingleInstanceMixin):
     def get_parser(self, prog_name):
         parser = super(Build, self).get_parser(prog_name)
         parser.add_argument('-y', dest='assume_yes', action='store_true')
-        parser.add_argument('--build')
-        parser.add_argument('--count', type=int, default=1)
-        parser.add_argument('--create', action='store_true')
+        parser.add_argument('-b', '--build')
+        parser.add_argument('-c', '--create', action='store_true')
+        parser.add_argument('-n', '--num', type=int, default=1)
         parser.add_argument('name')
         return parser
 
-    def create(self, name):
-        instance_type = self.get_instance_type()
-        image_item = self.get_image(return_item=True)
-        key = self.get_key()
-        zone = self.get_zone()
-        security_groups = self.get_security_groups(return_names=True)
-        user_data = self.get_user_data(return_name=True)
+    def take_action(self, parsed_args):
+        if parsed_args.create:
+            self.create(parsed_args.name)
+            return
 
-        upgrade_options = [{'text': 'Skip Step'}, {'text': 'upgrade'}, {'text': 'dist-upgrade'}]
-        upgrade_option = self.question_maker('Select upgrade option', 'upgrade', upgrade_options, start_at=0)
+        if 'Builds' not in self.app.config:
+            raise RuntimeError('No Builds found!')
 
-        if self.app.cparser.has_section('Groups'):
-            groups = self.app.cparser.options('Groups')
-            group_options = [{'text': 'Skip Step'}]
-            group_options.extend([{'text': group} for group in groups])
-            group_option = self.question_maker('Select group to install', 'group', group_options, start_at=0)
+        if parsed_args.build and parsed_args.build in self.app.config['Builds'].keys():
+            build = parsed_args.build
         else:
-            group_option = 'Skip Step'
+            build = self.question_maker('Select Build', 'build', [{'text': bld} for bld in self.app.config['Builds'].keys()])
+            if not build:
+                raise RuntimeError('No Build selected!\n')
 
-        if self.app.cparser.has_section('Python Bundles'):
-            bundles = self.app.cparser.options('Python Bundles')
-            bundle_options = [{'text': 'Skip Step'}]
-            bundle_options.extend([{'text': bundle} for bundle in bundles])
-            bundle_option = self.question_maker('Select python bundle to install', 'bundle', bundle_options, start_at=0)
-        else:
-            bundle_option = 'Skip Step'
+        if not parsed_args.assume_yes and not self.sure_check():
+            return
 
-        section = 'Build:' + name
-        self.app.cparser.add_section(section)
-        self.app.cparser.set(section, 'size', instance_type)
-        self.app.cparser.set(section, 'login', image_item[1].split('@')[0])
-        self.app.cparser.set(section, 'image', image_item[1].split('@')[1])
-        self.app.cparser.set(section, 'key', key.name)
+        options = self.app.config['Builds'][build]
 
-        if hasattr(zone, 'name'):
-            self.app.cparser.set(section, 'zone', zone.name)
+        cmd = 'launch -y'
+        cmd += ' --size %s' % options['Size']
+        cmd += ' --image %s' % options['Login']
+        cmd += ' --image %s' % options['Image']
+        cmd += ' --key %s' % options['Key']
+        cmd += ' --zone %s' % options['Zone']
+        cmd += ' --security-groups %s' % ','.join(options['SecurityGroups'])
+        if 'UserData' in options:
+            cmd += ' --user-data %s' % options['UserData']
+        cmd +=' --num %s' % parsed_args.num
+        cmd += ' ' + parsed_args.name
+        self.app.run_subcommand(cmd.split(' '))
+        time.sleep(10)
 
-        self.app.cparser.set(section, 'security_groups', security_groups)
+        reservation = self.get_reservation(parsed_args.name)
 
-        if user_data:
-            self.app.cparser.set(section, 'user_data', user_data)
+        # begin the mutliprocessing
+        pool = Pool(processes=len(reservation.instances))
 
-        if upgrade_option != 'Skip Step':
-            self.app.cparser.set(section, 'upgrade', upgrade_option)
+        if 'Upgrade' in options and options['Upgrade'] in ['upgrade', 'dist-upgrade']:
+            self.run_activity(reservation, pool, upgrade, [options['Login'], options['Upgrade'], self.app.aws_key_path])
+            self.app.stdout.write('Upgrade Finished\n')
+            time.sleep(10)
 
-        if group_option != 'Skip Step':
-            self.app.cparser.set(section, 'group', group_option)
+        if 'Group' in options and options['Group'] in self.app.config['Groups'].keys():
+            group = self.app.config['Groups'][options['Group']]
+            bundles = []
+            self.get_bundles(group, bundles)
 
-        if bundle_option != 'Skip Step':
-            self.app.cparser.set(section, 'pip', bundle_option)
+        if 'Pip' in options:
+            python_packages = self.app.config['PythonBundles'][options['Pip']]
+            self.app.stdout.write('python: %s [%s]\n' % (options['Pip'], python_packages))
 
-        self.app.write_config()
+            self.run_activity(reservation, pool, pip_installer, [options['Login'], python_packages, self.app.aws_key_path])
+            self.app.stdout.write('Pip Installer Finished\n')
+            time.sleep(10)
+
+        if 'Script' in options:
+            self.run_activity(reservation, pool, script_runner, [options['Login'], os.path.join(self.app.script_path, options['Script']), self.app.aws_key_path])
+
+        pool.close()
+        pool.join()
+
+    def get_bundles(self, group, bundles):
+        for item in self.app.config['Groups'][group]:
+            if item['Type'] == 'bundle':
+                bundles.append(self.app.config['Bundles'][item['Value']])
+            elif item['Type'] == 'group':
+                self.get_bundles(item['Value'], bundles)
+            elif item['Type'] == 'packages':
+                bundles.append(item['Value'])
 
     def run_activity(self, reservation, pool, func, arg_list):
         results = []
@@ -87,78 +106,65 @@ class Build(BaseCommand, LaunchOptionsMixin, SingleInstanceMixin):
                     self.app.stdout.write('Result: %s\n' % result.get())
                     completed.append(result)
 
-    def take_action(self, parsed_args):
-        if parsed_args.create:
-            self.create(parsed_args.name)
-            return
+    def create(self, name):
+        instance_type = self.get_instance_type()
+        image_item = self.get_image(return_item=True)
+        key = self.get_key()
+        zone = self.get_zone()
+        security_groups = self.get_security_groups(return_names=True)
+        user_data = self.get_user_data(return_name=True)
 
-        if parsed_args.build:
-            build = parsed_args.build
+        upgrade_options = [{'text': 'Skip Step'}, {'text': 'upgrade'}, {'text': 'dist-upgrade'}]
+        upgrade_option = self.question_maker('Select upgrade option', 'upgrade', upgrade_options, start_at=0)
+
+        if 'Groups' in self.app.config:
+            groups = self.app.config['Groups'].keys()
+            if groups:
+                group_options = [{'text': 'Skip Step'}]
+                group_options.extend([{'text': group} for group in groups])
+                group_option = self.question_maker('Select group to install', 'group', group_options, start_at=0)
+            else:
+                group_option = 'Skip Step'
         else:
-            build = self.question_maker('Select Build', 'build',
-                    [{'text': section[6:]} for section in self.app.cparser.sections() if section.startswith('Build:')])
-            if not self.app.cparser.has_section('Build:%s' % build):
-                raise RuntimeError('No build with that name in config!\n')
+            group_option = 'Skip Step'
 
-        if not parsed_args.assume_yes and not self.sure_check():
-            return
+        if 'PythonBundles' in self.app.config:
+            bundles = self.app.config['PythonBundles'].keys()
+            if bundles:
+                bundle_options = [{'text': 'Skip Step'}]
+                bundle_options.extend([{'text': bundle} for bundle in bundles])
+                bundle_option = self.question_maker('Select python bundle to install', 'bundle', bundle_options, start_at=0)
+            else:
+                bundle_option = 'Skip Step'
+        else:
+            bundle_option = 'Skip Step'
 
-        option_list = self.app.cparser.options('Build:%s' % build)
-        options = {}
-        for option in option_list:
-            options[option] = self.app.cparser.get('Build:%s' % build, option)
+        if 'Builds' not in self.app.config:
+            self.app.config['Builds'] = {}
 
-        count = parsed_args.count
+        build = {
+            'Size': instance_type,
+            'Login': image_item['Login'],
+            'Image': image_item['Id'],
+            'Key': key.name,
+            'SecurityGroups': security_groups,
+        }
 
-        cmd = 'launch -y'
-        cmd += ' --size %s' % options['size']
-        cmd += ' --image %s' % self.app.cparser.get('Images', options['image'])
-        cmd += ' --key %s' % options['key']
-        cmd += ' --zone %s' % options['zone']
-        cmd += ' --security-groups %s' % options['security_groups']
-        if 'user_data' in options:
-            cmd += ' --user-data %s' % options['user_data']
-        cmd +=' --count %s' % count
-        cmd += ' ' + parsed_args.name
-        self.app.run_subcommand(cmd.split(' '))
-        time.sleep(10)
+        if hasattr(zone, 'name'):
+            build['Zone'] = zone.name
 
-        reservation = self.get_reservation(parsed_args.name)
+        if user_data:
+            build['UserData'] = user_data
 
-        # begin the mutliprocessing
-        pool = Pool(processes=len(reservation.instances))
+        if upgrade_option != 'Skip Step':
+            build['Upgrade'] = upgrade_option
 
-        if 'upgrade' in options and options['upgrade'] in ['upgrade', 'dist-upgrade']:
-            self.run_activity(reservation, pool, upgrade, [options['login'], options['upgrade'], self.app.aws_key_path])
-            self.app.stdout.write('Upgrade Finished\n')
-            time.sleep(10)
+        if group_option != 'Skip Step':
+            build['Group'] = group_option
 
-        if 'group' in options:
-            group = self.app.get_option('Groups', options['group'])
-            bundle_names = group.split(' ')
-            bundles = []
-            for bundle_name in bundle_names:
-                bundle = self.app.get_option('Bundles', bundle_name, raise_error=False)
-                if bundle:
-                    bundles.append((bundle_name, bundle))
+        if bundle_option != 'Skip Step':
+            build['Pip'] = bundle_option
 
-            for bundle in bundles:
-                self.app.stdout.write('bundle: %s [%s]\n' % (bundle[0], bundle[1]))
+        self.app.config['Builds'][name] = build
 
-            self.run_activity(reservation, pool, group_installer, [options['login'], bundles, self.app.aws_key_path])
-            self.app.stdout.write('Group Installer Finished\n')
-            time.sleep(10)
-
-        if 'pip' in options:
-            python_packages = self.app.get_option('Python Bundles', options['pip'])
-            self.app.stdout.write('python: %s [%s]\n' % (options['pip'], python_packages))
-
-            self.run_activity(reservation, pool, pip_installer, [options['login'], python_packages, self.app.aws_key_path])
-            self.app.stdout.write('Pip Installer Finished\n')
-            time.sleep(10)
-
-        if 'script' in options:
-            self.run_activity(reservation, pool, script_runner, [options['login'], os.path.join(self.app.script_path, options['script']), self.app.aws_key_path])
-
-        pool.close()
-        pool.join()
+        self.app.write_config()

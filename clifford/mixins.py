@@ -21,20 +21,25 @@ class LaunchOptionsMixin(object):
                 pass
 
         if not image:
-            if not self.app.cparser.has_section('Images'):
-                raise RuntimeError('No image section found!\n')
+            if 'Images' not in self.app.config:
+                raise RuntimeError('No Images found!\n')
 
-            items = self.app.cparser.items('Images')
-            image_ids = [item[1].split('@')[1] for item in items]
+            items = self.app.config['Images'].keys()
+
+            image_ids = [self.app.config['Images'][item]['Id'] for item in items]
             if not image_ids:
                 raise RuntimeError('No images found!')
 
-            images = [{'text': '%s - %s' % (items[image_ids.index(img.id)][0], img.id), 'obj': img} for img in self.app.ec2_conn.get_all_images(image_ids=image_ids)]
+            images = []
+            for aws_image in self.app.ec2_conn.get_all_images(image_ids=image_ids):
+                for item in items:
+                    if self.app.config['Images'][item]['Id'] == aws_image.id:
+                        images.append({'text': '%s - %s' % (item, aws_image.id), 'obj': aws_image})
             images = sorted(images, key=lambda image: image['text'].lower())
             image = self.question_maker('Available Images', 'image', images)
 
             if return_item:
-                return [item for item in items if item[1].split('@')[1] == image.id][0]
+                return [self.app.config['Images'][item] for item in items if self.app.config['Images'][item]['Id'] == image.id][0]
 
         return image
 
@@ -103,8 +108,6 @@ class LaunchOptionsMixin(object):
                 else:
                     security_groups.extend([sg.id for sg in sec_grps])
 
-        if return_names:
-            security_groups = ','.join(security_groups)
         return security_groups
 
     def get_user_data(self, filename='', assume_yes=False, return_name=False):

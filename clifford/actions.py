@@ -80,7 +80,6 @@ class AddImage(BaseCommand):
 
     def get_parser(self, prog_name):
         parser = super(AddImage, self).get_parser(prog_name)
-        parser.add_argument('user')
         parser.add_argument('ami_id')
         return parser
 
@@ -92,15 +91,19 @@ class AddImage(BaseCommand):
         self.app.stdout.write('Found the following image:\n')
         self.app.stdout.write('name: %s\n' % image.name)
         self.app.stdout.write('desc: %s\n' % image.description)
-        description = raw_input('Enter short description of image: ')
-        if not description:
-            raise RuntimeError('Description required')
 
-        if not self.app.cparser.has_section('Images'):
-            self.app.cparser.add_section('Images')
-        self.app.cparser.set('Images', description, '%s@%s' % (parsed_args.user, image.id))
+        login = raw_input('Enter login: ')
+        if not login:
+            raise RuntimeError('Login required')
+
+        name = raw_input('Enter nickname of image: ')
+        if not name:
+            raise RuntimeError('Nickname required')
+
+        if 'Images' not in self.app.config:
+            self.app.config['Images'] = {}
+        self.app.config['Images'][name] = {'Id': image.id, 'Login': login, 'Name': image.name}
         self.app.write_config()
-        self.app.stdout.write('%s image added to config\n' % image.id)
 
 
 class Domain(BaseCommand):
