@@ -2,10 +2,10 @@ import logging
 
 from cliff.command import Command
 
-from mixins import PreseedMixin, SingleInstanceMixin
+from mixins import PreseedMixin, InstanceMixin
 
 
-class BaseCommand(Command):
+class BaseCommand(Command, InstanceMixin):
 
     log = logging.getLogger(__name__)
 
@@ -62,17 +62,7 @@ class BaseCommand(Command):
             self.app.stdout.write('ERROR: %s' % line)
 
 
-class InstanceCommand(BaseCommand, SingleInstanceMixin):
-
-    def get_parser(self, prog_name):
-        parser = super(InstanceCommand, self).get_parser(prog_name)
-        parser.add_argument('-y', dest='assume_yes', action='store_true')
-        parser.add_argument('--id', dest='arg_is_id', action='store_true')
-        parser.add_argument('name')
-        return parser
-
-
-class RemoteCommand(InstanceCommand, PreseedMixin):
+class RemoteCommand(BaseCommand, PreseedMixin):
 
     def get_parser(self, prog_name):
         parser = super(RemoteCommand, self).get_parser(prog_name)
@@ -80,7 +70,7 @@ class RemoteCommand(InstanceCommand, PreseedMixin):
         return parser
 
 
-class RemoteUserCommand(InstanceCommand):
+class RemoteUserCommand(BaseCommand):
 
     def get_parser(self, prog_name):
         parser = super(RemoteUserCommand, self).get_parser(prog_name)

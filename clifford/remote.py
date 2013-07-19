@@ -4,12 +4,19 @@ import time
 
 import paramiko
 
-from commands import InstanceCommand, RemoteCommand, RemoteUserCommand
+from commands import BaseCommand
 from mixins import PreseedMixin
 
 
-class AddAptInstall(RemoteCommand):
+class AddAptInstall(BaseCommand):
     "Add an apt repo and install a package from it."
+
+    def get_parser(self, prog_name):
+        parser = super(AddAptInstall, self).get_parser(prog_name)
+        parser.add_argument('--id', dest='arg_is_id', action='store_true')
+        parser.add_argument('name')
+        parser.add_argument('option')
+        return parser
 
     def take_action(self, parsed_args):
         instance = self.get_instance(parsed_args.name, parsed_args.arg_is_id)
@@ -52,8 +59,14 @@ class AddAptInstall(RemoteCommand):
         ssh.close()
 
 
-class AptGetInstall(InstanceCommand, PreseedMixin):
+class AptGetInstall(BaseCommand, PreseedMixin):
     "Install packages on a remote ec2 instance."
+
+    def get_parser(self, prog_name):
+        parser = super(AptGetInstall, self).get_parser(prog_name)
+        parser.add_argument('--id', dest='arg_is_id', action='store_true')
+        parser.add_argument('name')
+        return parser
 
     def take_action(self, parsed_args):
         instance = self.get_instance(parsed_args.name, parsed_args.arg_is_id)
@@ -87,8 +100,15 @@ class AptGetInstall(InstanceCommand, PreseedMixin):
             ssh.close()
 
 
-class BundleInstall(RemoteCommand):
+class BundleInstall(BaseCommand):
     "Install a bundle on a remote ec2 instance."
+
+    def get_parser(self, prog_name):
+        parser = super(BundleInstall, self).get_parser(prog_name)
+        parser.add_argument('--id', dest='arg_is_id', action='store_true')
+        parser.add_argument('name')
+        parser.add_argument('option')
+        return parser
 
     def take_action(self, parsed_args):
         instance = self.get_instance(parsed_args.name, parsed_args.arg_is_id)
@@ -119,13 +139,17 @@ class BundleInstall(RemoteCommand):
             ssh.close()
 
 
-class CreateUser(RemoteUserCommand):
+class CreateUser(BaseCommand):
     "Run useradd and scp all public (*.pub) keys to the ec2 instance."
 
     def get_parser(self, prog_name):
         parser = super(CreateUser, self).get_parser(prog_name)
+        parser.add_argument('-y', dest='assume_yes', action='store_true')
         parser.add_argument('--fullname', nargs='+')
         parser.add_argument('--password', nargs='+')
+        parser.add_argument('--id', dest='arg_is_id', action='store_true')
+        parser.add_argument('name')
+        parser.add_argument('user')
         return parser
 
     def take_action(self, parsed_args):
@@ -186,26 +210,16 @@ class CreateUser(RemoteUserCommand):
             ssh.close()
 
 
-class PipInstall(RemoteCommand):
-    "Python pip install a bundle on a remote ec2 instance."
-
-    def take_action(self, parsed_args):
-        instance = self.get_instance(parsed_args.name, parsed_args.arg_is_id)
-        bundle = self.app.get_option('Python Bundles', parsed_args.option)
-
-        if parsed_args.assume_yes or self.sure_check():
-            ssh = paramiko.SSHClient()
-            ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-            ssh.connect(instance.public_dns_name, username=self.get_user(instance), key_filename='%s/%s.pem' % (self.app.aws_key_path, instance.key_name))
-            stdin, stdout, stderr = ssh.exec_command('sudo pip install %s' % bundle)
-            for line in stdout.readlines():
-                if line.startswith('Installed') or line.startswith('Finished'):
-                    self.app.stdout.write(line)
-            ssh.close()
-
-
-class GroupInstall(RemoteCommand):
+class GroupInstall(BaseCommand):
     "Install a group of bundles on a remote ec2 instance."
+
+    def get_parser(self, prog_name):
+        parser = super(GroupInstall, self).get_parser(prog_name)
+        parser.add_argument('-y', dest='assume_yes', action='store_true')
+        parser.add_argument('--id', dest='arg_is_id', action='store_true')
+        parser.add_argument('name')
+        parser.add_argument('option')
+        return parser
 
     def take_action(self, parsed_args):
         instance = self.get_instance(parsed_args.name, parsed_args.arg_is_id)
@@ -273,8 +287,41 @@ class GroupInstall(RemoteCommand):
             ssh.close()
 
 
-class PPAInstall(RemoteCommand):
+class PipInstall(BaseCommand):
+    "Python pip install a bundle on a remote ec2 instance."
+
+    def get_parser(self, prog_name):
+        parser = super(PipInstall, self).get_parser(prog_name)
+        parser.add_argument('-y', dest='assume_yes', action='store_true')
+        parser.add_argument('--id', dest='arg_is_id', action='store_true')
+        parser.add_argument('name')
+        parser.add_argument('option')
+        return parser
+
+    def take_action(self, parsed_args):
+        instance = self.get_instance(parsed_args.name, parsed_args.arg_is_id)
+        bundle = self.app.get_option('Python Bundles', parsed_args.option)
+
+        if parsed_args.assume_yes or self.sure_check():
+            ssh = paramiko.SSHClient()
+            ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+            ssh.connect(instance.public_dns_name, username=self.get_user(instance), key_filename='%s/%s.pem' % (self.app.aws_key_path, instance.key_name))
+            stdin, stdout, stderr = ssh.exec_command('sudo pip install %s' % bundle)
+            for line in stdout.readlines():
+                if line.startswith('Installed') or line.startswith('Finished'):
+                    self.app.stdout.write(line)
+            ssh.close()
+
+
+class PPAInstall(BaseCommand):
     "Add a ppa and install the package."
+
+    def get_parser(self, prog_name):
+        parser = super(PPAInstall, self).get_parser(prog_name)
+        parser.add_argument('--id', dest='arg_is_id', action='store_true')
+        parser.add_argument('name')
+        parser.add_argument('option')
+        return parser
 
     def take_action(self, parsed_args):
         instance = self.get_instance(parsed_args.name, parsed_args.arg_is_id)
@@ -312,14 +359,18 @@ class PPAInstall(RemoteCommand):
         ssh.close()
 
 
-class Script(InstanceCommand):
+class Script(BaseCommand):
     "Run a bash script on a remote ec2 instance."
 
     def get_parser(self, prog_name):
         parser = super(Script, self).get_parser(prog_name)
+        parser.add_argument('-y', dest='assume_yes', action='store_true')
         parser.add_argument('--script')
         parser.add_argument('--user')
         parser.add_argument('--copy-only', action='store_true')
+        parser.add_argument('--id', dest='arg_is_id', action='store_true')
+        parser.add_argument('name')
+        parser.add_argument('option')
         return parser
 
     def take_action(self, parsed_args):
@@ -372,13 +423,16 @@ class Script(InstanceCommand):
             ssh.close()
 
 
-class Upgrade(InstanceCommand):
+class Upgrade(BaseCommand):
     "Update and upgrade an ec2 instance."
 
     def get_parser(self, prog_name):
         parser = super(Upgrade, self).get_parser(prog_name)
+        parser.add_argument('-y', dest='assume_yes', action='store_true')
         parser.add_argument('--upgrade', action='store_true')
         parser.add_argument('--dist-upgrade', action='store_true')
+        parser.add_argument('--id', dest='arg_is_id', action='store_true')
+        parser.add_argument('name')
         return parser
 
     def take_action(self, parsed_args):

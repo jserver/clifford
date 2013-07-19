@@ -2,11 +2,10 @@ from collections import OrderedDict
 import time
 
 from commands import BaseCommand
-from main import config, write_config
-from mixins import SingleInstanceMixin
+from main import config
 
 
-class Project(BaseCommand, SingleInstanceMixin):
+class Project(BaseCommand):
     "Launch and bootstrap a new ec2 instance"
 
     def get_parser(self, prog_name):
@@ -20,13 +19,13 @@ class Project(BaseCommand, SingleInstanceMixin):
             self.create(parsed_args.name)
             return
 
-        if 'Projects' not in config:
+        if not config.projects:
             raise RuntimeError('No Projects found!')
 
-        if parsed_args.name not in config['Projects']:
+        if parsed_args.name not in config.projects:
             raise RuntimeError('Project not found!')
 
-        project = config['Projects'][parsed_args.name]
+        project = config.projects[parsed_args.name]
         if 'Build' not in project:
             raise RuntimeError('No build in project')
 
@@ -72,7 +71,10 @@ class Project(BaseCommand, SingleInstanceMixin):
         '''
 
     def create(self, name):
-        build = self.question_maker('Select Build', 'build', [{'text': bld} for bld in config['Builds'].keys()])
+        if not config.builds:
+            raise RuntimeError('No Builds Found')
+
+        build = self.question_maker('Select Build', 'build', [{'text': bld} for bld in config.builds.keys()])
         if not build:
             raise RuntimeError('No Build selected!\n')
 
@@ -83,5 +85,5 @@ class Project(BaseCommand, SingleInstanceMixin):
         project = OrderedDict()
         project['Build'] = build
         project['Num'] = int(num)
-        config['Projects'][name] = project
-        write_config()
+        config.projects[name] = project
+        config.save()

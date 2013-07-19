@@ -85,10 +85,9 @@ setup(
             'volumes = clifford.listing:Volumes',
 
             # EC2
-            'add image = clifford.actions:AddImage',
+            'image = clifford.actions:Image',
             'create image = clifford.actions:CreateImage',
             'create snapshot = clifford.actions:CreateSnapshot',
-            'del image = clifford.actions:DeleteImage',
             'del snapshot = clifford.actions:DeleteSnapshot',
             'del volume = clifford.actions:DeleteVolume',
 

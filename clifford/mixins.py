@@ -113,7 +113,7 @@ class LaunchOptionsMixin(object):
         return security_groups
 
     def get_user_data(self, filename='', assume_yes=False, return_name=False):
-        script_path = self.app.script_path
+        script_path = config.script_path
         if filename:
             user_data = open('%s/%s' % (script_path, filename), 'r').read()
         elif assume_yes:
@@ -147,7 +147,7 @@ class PreseedMixin(object):
         return preseeds
 
 
-class SingleInstanceMixin(object):
+class InstanceMixin(object):
     def get_instance(self, name, arg_is_id=False):
         if arg_is_id:
             reservations = self.app.ec2_conn.get_all_instances(instance_ids=[name])

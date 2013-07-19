@@ -26,23 +26,6 @@ class CliffordApp(App):
     def initialize_app(self, argv):
         self.log.debug('initialize_app')
 
-        changes_made = False
-
-        if 'AwsKeyPath' not in config:
-            config['AwsKeyPath'] = self.input_valid_path('AwsKeyPath')
-            changes_made = True
-
-        if 'PubKeyPath' not in config:
-            config['PubKeyPath']  = self.input_valid_path('PubKeyPath')
-            changes_made = True
-
-        if 'ScriptPath' not in config:
-            config['ScriptPath']  = self.input_valid_path('ScriptPath')
-            changes_made = True
-
-        if changes_made:
-            write_config()
-
     def prepare_to_run_command(self, cmd):
         self.log.debug('prepare_to_run_command %s', cmd.__class__.__name__)
 
@@ -51,28 +34,7 @@ class CliffordApp(App):
         if err:
             self.log.debug('got an error: %s', err)
 
-    def input_valid_path(self, name):
-        while True:
-            path = raw_input('Enter %s: ' % name)
-            if not path:
-                self.stdout.write('This field is required!\n')
-                continue
-            value = os.path.expanduser(path)
-            value = os.path.expandvars(value)
-            if not os.path.exists(value):
-                self.stdout.write('Directory does not exist!\n')
-                continue
-            break
-        return path
-
-    def get_path(self, key):
-        if key not in config:
-            raise RuntimeError('%s not found!' % key)
-        value = config[key]
-        value = os.path.expanduser(value)
-        value = os.path.expandvars(value)
-        return value
-
+class OrderedConfig(OrderedDict):
     @property
     def aws_key_path(self):
         return self.get_path('AwsKeyPath')
@@ -85,23 +47,100 @@ class CliffordApp(App):
     def script_path(self):
         return self.get_path('ScriptPath')
 
+    @property
+    def images(self):
+        if 'Images' not in self:
+            self['Images'] = OrderedDict()
+        return self['Images']
+
+    @property
+    def bundles(self):
+        if 'Bundles' not in self:
+            self['Bundles'] = OrderedDict()
+        return self['Bundles']
+
+    @property
+    def python_bundles(self):
+        if 'PythonBundles' not in self:
+            self['PythonBundles'] = OrderedDict()
+        return self['PythonBundles']
+
+    @property
+    def groups(self):
+        if 'Groups' not in self:
+            self['Groups'] = OrderedDict()
+        return self['Groups']
+
+    @property
+    def builds(self):
+        if 'Builds' not in self:
+            self['Builds'] = OrderedDict()
+        return self['Builds']
+
+    @property
+    def projects(self):
+        if 'Projects' not in self:
+            self['Projects'] = OrderedDict()
+        return self['Projects']
+
+    def get_path(self, key):
+
+        if key not in config:
+            raise RuntimeError('%s not found!' % key)
+        value = config[key]
+        value = os.path.expanduser(value)
+        value = os.path.expandvars(value)
+        return value
+
+    def save(self):
+        with open(CONFIG_FILE, 'wb') as fp:
+            json.dump(self, fp, indent=2, separators=(',', ': '))
+
+
+def input_valid_dir(name):
+    while True:
+        path = raw_input('Enter %s: ' % name)
+        if not path:
+            print 'This field is required!\n'
+            continue
+        value = os.path.expanduser(path)
+        value = os.path.expandvars(value)
+        if not os.path.isdir(value):
+            print 'Directory does not exist!\n'
+            continue
+        break
+    return path
+
+
+def default_config():
+    config = OrderedConfig()
+    config['AwsKeyPath'] = input_valid_dir('AwsKeyPath')
+    config['PubKeyPath'] = input_valid_dir('PubKeyPath')
+    config['ScriptPath'] = input_valid_dir('ScriptPath')
+    config['Domain'] = raw_input('Enter domain: ')
+    config['Salt'] = raw_input('Enter Password Salt: ')
+    config['Images'] = OrderedDict()
+    config['Bundles'] = OrderedDict()
+    config['PythonBundles'] = OrderedDict()
+    config['Groups'] = OrderedDict()
+    config['Builds'] = OrderedDict()
+    config['Projects'] = OrderedDict()
+
+    return config
+
 
 def read_config():
-    if not os.path.exists(json_config_file):
-        basedir = os.path.dirname(json_config_file)
+    if not os.path.exists(CONFIG_FILE):
+        basedir = os.path.dirname(CONFIG_FILE)
         if not os.path.exists(basedir):
             os.makedirs(basedir)
-        with open(json_config_file, 'a') as configfile:
-            json.dump({}, configfile)
-    with open(json_config_file, 'r') as configfile:
-        return json.load(configfile, object_pairs_hook=OrderedDict)
+        with open(CONFIG_FILE, 'a') as fp:
+            json.dump(default_config(), fp, indent=2, separators=(',', ': '))
+    with open(CONFIG_FILE, 'r') as fp:
+        return json.load(fp, object_pairs_hook=OrderedConfig)
 
 
-def write_config():
-    with open(json_config_file, 'wb') as configfile:
-        json.dump(config, configfile, indent=2, separators=(',', ': '))
-
-json_config_file = '%s/.clifford/config.json' % expanduser("~")
+CONFIG_FILE = '%s/.clifford/config.json' % expanduser("~")
 config = read_config()
 
 

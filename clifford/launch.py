@@ -2,6 +2,7 @@ import os
 import time
 
 from commands import BaseCommand
+from main import config
 from mixins import LaunchOptionsMixin
 
 
@@ -81,7 +82,7 @@ class Launch(BaseCommand, LaunchOptionsMixin):
         time.sleep(20)
         self.app.stdout.write('Instance%s should now be running\n' % plural)
         for inst in instances:
-            if self.app.aws_key_path:
-                self.app.stdout.write('ssh -i %s.pem %s@%s\n' % (os.path.join(self.app.aws_key_path, key.name), parsed_args.login, inst.public_dns_name))
+            if config.aws_key_path:
+                self.app.stdout.write('ssh -i %s.pem %s@%s\n' % (os.path.join(config.aws_key_path, key.name), parsed_args.login, inst.public_dns_name))
             else:
                 self.app.stdout.write('Public DNS: %s\n' % inst.public_dns_name)

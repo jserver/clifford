@@ -1,6 +1,6 @@
 from collections import OrderedDict
 from commands import BaseCommand
-from main import config, write_config
+from main import config
 
 
 class Bundle(BaseCommand):
@@ -29,7 +29,7 @@ class Bundle(BaseCommand):
                 raise RuntimeError('No package names given!\n')
 
             config[section][parsed_args.name] = packages
-            write_config()
+            config.save()
 
         else:
             if parsed_args.name not in config[section]:
@@ -44,11 +44,11 @@ class Bundle(BaseCommand):
                     raise RuntimeError('No package names given!\n')
 
                 config[section][parsed_args.name] = packages
-                write_config()
+                config.save()
 
             elif parsed_args.delete:
                 del(config[section][parsed_args.name])
-                write_config()
+                config.save()
 
 
 class Group(BaseCommand):
@@ -115,7 +115,7 @@ class Group(BaseCommand):
                 raise RuntimeError('Nothing to save!\n')
 
             config[section][parsed_args.name] = group_items
-            write_config()
+            config.save()
 
         else:
             if parsed_args.name not in config[section]:
@@ -131,8 +131,8 @@ class Group(BaseCommand):
                     raise RuntimeError('Nothing to save!\n')
 
                 config[section][parsed_args.name] = group_items
-                write_config()
+                config.save()
 
             elif parsed_args.delete:
                 del(config[section][parsed_args.name])
-                write_config()
+                config.save()

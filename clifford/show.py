@@ -1,9 +1,9 @@
 from cliff.show import ShowOne
 
-from mixins import SingleInstanceMixin
+from mixins import InstanceMixin
 
 
-class Instance(ShowOne, SingleInstanceMixin):
+class Instance(ShowOne, InstanceMixin):
     "Show details about a single instance."
 
     def get_parser(self, prog_name):

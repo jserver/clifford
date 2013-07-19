@@ -5,10 +5,10 @@ import time
 
 from activity import group_installer, pip_installer, script_runner, upgrade
 from commands import BaseCommand
-from main import config, write_config
-from mixins import LaunchOptionsMixin, SingleInstanceMixin
+from main import config
+from mixins import LaunchOptionsMixin
 
-class Build(BaseCommand, LaunchOptionsMixin, SingleInstanceMixin):
+class Build(BaseCommand, LaunchOptionsMixin):
     "Launch and bootstrap a new ec2 instance"
 
     def get_parser(self, prog_name):
@@ -25,20 +25,20 @@ class Build(BaseCommand, LaunchOptionsMixin, SingleInstanceMixin):
             self.create(parsed_args.name)
             return
 
-        if 'Builds' not in config:
+        if not config.builds:
             raise RuntimeError('No Builds found!')
 
-        if parsed_args.build and parsed_args.build in config['Builds'].keys():
+        if parsed_args.build and parsed_args.build in config.builds.keys():
             build = parsed_args.build
         else:
-            build = self.question_maker('Select Build', 'build', [{'text': bld} for bld in config['Builds'].keys()])
+            build = self.question_maker('Select Build', 'build', [{'text': bld} for bld in config.builds.keys()])
             if not build:
                 raise RuntimeError('No Build selected!\n')
 
         if not parsed_args.assume_yes and not self.sure_check():
             return
 
-        options = config['Builds'][build]
+        options = config.builds[build]
 
         cmd = 'launch -y'
         cmd += ' --size %s' % options['Size']
@@ -60,36 +60,36 @@ class Build(BaseCommand, LaunchOptionsMixin, SingleInstanceMixin):
         pool = Pool(processes=len(reservation.instances))
 
         if 'Upgrade' in options and options['Upgrade'] in ['upgrade', 'dist-upgrade']:
-            self.run_activity(reservation, pool, upgrade, [options['Login'], options['Upgrade'], self.app.aws_key_path])
+            self.run_activity(reservation, pool, upgrade, [options['Login'], options['Upgrade'], config.aws_key_path])
             self.app.stdout.write('Upgrade Finished\n')
             time.sleep(10)
 
-        if 'Group' in options and options['Group'] in config['Groups'].keys():
-            group = config['Groups'][options['Group']]
+        if 'Group' in options and options['Group'] in config.groups:
+            group = config.groups[options['Group']]
             bundles = []
             self.get_bundles(group, bundles)
-            self.run_activity(reservation, pool, group_installer, [options['Login'], bundles, self.app.aws_key_path])
+            self.run_activity(reservation, pool, group_installer, [options['Login'], bundles, config.aws_key_path])
             self.app.stdout.write('Pip Installer Finished\n')
             time.sleep(10)
 
         if 'Pip' in options:
-            python_packages = config['PythonBundles'][options['Pip']]
+            python_packages = config.python_bundles[options['Pip']]
             self.app.stdout.write('python: %s [%s]\n' % (options['Pip'], python_packages))
 
-            self.run_activity(reservation, pool, pip_installer, [options['Login'], python_packages, self.app.aws_key_path])
+            self.run_activity(reservation, pool, pip_installer, [options['Login'], python_packages, config.aws_key_path])
             self.app.stdout.write('Pip Installer Finished\n')
             time.sleep(10)
 
         if 'Script' in options:
-            self.run_activity(reservation, pool, script_runner, [options['Login'], os.path.join(self.app.script_path, options['Script']), self.app.aws_key_path])
+            self.run_activity(reservation, pool, script_runner, [options['Login'], os.path.join(config.script_path, options['Script']), config.aws_key_path])
 
         pool.close()
         pool.join()
 
     def get_bundles(self, group, bundles):
-        for item in config['Groups'][group]:
+        for item in config.groups[group]:
             if item['Type'] == 'bundle':
-                bundles.append(config['Bundles'][item['Value']])
+                bundles.append(config.bundles[item['Value']])
             elif item['Type'] == 'group':
                 self.get_bundles(item['Value'], bundles)
             elif item['Type'] == 'packages':
@@ -112,6 +112,9 @@ class Build(BaseCommand, LaunchOptionsMixin, SingleInstanceMixin):
                     completed.append(result)
 
     def create(self, name):
+        if not config.images:
+            raise RuntimeError('No Images Found')
+
         instance_type = self.get_instance_type()
         image_item = self.get_image(return_item=True)
         key = self.get_key()
@@ -122,32 +125,22 @@ class Build(BaseCommand, LaunchOptionsMixin, SingleInstanceMixin):
         upgrade_options = [{'text': 'Skip Step'}, {'text': 'upgrade'}, {'text': 'dist-upgrade'}]
         upgrade_option = self.question_maker('Select upgrade option', 'upgrade', upgrade_options, start_at=0)
 
-        if 'Groups' in config:
-            groups = config['Groups'].keys()
-            if groups:
-                group_options = [{'text': 'Skip Step'}]
-                group_options.extend([{'text': group} for group in groups])
-                group_option = self.question_maker('Select group to install', 'group', group_options, start_at=0)
-            else:
-                group_option = 'Skip Step'
+        if config.groups:
+            groups = config.groups
+            group_options = [{'text': 'Skip Step'}]
+            group_options.extend([{'text': item} for item in groups.keys()])
+            group_option = self.question_maker('Select group to install', 'group', group_options, start_at=0)
         else:
             group_option = 'Skip Step'
 
-        if 'PythonBundles' in config:
-            bundles = config['PythonBundles'].keys()
-            if bundles:
-                bundle_options = [{'text': 'Skip Step'}]
-                bundle_options.extend([{'text': bundle} for bundle in bundles])
-                bundle_option = self.question_maker('Select python bundle to install', 'bundle', bundle_options, start_at=0)
-            else:
-                bundle_option = 'Skip Step'
+        if config.python_bundles:
+            bundles = config.python_bundles
+            bundle_options = [{'text': 'Skip Step'}]
+            bundle_options.extend([{'text': item} for item in bundles.keys()])
+            bundle_option = self.question_maker('Select python bundle to install', 'bundle', bundle_options, start_at=0)
         else:
             bundle_option = 'Skip Step'
 
-        if 'Builds' not in config:
-            config['Builds'] = OrderedDict()
-
-        import pdb; pdb.set_trace()
         build = OrderedDict()
         build['Size'] = instance_type
         build['Login'] = image_item['Login']
@@ -170,5 +163,5 @@ class Build(BaseCommand, LaunchOptionsMixin, SingleInstanceMixin):
         if bundle_option != 'Skip Step':
             build['Pip'] = bundle_option
 
-        config['Builds'][name] = build
-        write_config()
+        config.builds[name] = build
+        config.save()

@@ -1,54 +1,18 @@
 from collections import OrderedDict
 import time
 
-from commands import BaseCommand, InstanceCommand
-from main import config, write_config
-from mixins import SingleInstanceMixin
+from commands import BaseCommand
+from main import config
 
 
-class Tag(InstanceCommand):
-    "Add/Remove/Update Tag on an instance."
+class Reboot(BaseCommand):
+    "Reboot an instance."
 
     def get_parser(self, prog_name):
-        parser = super(Tag, self).get_parser(prog_name)
-        parser.add_argument('--rm', action='store_true')
+        parser = super(Reboot, self).get_parser(prog_name)
+        parser.add_argument('--id', dest='arg_is_id', action='store_true')
+        parser.add_argument('name')
         return parser
-
-    def take_action(self, parsed_args):
-        instance = self.get_instance(parsed_args.name, parsed_args.arg_is_id)
-        if not instance:
-            raise RuntimeError('Instance not found!')
-
-        if parsed_args.rm:
-            tag_name = raw_input('Tag: ')
-            if not tag_name or tag_name == 'Name':
-                raise RuntimeError('Invalid Tag')
-
-            instance.remove_tag(tag_name)
-
-        else:
-            tag_name = raw_input('Tag: ')
-            if not tag_name:
-                raise RuntimeError('Invalid Tag')
-            value = raw_input('Value: ')
-            if not value:
-                raise RuntimeError('Invalid Value')
-
-            instance.add_tag(tag_name, value)
-
-
-class Terminate(InstanceCommand):
-    "Terminates an instance."
-
-    def take_action(self, parsed_args):
-        instance = self.get_instance(parsed_args.name, parsed_args.arg_is_id)
-        if instance and self.sure_check():
-            self.app.stdout.write('Terminating %s\n' % parsed_args.name)
-            instance.terminate()
-
-
-class Reboot(InstanceCommand):
-    "Reboot an instance."
 
     def take_action(self, parsed_args):
         instance = self.get_instance(parsed_args.name, parsed_args.arg_is_id)
@@ -57,18 +21,14 @@ class Reboot(InstanceCommand):
             instance.reboot()
 
 
-class Stop(InstanceCommand):
-    "Stop an instance."
-
-    def take_action(self, parsed_args):
-        instance = self.get_instance(parsed_args.name, parsed_args.arg_is_id)
-        if instance and self.sure_check():
-            self.app.stdout.write('Stopping %s\n' % parsed_args.name)
-            instance.stop()
-
-
-class Start(InstanceCommand):
+class Start(BaseCommand):
     "Start an instance."
+
+    def get_parser(self, prog_name):
+        parser = super(Start, self).get_parser(prog_name)
+        parser.add_argument('--id', dest='arg_is_id', action='store_true')
+        parser.add_argument('name')
+        return parser
 
     def take_action(self, parsed_args):
         instance = self.get_instance(parsed_args.name, parsed_args.arg_is_id)
@@ -77,117 +37,46 @@ class Start(InstanceCommand):
             instance.start()
 
 
-class AddImage(BaseCommand):
-    "Adds an image to config."
+class Stop(BaseCommand):
+    "Stop an instance."
 
     def get_parser(self, prog_name):
-        parser = super(AddImage, self).get_parser(prog_name)
-        parser.add_argument('ami_id')
+        parser = super(Stop, self).get_parser(prog_name)
+        parser.add_argument('--id', dest='arg_is_id', action='store_true')
+        parser.add_argument('name')
         return parser
 
     def take_action(self, parsed_args):
-        image = self.app.ec2_conn.get_image(parsed_args.ami_id)
-        if not image:
-            raise RuntimeError('Image not found!')
-
-        self.app.stdout.write('Found the following image:\n')
-        self.app.stdout.write('name: %s\n' % image.name)
-        self.app.stdout.write('desc: %s\n' % image.description)
-
-        login = raw_input('Enter login: ')
-        if not login:
-            raise RuntimeError('Login required')
-
-        name = raw_input('Enter nickname of image: ')
-        if not name:
-            raise RuntimeError('Nickname required')
-
-        if 'Images' not in config:
-            config['Images'] = OrderedDict()
-        img = OrderedDict()
-        img['Id'] = image.id
-        img['Login'] = login
-        img['Name'] = image.name
-        config['Images'][name] = img
-        write_config()
+        instance = self.get_instance(parsed_args.name, parsed_args.arg_is_id)
+        if instance and self.sure_check():
+            self.app.stdout.write('Stopping %s\n' % parsed_args.name)
+            instance.stop()
 
 
-class Domain(BaseCommand):
-    "Add/Update domain_name."
+class Terminate(BaseCommand):
+    "Terminates an instance."
 
     def get_parser(self, prog_name):
-        parser = super(Domain, self).get_parser(prog_name)
-        parser.add_argument('-u', '--update')
+        parser = super(Terminate, self).get_parser(prog_name)
+        parser.add_argument('--id', dest='arg_is_id', action='store_true')
+        parser.add_argument('name')
         return parser
 
     def take_action(self, parsed_args):
-        if not parsed_args.update:
-            self.app.stdout.write('%s\n' % config.get('Domain', '<<Domain not set!>>'))
-            return
-
-        config['Domain'] = parsed_args.update
-        write_config()
+        instance = self.get_instance(parsed_args.name, parsed_args.arg_is_id)
+        if instance and self.sure_check():
+            self.app.stdout.write('Terminating %s\n' % parsed_args.name)
+            instance.terminate()
 
 
-class KeyPaths(BaseCommand):
-    "Add/Update key_paths."
-
-    def get_parser(self, prog_name):
-        parser = super(KeyPaths, self).get_parser(prog_name)
-        parser.add_argument('--aws')
-        parser.add_argument('--pub')
-        return parser
-
-    def take_action(self, parsed_args):
-        if not parsed_args.aws and not parsed_args.pub:
-            self.app.stdout.write('aws: %s\n' % self.app.aws_key_path)
-            self.app.stdout.write('pub: %s\n' % self.app.pub_key_path)
-            return
-
-        if parsed_args.aws:
-            config['AwsKeyPath'] = parsed_args.aws
-        if parsed_args.pub:
-            config['PubKeyPath'] = parsed_args.pub
-
-        write_config()
-
-
-class Salt(BaseCommand):
-    "Add/Update the salt."
-
-    def get_parser(self, prog_name):
-        parser = super(Salt, self).get_parser(prog_name)
-        parser.add_argument('-u', '--update')
-        return parser
-
-    def take_action(self, parsed_args):
-        if not parsed_args.update:
-            self.app.stdout.write('%s\n' % config.get('Salt', '<<Salt not set!>>'))
-            return
-
-        config['Salt'] = parsed_args.update
-        write_config()
-
-
-class ScriptPath(BaseCommand):
-    "Add/Update script_path."
-
-    def get_parser(self, prog_name):
-        parser = super(ScriptPath, self).get_parser(prog_name)
-        parser.add_argument('-u', '--update')
-        return parser
-
-    def take_action(self, parsed_args):
-        if not parsed_args.update:
-            self.app.stdout.write('%s\n' % self.app.script_path)
-            return
-
-        config['ScriptPath'] = parsed_args.update
-        write_config()
-
-
-class CreateImage(InstanceCommand):
+class CreateImage(BaseCommand):
     "Create an Image of an instance."
+
+    def get_parser(self, prog_name):
+        parser = super(CreateImage, self).get_parser(prog_name)
+        parser.add_argument('--id', dest='arg_is_id', action='store_true')
+        parser.add_argument('name')
+        return parser
 
     def take_action(self, parsed_args):
         instance = self.get_instance(parsed_args.name, parsed_args.arg_is_id)
@@ -200,7 +89,7 @@ class CreateImage(InstanceCommand):
             self.app.stdout.write(image_id)
 
 
-class CreateSnapshot(BaseCommand, SingleInstanceMixin):
+class CreateSnapshot(BaseCommand):
     "Create a snapshot of a volume."
 
     def take_action(self, parsed_args):
@@ -246,24 +135,6 @@ class CreateSnapshot(BaseCommand, SingleInstanceMixin):
             snapshot.add_tag('Name', name)
 
 
-class DeleteImage(BaseCommand):
-    "Deletes an image"
-
-    def take_action(self, parsed_args):
-        if 'Images' not in config:
-            raise RuntimeError('No Images found!')
-
-        items = config['Images'].keys()
-        if not items:
-            raise RuntimeError('No Images found!!')
-        images = [{'text': '%s - %s' % (item, config['Images'][item]['Id']), 'obj': item} for item in items]
-        image = self.question_maker('Available Images', 'image', images)
-
-        if self.sure_check():
-            del(config['Images'][image])
-            write_config()
-
-
 class DeleteSnapshot(BaseCommand):
     "Deletes a snapshot"
 
@@ -294,3 +165,157 @@ class DeleteVolume(BaseCommand):
 
         if self.sure_check():
             volume.delete()
+
+
+class Domain(BaseCommand):
+    "Add/Update domain_name."
+
+    def get_parser(self, prog_name):
+        parser = super(Domain, self).get_parser(prog_name)
+        parser.add_argument('-u', '--update')
+        return parser
+
+    def take_action(self, parsed_args):
+        if not parsed_args.update:
+            self.app.stdout.write('%s\n' % config.get('Domain', '<<Domain not set!>>'))
+            return
+
+        config['Domain'] = parsed_args.update
+        config.save()
+
+
+class Image(BaseCommand):
+    "Adds an image to config."
+
+    def get_parser(self, prog_name):
+        parser = super(Image, self).get_parser(prog_name)
+        parser.add_argument('-a', '--add')
+        parser.add_argument('-r', '--remove', action='store_true')
+        return parser
+
+    def take_action(self, parsed_args):
+        if parsed_args.add:
+            image = self.app.ec2_conn.get_image(parsed_args.add)
+            if not image:
+                raise RuntimeError('Image not found!')
+
+            self.app.stdout.write('Found the following image:\n')
+            self.app.stdout.write('  Name: %s\n' % image.name)
+            self.app.stdout.write('  Desc: %s\n' % image.description)
+
+            login = raw_input('Enter login: ')
+            if not login:
+                raise RuntimeError('Login required')
+
+            name = raw_input('Enter nickname of image: ')
+            if not name:
+                raise RuntimeError('Nickname required')
+
+            img = OrderedDict()
+            img['Id'] = image.id
+            img['Login'] = login
+            img['Name'] = image.name
+            config.images[name] = img
+            config.save()
+
+        elif parsed_args.remove:
+            images = config.images
+            if not images:
+                raise RuntimeError('No Images found!')
+
+            items = [{'text': '%s - %s' % (key, images[key]['Id']), 'obj': key} for key in images.keys()]
+            image = self.question_maker('Available Images', 'image', items)
+
+            if self.sure_check():
+                del(images[image])
+                config.save()
+
+
+class KeyPaths(BaseCommand):
+    "Add/Update key_paths."
+
+    def get_parser(self, prog_name):
+        parser = super(KeyPaths, self).get_parser(prog_name)
+        parser.add_argument('--aws')
+        parser.add_argument('--pub')
+        return parser
+
+    def take_action(self, parsed_args):
+        if not parsed_args.aws and not parsed_args.pub:
+            self.app.stdout.write('aws: %s\n' % config.aws_key_path)
+            self.app.stdout.write('pub: %s\n' % config.pub_key_path)
+            return
+
+        if parsed_args.aws:
+            config['AwsKeyPath'] = parsed_args.aws
+        if parsed_args.pub:
+            config['PubKeyPath'] = parsed_args.pub
+
+        config.write()
+
+
+class Salt(BaseCommand):
+    "Add/Update the salt."
+
+    def get_parser(self, prog_name):
+        parser = super(Salt, self).get_parser(prog_name)
+        parser.add_argument('-u', '--update')
+        return parser
+
+    def take_action(self, parsed_args):
+        if not parsed_args.update:
+            self.app.stdout.write('%s\n' % config.get('Salt', '<<Salt not set!>>'))
+            return
+
+        config['Salt'] = parsed_args.update
+        config.save()
+
+
+class ScriptPath(BaseCommand):
+    "Add/Update script_path."
+
+    def get_parser(self, prog_name):
+        parser = super(ScriptPath, self).get_parser(prog_name)
+        parser.add_argument('-u', '--update')
+        return parser
+
+    def take_action(self, parsed_args):
+        if not parsed_args.update:
+            self.app.stdout.write('%s\n' % config.script_path)
+            return
+
+        config['ScriptPath'] = parsed_args.update
+        config.save()
+
+
+class Tag(BaseCommand):
+    "Add/Remove/Update Tag on an instance."
+
+    def get_parser(self, prog_name):
+        parser = super(Tag, self).get_parser(prog_name)
+        parser.add_argument('-d', '--delete', action='store_true')
+        parser.add_argument('--id', dest='arg_is_id', action='store_true')
+        parser.add_argument('name')
+        return parser
+
+    def take_action(self, parsed_args):
+        instance = self.get_instance(parsed_args.name, parsed_args.arg_is_id)
+        if not instance:
+            raise RuntimeError('Instance not found!')
+
+        if parsed_args.delete:
+            tag_name = raw_input('Tag: ')
+            if not tag_name or tag_name == 'Name':
+                raise RuntimeError('Invalid Tag')
+
+            instance.remove_tag(tag_name)
+
+        else:
+            tag_name = raw_input('Tag: ')
+            if not tag_name:
+                raise RuntimeError('Invalid Tag')
+            value = raw_input('Value: ')
+            if not value:
+                raise RuntimeError('Invalid Value')
+
+            instance.add_tag(tag_name, value)

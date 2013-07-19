@@ -4,7 +4,7 @@ import os
 from cliff.lister import Lister
 
 from main import config
-from mixins import SingleInstanceMixin
+from mixins import InstanceMixin
 
 
 ROWS, COLUMNS = [int(item) for item in os.popen('stty size', 'r').read().split()]
@@ -63,9 +63,9 @@ class Builds(Lister):
     log = logging.getLogger(__name__)
 
     def take_action(self, parsed_args):
-        if 'Builds' not in config:
+        builds = config.builds
+        if not builds:
             raise RuntimeError('No Builds found!')
-        builds = config['Builds']
 
         build_tuples = []
         for build in builds.keys():
@@ -94,13 +94,10 @@ class Bundles(Lister):
 
 
     def take_action(self, parsed_args):
-        section = 'Bundles' if not parsed_args.is_py_bundle else 'PythonBundles'
-        if section not in config:
-            raise RuntimeError('No %s found!' % section)
-
-        bundles = config[section]
+        bundles = config.bundles if not parsed_args.is_py_bundle else config.python_bundles
         if not bundles:
-            raise RuntimeError('No %s found!!' % section)
+            bundle_type = 'Bundles' if not parsed_args.is_py_bundle else 'PythonBundles'
+            raise RuntimeError('No %s found!' % bundle_type)
 
         max_name_len = max(4, max([len(bundle) for bundle in bundles.keys()]))
         max_bundles_len = COLUMNS - max_name_len - 7
@@ -123,19 +120,14 @@ class Groups(Lister):
     log = logging.getLogger(__name__)
 
     def take_action(self, parsed_args):
-        section = 'Groups'
-        if section not in config:
-            raise RuntimeError('No %s found!' % section)
-
-        groups = config[section]
+        groups = config.groups
         if not groups:
-            raise RuntimeError('No %s found!!' % section)
+            raise RuntimeError('No Groups found!')
 
         max_name_len = max(4, max([len(group) for group in groups.keys()]))
         max_groups_len = COLUMNS - max_name_len - 7
 
         group_tuples = []
-        import pdb; pdb.set_trace()
         for group in groups.keys():
             items = ''
             for item in groups[group]:
@@ -165,10 +157,9 @@ class Images(Lister):
     log = logging.getLogger(__name__)
 
     def take_action(self, parsed_args):
-        if 'Images' not in config:
+        images = config.images
+        if not images:
             raise RuntimeError('No Images found!')
-
-        images = config['Images']
 
         image_tuples = []
 
@@ -180,14 +171,17 @@ class Images(Lister):
                     break
 
         for image in images.keys():
-            image_tuples.append((image, images[image].get('Login', ''), images[image].get('Id', ''), images[image].get('Name', '')))
+            image_tuples.append((image,
+                                 images[image].get('Login', ''),
+                                 images[image].get('Id', ''),
+                                 images[image].get('Name', '')))
 
         return (('Nickname', 'Login', 'AMI ID', 'Name'),
                 image_tuples
                 )
 
 
-class InstanceTags(Lister, SingleInstanceMixin):
+class InstanceTags(Lister, InstanceMixin):
     "List of tags on an ec2 instance."
 
     log = logging.getLogger(__name__)
@@ -251,17 +245,17 @@ class Projects(Lister):
     log = logging.getLogger(__name__)
 
     def take_action(self, parsed_args):
-        if 'Projects' not in config:
+        projects = config.projects
+        if not projects:
             raise RuntimeError('No Projects found!')
-        projects = config['Projects']
 
         project_tuples = []
         for project in projects.keys():
             project_tuples.append((project,
                                  projects[project].get('Build', ''),
-                                 projects[project].get('Count', '')))
+                                 projects[project].get('Num', '')))
 
-        return (('Name', 'Build', 'Count'),
+        return (('Name', 'Build', 'Num'),
                 project_tuples
                 )
 
@@ -273,7 +267,7 @@ class Scripts(Lister):
 
     def take_action(self, parsed_args):
         return (('Name',),
-                ((script,) for script in os.listdir(self.app.script_path) if not script.startswith('.'))
+                ((script,) for script in os.listdir(config.script_path) if not script.startswith('.'))
                 )
 
 
