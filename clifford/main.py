@@ -2,6 +2,7 @@ import json
 import logging
 import os
 import sys
+from collections import OrderedDict
 from os.path import expanduser
 
 import boto
@@ -94,11 +95,11 @@ class CliffordApp(App):
             with open(self.json_config_file, 'a') as configfile:
                 json.dump({}, configfile)
         with open(self.json_config_file, 'r') as configfile:
-            return json.load(configfile)
+            return json.load(configfile, object_pairs_hook=OrderedDict)
 
     def write_config(self):
         with open(self.json_config_file, 'wb') as configfile:
-            json.dump(self.config, configfile, indent=2)
+            json.dump(self.config, configfile, indent=2, separators=(',', ': '))
 
 
 def main(argv=sys.argv[1:]):

@@ -1,3 +1,4 @@
+from collections import OrderedDict
 from multiprocessing import Pool
 import os
 import time
@@ -66,6 +67,9 @@ class Build(BaseCommand, LaunchOptionsMixin, SingleInstanceMixin):
             group = self.app.config['Groups'][options['Group']]
             bundles = []
             self.get_bundles(group, bundles)
+            self.run_activity(reservation, pool, group_installer, [options['Login'], bundles, self.app.aws_key_path])
+            self.app.stdout.write('Pip Installer Finished\n')
+            time.sleep(10)
 
         if 'Pip' in options:
             python_packages = self.app.config['PythonBundles'][options['Pip']]
@@ -140,15 +144,14 @@ class Build(BaseCommand, LaunchOptionsMixin, SingleInstanceMixin):
             bundle_option = 'Skip Step'
 
         if 'Builds' not in self.app.config:
-            self.app.config['Builds'] = {}
+            self.app.config['Builds'] = OrderedDict()
 
-        build = {
-            'Size': instance_type,
-            'Login': image_item['Login'],
-            'Image': image_item['Id'],
-            'Key': key.name,
-            'SecurityGroups': security_groups,
-        }
+        build = OrderedDict()
+        build['Size'] = instance_type
+        build['Login'] = image_item['Login'],
+        build['Image'] = image_item['Id'],
+        build['Key'] = key.name,
+        build['SecurityGroups'] = security_groups,
 
         if hasattr(zone, 'name'):
             build['Zone'] = zone.name

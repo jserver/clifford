@@ -63,7 +63,7 @@ class Builds(Lister):
 
     def take_action(self, parsed_args):
         if 'Builds' not in self.app.config:
-            raise RuntimeError('No builds found!')
+            raise RuntimeError('No Builds found!')
         builds = self.app.config['Builds']
 
         build_tuples = []
@@ -251,7 +251,7 @@ class Projects(Lister):
 
     def take_action(self, parsed_args):
         if 'Projects' not in self.app.config:
-            raise RuntimeError('No projects found!')
+            raise RuntimeError('No Projects found!')
         projects = self.app.config['Projects']
 
         project_tuples = []

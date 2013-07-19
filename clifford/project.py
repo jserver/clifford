@@ -1,3 +1,4 @@
+from collections import OrderedDict
 import time
 
 from commands import BaseCommand
@@ -9,32 +10,33 @@ class Project(BaseCommand, SingleInstanceMixin):
 
     def get_parser(self, prog_name):
         parser = super(Project, self).get_parser(prog_name)
-        parser.add_argument('project')
+        parser.add_argument('-c', '--create', action='store_true')
         parser.add_argument('name')
         return parser
 
     def take_action(self, parsed_args):
-        if not self.is_ok(parsed_args.name):
-            raise RuntimeError('Inavlid Name!\n')
+        if parsed_args.create:
+            self.create(parsed_args.name)
+            return
 
-        if not self.app.cparser.has_section('Project:%s' % parsed_args.project):
+        if 'Projects' not in self.app.config:
+            raise RuntimeError('No Projects found!')
+
+        if parsed_args.name not in self.app.config['Projects']:
             raise RuntimeError('Project not found!')
 
+        project = self.app.config['Projects'][parsed_args.name]
+        if 'Build' not in project:
+            raise RuntimeError('No build in project')
+
+        self.app.stdout.write('This project will launch %s instance(s)' % project['Num'])
         if not self.sure_check():
             return
 
-        items = self.app.cparser.items('Project:%s' % parsed_args.project)
-        options = {}
-        for item in items:
-            options[item[0]] = item[1]
-
-        if 'build' not in options:
-            raise RuntimeError('No build in project')
-
         cmd = 'build -y'
-        cmd += ' --build %s' % options['build']
-        if 'count' in options:
-            cmd += ' --count %s' % options['count']
+        cmd += ' --build %s' % project['Build']
+        if 'Num' in project:
+            cmd += ' --num %s' % project['Num']
         cmd += ' ' + parsed_args.name
         self.app.run_subcommand(cmd.split(' '))
         time.sleep(15)
@@ -67,3 +69,18 @@ class Project(BaseCommand, SingleInstanceMixin):
             cmd += ' --id %s' % instance.id
             self.app.run_subcommand(cmd.split(' '))
         '''
+
+    def create(self, name):
+        build = self.question_maker('Select Build', 'build', [{'text': bld} for bld in self.app.config['Builds'].keys()])
+        if not build:
+            raise RuntimeError('No Build selected!\n')
+
+        num = raw_input('How many instances? ')
+        if not num.isdigit():
+            raise RuntimeError('Invalid number!')
+
+        project = OrderedDict()
+        project['Build'] = build
+        project['Num'] = int(num)
+        self.app.config['Projects'][name] = project
+        self.app.write_config()

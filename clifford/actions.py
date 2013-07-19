@@ -1,3 +1,4 @@
+from collections import OrderedDict
 import time
 
 from commands import BaseCommand, InstanceCommand
@@ -101,8 +102,12 @@ class AddImage(BaseCommand):
             raise RuntimeError('Nickname required')
 
         if 'Images' not in self.app.config:
-            self.app.config['Images'] = {}
-        self.app.config['Images'][name] = {'Id': image.id, 'Login': login, 'Name': image.name}
+            self.app.config['Images'] = OrderedDict()
+        img = OrderedDict()
+        img['Id'] = image.id
+        img['Login'] = login
+        img['Name'] = image.name
+        self.app.config['Images'][name] = img
         self.app.write_config()
 
 
@@ -116,13 +121,10 @@ class Domain(BaseCommand):
 
     def take_action(self, parsed_args):
         if not parsed_args.update:
-            self.app.stdout.write('%s\n' % self.app.get_option('General', 'domain'))
+            self.app.stdout.write('%s\n' % self.app.config.get('Domain', '<<Domain not set!>>'))
             return
 
-        if not self.app.cparser.has_section('General'):
-            self.app.cparser.add_section('General')
-
-        self.app.cparser.set('General', 'domain', parsed_args.update)
+        self.app.config['Domain'] = parsed_args.update
         self.app.write_config()
 
 
@@ -141,13 +143,10 @@ class KeyPaths(BaseCommand):
             self.app.stdout.write('pub: %s\n' % self.app.pub_key_path)
             return
 
-        if not self.app.cparser.has_section('General'):
-            self.app.cparser.add_section('General')
-
         if parsed_args.aws:
-            self.app.cparser.set('General', 'aws_key_path', parsed_args.aws)
+            self.app.config['AwsKeyPath'] = parsed_args.aws
         if parsed_args.pub:
-            self.app.cparser.set('General', 'pub_key_path', parsed_args.pub)
+            self.app.config['PubKeyPath'] = parsed_args.pub
 
         self.app.write_config()
 
@@ -162,13 +161,10 @@ class Salt(BaseCommand):
 
     def take_action(self, parsed_args):
         if not parsed_args.update:
-            self.app.stdout.write('%s\n' % self.app.get_option('General', 'salt'))
+            self.app.stdout.write('%s\n' % self.app.config.get('Salt', '<<Salt not set!>>'))
             return
 
-        if not self.app.cparser.has_section('General'):
-            self.app.cparser.add_section('General')
-
-        self.app.cparser.set('General', 'salt', parsed_args.update)
+        self.app.config['Salt'] = parsed_args.update
         self.app.write_config()
 
 
@@ -185,10 +181,7 @@ class ScriptPath(BaseCommand):
             self.app.stdout.write('%s\n' % self.app.script_path)
             return
 
-        if not self.app.cparser.has_section('General'):
-            self.app.cparser.add_section('General')
-
-        self.app.cparser.set('General', 'script_path', parsed_args.update)
+        self.app.config['ScriptPath'] = parsed_args.update
         self.app.write_config()
 
 
@@ -256,19 +249,18 @@ class DeleteImage(BaseCommand):
     "Deletes an image"
 
     def take_action(self, parsed_args):
-        if not self.app.cparser.has_section('Images'):
-            raise RuntimeError('No image section found!')
+        if 'Images' not in self.app.config:
+            raise RuntimeError('No Images found!')
 
-        items = self.app.cparser.items('Images')
+        items = self.app.config['Images'].keys()
         if not items:
-            raise RuntimeError('No images found')
-        images = [{'text': '%s - %s' % (image[0], image[1]), 'obj': image[0]} for image in items]
+            raise RuntimeError('No Images found!!')
+        images = [{'text': '%s - %s' % (item, self.app.config['Images'][item]['Id']), 'obj': item} for item in items]
         image = self.question_maker('Available Images', 'image', images)
 
         if self.sure_check():
-            self.app.cparser.remove_option('Images', image)
+            del(self.app.config['Images'][image])
             self.app.write_config()
-            self.app.stdout.write('%s removed from Images\n' % image)
 
 
 class DeleteSnapshot(BaseCommand):

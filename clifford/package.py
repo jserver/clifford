@@ -1,3 +1,4 @@
+from collections import OrderedDict
 from commands import BaseCommand
 
 
@@ -16,7 +17,7 @@ class Bundle(BaseCommand):
     def take_action(self, parsed_args):
         section = 'Bundles' if not parsed_args.is_py_bundle else 'PythonBundles'
         if section not in self.app.config:
-            self.app.config[section] = {}
+            self.app.config[section] = OrderedDict()
 
         if parsed_args.create:
             if parsed_args.name in self.app.config[section]:
@@ -102,7 +103,7 @@ class Group(BaseCommand):
     def take_action(self, parsed_args):
         section = 'Groups'
         if section not in self.app.config:
-            self.app.config[section] = {}
+            self.app.config[section] = OrderedDict()
 
         if parsed_args.create:
             if parsed_args.name in self.app.config[section]:

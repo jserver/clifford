@@ -17,7 +17,7 @@ import os
 import sys
 
 try:
-    long_description = open('README.rst', 'rt').read()
+    long_description = open('README', 'rt').read()
 except IOError:
     long_description = ''
 
@@ -29,7 +29,7 @@ setup(
     long_description=long_description,
 
     author='Joe Server',
-    author_email='servernyc@gmail.com',
+    author_email='joe@jserver.io',
 
     url='https://github.com/jserver/clifford',
     download_url='https://github.com/jserver/clifford/tarball/master',
@@ -39,8 +39,6 @@ setup(
                  'Programming Language :: Python',
                  'Programming Language :: Python :: 2',
                  'Programming Language :: Python :: 2.7',
-                 'Programming Language :: Python :: 3',
-                 'Programming Language :: Python :: 3.2',
                  'Intended Audience :: Developers',
                  'Environment :: Console',
                  ],
