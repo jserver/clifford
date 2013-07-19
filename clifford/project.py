@@ -2,6 +2,7 @@ from collections import OrderedDict
 import time
 
 from commands import BaseCommand
+from main import config, write_config
 from mixins import SingleInstanceMixin
 
 
@@ -19,13 +20,13 @@ class Project(BaseCommand, SingleInstanceMixin):
             self.create(parsed_args.name)
             return
 
-        if 'Projects' not in self.app.config:
+        if 'Projects' not in config:
             raise RuntimeError('No Projects found!')
 
-        if parsed_args.name not in self.app.config['Projects']:
+        if parsed_args.name not in config['Projects']:
             raise RuntimeError('Project not found!')
 
-        project = self.app.config['Projects'][parsed_args.name]
+        project = config['Projects'][parsed_args.name]
         if 'Build' not in project:
             raise RuntimeError('No build in project')
 
@@ -71,7 +72,7 @@ class Project(BaseCommand, SingleInstanceMixin):
         '''
 
     def create(self, name):
-        build = self.question_maker('Select Build', 'build', [{'text': bld} for bld in self.app.config['Builds'].keys()])
+        build = self.question_maker('Select Build', 'build', [{'text': bld} for bld in config['Builds'].keys()])
         if not build:
             raise RuntimeError('No Build selected!\n')
 
@@ -82,5 +83,5 @@ class Project(BaseCommand, SingleInstanceMixin):
         project = OrderedDict()
         project['Build'] = build
         project['Num'] = int(num)
-        self.app.config['Projects'][name] = project
-        self.app.write_config()
+        config['Projects'][name] = project
+        write_config()

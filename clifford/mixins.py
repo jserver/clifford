@@ -1,5 +1,7 @@
 import glob
 
+from main import config
+
 
 class LaunchOptionsMixin(object):
     def get_instance_type(self, size=''):
@@ -21,25 +23,25 @@ class LaunchOptionsMixin(object):
                 pass
 
         if not image:
-            if 'Images' not in self.app.config:
+            if 'Images' not in config:
                 raise RuntimeError('No Images found!\n')
 
-            items = self.app.config['Images'].keys()
+            items = config['Images'].keys()
 
-            image_ids = [self.app.config['Images'][item]['Id'] for item in items]
+            image_ids = [config['Images'][item]['Id'] for item in items]
             if not image_ids:
                 raise RuntimeError('No images found!')
 
             images = []
             for aws_image in self.app.ec2_conn.get_all_images(image_ids=image_ids):
                 for item in items:
-                    if self.app.config['Images'][item]['Id'] == aws_image.id:
+                    if config['Images'][item]['Id'] == aws_image.id:
                         images.append({'text': '%s - %s' % (item, aws_image.id), 'obj': aws_image})
             images = sorted(images, key=lambda image: image['text'].lower())
             image = self.question_maker('Available Images', 'image', images)
 
             if return_item:
-                return [self.app.config['Images'][item] for item in items if self.app.config['Images'][item]['Id'] == image.id][0]
+                return [config['Images'][item] for item in items if config['Images'][item]['Id'] == image.id][0]
 
         return image
 

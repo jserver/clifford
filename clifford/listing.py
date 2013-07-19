@@ -3,6 +3,7 @@ import os
 
 from cliff.lister import Lister
 
+from main import config
 from mixins import SingleInstanceMixin
 
 
@@ -62,18 +63,18 @@ class Builds(Lister):
     log = logging.getLogger(__name__)
 
     def take_action(self, parsed_args):
-        if 'Builds' not in self.app.config:
+        if 'Builds' not in config:
             raise RuntimeError('No Builds found!')
-        builds = self.app.config['Builds']
+        builds = config['Builds']
 
         build_tuples = []
         for build in builds.keys():
             build_tuples.append((build,
-                                 builds[build].get('size', ''),
-                                 builds[build].get('image', ''),
-                                 builds[build].get('key', ''),
-                                 builds[build].get('zone', ''),
-                                 builds[build].get('group', '')))
+                                 builds[build].get('Size', ''),
+                                 builds[build].get('Image', ''),
+                                 builds[build].get('Key', ''),
+                                 builds[build].get('Zone', ''),
+                                 builds[build].get('Group', '')))
 
         return (('Name', 'Size', 'Image', 'Key', 'Zone', 'Group'),
                 build_tuples
@@ -94,10 +95,10 @@ class Bundles(Lister):
 
     def take_action(self, parsed_args):
         section = 'Bundles' if not parsed_args.is_py_bundle else 'PythonBundles'
-        if section not in self.app.config:
+        if section not in config:
             raise RuntimeError('No %s found!' % section)
 
-        bundles = self.app.config[section]
+        bundles = config[section]
         if not bundles:
             raise RuntimeError('No %s found!!' % section)
 
@@ -123,10 +124,10 @@ class Groups(Lister):
 
     def take_action(self, parsed_args):
         section = 'Groups'
-        if section not in self.app.config:
+        if section not in config:
             raise RuntimeError('No %s found!' % section)
 
-        groups = self.app.config[section]
+        groups = config[section]
         if not groups:
             raise RuntimeError('No %s found!!' % section)
 
@@ -164,10 +165,10 @@ class Images(Lister):
     log = logging.getLogger(__name__)
 
     def take_action(self, parsed_args):
-        if 'Images' not in self.app.config:
-            raise RuntimeError('No images found!')
+        if 'Images' not in config:
+            raise RuntimeError('No Images found!')
 
-        images = self.app.config['Images']
+        images = config['Images']
 
         image_tuples = []
 
@@ -250,9 +251,9 @@ class Projects(Lister):
     log = logging.getLogger(__name__)
 
     def take_action(self, parsed_args):
-        if 'Projects' not in self.app.config:
+        if 'Projects' not in config:
             raise RuntimeError('No Projects found!')
-        projects = self.app.config['Projects']
+        projects = config['Projects']
 
         project_tuples = []
         for project in projects.keys():

@@ -2,6 +2,7 @@ from collections import OrderedDict
 import time
 
 from commands import BaseCommand, InstanceCommand
+from main import config, write_config
 from mixins import SingleInstanceMixin
 
 
@@ -101,14 +102,14 @@ class AddImage(BaseCommand):
         if not name:
             raise RuntimeError('Nickname required')
 
-        if 'Images' not in self.app.config:
-            self.app.config['Images'] = OrderedDict()
+        if 'Images' not in config:
+            config['Images'] = OrderedDict()
         img = OrderedDict()
         img['Id'] = image.id
         img['Login'] = login
         img['Name'] = image.name
-        self.app.config['Images'][name] = img
-        self.app.write_config()
+        config['Images'][name] = img
+        write_config()
 
 
 class Domain(BaseCommand):
@@ -121,11 +122,11 @@ class Domain(BaseCommand):
 
     def take_action(self, parsed_args):
         if not parsed_args.update:
-            self.app.stdout.write('%s\n' % self.app.config.get('Domain', '<<Domain not set!>>'))
+            self.app.stdout.write('%s\n' % config.get('Domain', '<<Domain not set!>>'))
             return
 
-        self.app.config['Domain'] = parsed_args.update
-        self.app.write_config()
+        config['Domain'] = parsed_args.update
+        write_config()
 
 
 class KeyPaths(BaseCommand):
@@ -144,11 +145,11 @@ class KeyPaths(BaseCommand):
             return
 
         if parsed_args.aws:
-            self.app.config['AwsKeyPath'] = parsed_args.aws
+            config['AwsKeyPath'] = parsed_args.aws
         if parsed_args.pub:
-            self.app.config['PubKeyPath'] = parsed_args.pub
+            config['PubKeyPath'] = parsed_args.pub
 
-        self.app.write_config()
+        write_config()
 
 
 class Salt(BaseCommand):
@@ -161,11 +162,11 @@ class Salt(BaseCommand):
 
     def take_action(self, parsed_args):
         if not parsed_args.update:
-            self.app.stdout.write('%s\n' % self.app.config.get('Salt', '<<Salt not set!>>'))
+            self.app.stdout.write('%s\n' % config.get('Salt', '<<Salt not set!>>'))
             return
 
-        self.app.config['Salt'] = parsed_args.update
-        self.app.write_config()
+        config['Salt'] = parsed_args.update
+        write_config()
 
 
 class ScriptPath(BaseCommand):
@@ -181,8 +182,8 @@ class ScriptPath(BaseCommand):
             self.app.stdout.write('%s\n' % self.app.script_path)
             return
 
-        self.app.config['ScriptPath'] = parsed_args.update
-        self.app.write_config()
+        config['ScriptPath'] = parsed_args.update
+        write_config()
 
 
 class CreateImage(InstanceCommand):
@@ -249,18 +250,18 @@ class DeleteImage(BaseCommand):
     "Deletes an image"
 
     def take_action(self, parsed_args):
-        if 'Images' not in self.app.config:
+        if 'Images' not in config:
             raise RuntimeError('No Images found!')
 
-        items = self.app.config['Images'].keys()
+        items = config['Images'].keys()
         if not items:
             raise RuntimeError('No Images found!!')
-        images = [{'text': '%s - %s' % (item, self.app.config['Images'][item]['Id']), 'obj': item} for item in items]
+        images = [{'text': '%s - %s' % (item, config['Images'][item]['Id']), 'obj': item} for item in items]
         image = self.question_maker('Available Images', 'image', images)
 
         if self.sure_check():
-            del(self.app.config['Images'][image])
-            self.app.write_config()
+            del(config['Images'][image])
+            write_config()
 
 
 class DeleteSnapshot(BaseCommand):

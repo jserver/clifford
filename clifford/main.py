@@ -22,28 +22,26 @@ class CliffordApp(App):
             )
         self.ec2_conn = boto.connect_ec2()
         self.s3_conn = boto.connect_s3()
-        self.json_config_file = '%s/.clifford/config.json' % expanduser("~")
-        self.config = self.read_config()
 
     def initialize_app(self, argv):
         self.log.debug('initialize_app')
 
         changes_made = False
 
-        if 'AwsKeyPath' not in self.config:
-            self.config['AwsKeyPath'] = self.input_valid_path('AwsKeyPath')
+        if 'AwsKeyPath' not in config:
+            config['AwsKeyPath'] = self.input_valid_path('AwsKeyPath')
             changes_made = True
 
-        if 'PubKeyPath' not in self.config:
-            self.config['PubKeyPath']  = self.input_valid_path('PubKeyPath')
+        if 'PubKeyPath' not in config:
+            config['PubKeyPath']  = self.input_valid_path('PubKeyPath')
             changes_made = True
 
-        if 'ScriptPath' not in self.config:
-            self.config['ScriptPath']  = self.input_valid_path('ScriptPath')
+        if 'ScriptPath' not in config:
+            config['ScriptPath']  = self.input_valid_path('ScriptPath')
             changes_made = True
 
         if changes_made:
-            self.write_config()
+            write_config()
 
     def prepare_to_run_command(self, cmd):
         self.log.debug('prepare_to_run_command %s', cmd.__class__.__name__)
@@ -68,9 +66,9 @@ class CliffordApp(App):
         return path
 
     def get_path(self, key):
-        if key not in self.config:
+        if key not in config:
             raise RuntimeError('%s not found!' % key)
-        value = self.config[key]
+        value = config[key]
         value = os.path.expanduser(value)
         value = os.path.expandvars(value)
         return value
@@ -87,19 +85,24 @@ class CliffordApp(App):
     def script_path(self):
         return self.get_path('ScriptPath')
 
-    def read_config(self):
-        if not os.path.exists(self.json_config_file):
-            basedir = os.path.dirname(self.json_config_file)
-            if not os.path.exists(basedir):
-                os.makedirs(basedir)
-            with open(self.json_config_file, 'a') as configfile:
-                json.dump({}, configfile)
-        with open(self.json_config_file, 'r') as configfile:
-            return json.load(configfile, object_pairs_hook=OrderedDict)
 
-    def write_config(self):
-        with open(self.json_config_file, 'wb') as configfile:
-            json.dump(self.config, configfile, indent=2, separators=(',', ': '))
+def read_config():
+    if not os.path.exists(json_config_file):
+        basedir = os.path.dirname(json_config_file)
+        if not os.path.exists(basedir):
+            os.makedirs(basedir)
+        with open(json_config_file, 'a') as configfile:
+            json.dump({}, configfile)
+    with open(json_config_file, 'r') as configfile:
+        return json.load(configfile, object_pairs_hook=OrderedDict)
+
+
+def write_config():
+    with open(json_config_file, 'wb') as configfile:
+        json.dump(config, configfile, indent=2, separators=(',', ': '))
+
+json_config_file = '%s/.clifford/config.json' % expanduser("~")
+config = read_config()
 
 
 def main(argv=sys.argv[1:]):

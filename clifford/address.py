@@ -19,12 +19,12 @@ class Associate(InstanceCommand):
             self.app.stdout.write('Attaching to Elastic IP...\n')
             address.associate(instance.id)
 
-        if 'Domain' in self.app.config:
+        if 'Domain' in config:
             ssh = paramiko.SSHClient()
             ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
             ssh.connect(instance.public_dns_name, username=self.get_user(instance), key_filename='%s/%s.pem' % (self.key_path, instance.key_name))
             stdin, stdout, stderr = ssh.exec_command('sudo su -c "echo %s > /etc/hostname && hostname -F /etc/hostname"' % parsed_args.name)
-            fqdn = '%s.%s' % (parsed_args.name, self.app.config['Domain'])
+            fqdn = '%s.%s' % (parsed_args.name, config['Domain'])
             stdin, stdout, stderr = ssh.exec_command('sudo su -c "echo \'\n### CLIFFORD\n%s\t%s\t%s\' >> /etc/hosts"' % (address.public_ip, fqdn, parsed_args.name))
             ssh.close()
 
