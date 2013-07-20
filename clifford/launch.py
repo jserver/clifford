@@ -12,6 +12,8 @@ class Launch(BaseCommand, LaunchOptionsMixin):
     def get_parser(self, prog_name):
         parser = super(Launch, self).get_parser(prog_name)
         parser.add_argument('-y', dest='assume_yes', action='store_true')
+        parser.add_argument('--project')
+        parser.add_argument('--build')
         parser.add_argument('--size')
         parser.add_argument('--login')
         parser.add_argument('--image')
@@ -42,26 +44,30 @@ class Launch(BaseCommand, LaunchOptionsMixin):
             kwargs['placement'] = zone.name
 
         if parsed_args.num > 1:
-            plural = 's'
             kwargs['min_count'] = parsed_args.num
             kwargs['max_count'] = parsed_args.num
-        else:
-            plural = ''
 
         if not parsed_args.assume_yes and not self.sure_check():
-            raise RuntimeError('Instance%s not created!' % plural)
+            raise RuntimeError('Instance(s) not created!')
 
         # Launch this thing
-        self.app.stdout.write('Launching instance%s...\n' % plural)
+        self.app.stdout.write('Launching instance(s)...\n')
         reservation = image.run(**kwargs)
         time.sleep(10)
 
         instances = reservation.instances
+        count = len(instances)
         time.sleep(10)
-        self.app.stdout.write('Add Name tag to instance%s\n' % plural)
-        for idx, inst in enumerate(reservation.instances):
-            inst.add_tag('Name', parsed_args.name)
-            inst.add_tag('Clifford', '%s-%s' % (parsed_args.name, idx + 1))
+        self.app.stdout.write('Adding Tags to instance(s)\n')
+        for idx, inst in enumerate(instances):
+            if count == 1:
+                inst.add_tag('Name', parsed_args.name)
+            else:
+                inst.add_tag('Name', '%s-%s' % (parsed_args.name, idx + 1))
+            if parsed_args.project:
+                inst.add_tag('Project', parsed_args.project)
+            if parsed_args.build:
+                inst.add_tag('Build', parsed_args.build)
 
         cnt = 0
         while cnt < 6:
@@ -77,10 +83,10 @@ class Launch(BaseCommand, LaunchOptionsMixin):
             if ready:
                 break
         if cnt == 6:
-            raise RuntimeError('All instance%s are not created equal!' % plural)
+            raise RuntimeError('All instance(s) are not created equal!')
 
         time.sleep(20)
-        self.app.stdout.write('Instance%s should now be running\n' % plural)
+        self.app.stdout.write('Instance(s) should now be running\n')
         for inst in instances:
             if config.aws_key_path:
                 self.app.stdout.write('ssh -i %s.pem %s@%s\n' % (os.path.join(config.aws_key_path, key.name), parsed_args.login, inst.public_dns_name))

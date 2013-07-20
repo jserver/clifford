@@ -211,18 +211,22 @@ class Instances(Lister):
         instances = []
         for res in reservations:
             for instance in res.instances:
-                instances.append((instance.tags.get('Name', ''),
+                instances.append((instance.tags.get('Project', ''),
+                                  instance.tags.get('Build', ''),
+                                  instance.tags.get('Name', ''),
                                   instance.id,
                                   instance.state,
                                   instance.instance_type[3:],
                                   'Y' if instance.root_device_type == 'ebs' else 'N',
                                   'Y' if instance.architecture == 'x86_64' else 'N',
-                                  instance.placement,
-                                  instance.public_dns_name))
+                                  instance.placement))
                 instances = sorted(instances, key=lambda instance: instance[0].lower())
 
-        return (('Name', 'Id', 'State', 'Type', 'ebs', '64', 'Zone', 'Public DNS'),
-                (instance for instance in instances)
+        if not instances:
+            raise RuntimeError('No Instances found!')
+
+        return (('Project', 'Build', 'Name', 'Id', 'State', 'Type', 'ebs', '64', 'Zone'),
+                tuple(instances)
                 )
 
 

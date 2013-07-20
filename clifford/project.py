@@ -10,34 +10,39 @@ class Project(BaseCommand):
 
     def get_parser(self, prog_name):
         parser = super(Project, self).get_parser(prog_name)
-        parser.add_argument('-c', '--create', action='store_true')
+        parser.add_argument('-a', '--add', action='store_true')
+        parser.add_argument('-r', '--remove', action='store_true')
         parser.add_argument('name')
         return parser
 
     def take_action(self, parsed_args):
-        if parsed_args.create:
-            self.create(parsed_args.name)
+        if parsed_args.add:
+            if parsed_args.name in config.projects:
+                raise RuntimeError('A project already exists by that name!')
+            self.add(parsed_args.name)
             return
-
-        if not config.projects:
-            raise RuntimeError('No Projects found!')
 
         if parsed_args.name not in config.projects:
             raise RuntimeError('Project not found!')
+
+        if parsed_args.remove:
+            del(config.projects[parsed_args.name])
+            config.write()
+            return
 
         project = config.projects[parsed_args.name]
         if 'Build' not in project:
             raise RuntimeError('No build in project')
 
-        self.app.stdout.write('This project will launch %s instance(s)' % project['Num'])
+        self.app.stdout.write('This project will launch %s instance(s)\n' % project['Num'])
         if not self.sure_check():
             return
 
-        cmd = 'build -y'
-        cmd += ' --build %s' % project['Build']
+        cmd = 'build'
         if 'Num' in project:
             cmd += ' --num %s' % project['Num']
-        cmd += ' ' + parsed_args.name
+        cmd += ' --project %s' % parsed_args.name
+        cmd += ' ' + project['Build']
         self.app.run_subcommand(cmd.split(' '))
         time.sleep(15)
 
@@ -70,10 +75,7 @@ class Project(BaseCommand):
             self.app.run_subcommand(cmd.split(' '))
         '''
 
-    def create(self, name):
-        if not config.builds:
-            raise RuntimeError('No Builds Found')
-
+    def add(self, name):
         build = self.question_maker('Select Build', 'build', [{'text': bld} for bld in config.builds.keys()])
         if not build:
             raise RuntimeError('No Build selected!\n')

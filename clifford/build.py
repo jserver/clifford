@@ -13,34 +13,42 @@ class Build(BaseCommand, LaunchOptionsMixin):
 
     def get_parser(self, prog_name):
         parser = super(Build, self).get_parser(prog_name)
-        parser.add_argument('-y', dest='assume_yes', action='store_true')
-        parser.add_argument('-b', '--build')
-        parser.add_argument('-c', '--create', action='store_true')
+        parser.add_argument('-a', '--add', action='store_true')
         parser.add_argument('-n', '--num', type=int, default=1)
+        parser.add_argument('--project')
+        parser.add_argument('-r', '--remove', action='store_true')
         parser.add_argument('name')
         return parser
 
     def take_action(self, parsed_args):
-        if parsed_args.create:
-            self.create(parsed_args.name)
+        if parsed_args.add:
+            if parsed_args.name in config.builds:
+                raise RuntimeError('A build already exists by that name!')
+            self.add(parsed_args.name)
             return
 
-        if not config.builds:
-            raise RuntimeError('No Builds found!')
+        if parsed_args.name not in config.builds:
+            raise RuntimeError('Build not found!')
 
-        if parsed_args.build and parsed_args.build in config.builds.keys():
-            build = parsed_args.build
-        else:
-            build = self.question_maker('Select Build', 'build', [{'text': bld} for bld in config.builds.keys()])
-            if not build:
-                raise RuntimeError('No Build selected!\n')
-
-        if not parsed_args.assume_yes and not self.sure_check():
+        if parsed_args.remove:
+            del(config.builds[parsed_args.name])
+            config.write()
             return
 
-        options = config.builds[build]
+        if parsed_args.project:
+            self.app.stdout.write('Project: %s; Build: %s\n' % (parsed_args.project, parsed_args.name))
+        launch_name = raw_input('Enter Tag:Name Value (%s): ' % parsed_args.name)
+        if not launch_name:
+            launch_name = parsed_args.name
+
+        if not self.sure_check():
+            return
+
+        options = config.builds[parsed_args.name]
 
         cmd = 'launch -y'
+        cmd += ' --project %s' % parsed_args.project
+        cmd += ' --build %s' % parsed_args.name
         cmd += ' --size %s' % options['Size']
         cmd += ' --image %s' % options['Login']
         cmd += ' --image %s' % options['Image']
@@ -50,7 +58,7 @@ class Build(BaseCommand, LaunchOptionsMixin):
         if 'UserData' in options:
             cmd += ' --user-data %s' % options['UserData']
         cmd +=' --num %s' % parsed_args.num
-        cmd += ' ' + parsed_args.name
+        cmd += ' ' + launch_name
         self.app.run_subcommand(cmd.split(' '))
         time.sleep(10)
 
@@ -111,10 +119,7 @@ class Build(BaseCommand, LaunchOptionsMixin):
                     self.app.stdout.write('Result: %s\n' % result.get())
                     completed.append(result)
 
-    def create(self, name):
-        if not config.images:
-            raise RuntimeError('No Images Found')
-
+    def add(self, name):
         instance_type = self.get_instance_type()
         image_item = self.get_image(return_item=True)
         key = self.get_key()

@@ -9,8 +9,8 @@ class Bundle(BaseCommand):
         parser = super(Bundle, self).get_parser(prog_name)
         parser.add_argument('--py', dest='is_py_bundle', action='store_true')
         parser.add_argument('-s', '--show', action='store_true')
-        parser.add_argument('-c', '--create', action='store_true')
-        parser.add_argument('-d', '--delete', action='store_true')
+        parser.add_argument('-a', '--add', action='store_true')
+        parser.add_argument('-r', '--remove', action='store_true')
         parser.add_argument('-u', '--update', action='store_true')
         parser.add_argument('name')
         return parser
@@ -20,7 +20,7 @@ class Bundle(BaseCommand):
         if section not in config:
             config[section] = OrderedDict()
 
-        if parsed_args.create:
+        if parsed_args.add:
             if parsed_args.name in config[section]:
                 raise RuntimeError('%s already exists!' % parsed_args.name)
 
@@ -46,7 +46,7 @@ class Bundle(BaseCommand):
                 config[section][parsed_args.name] = packages
                 config.save()
 
-            elif parsed_args.delete:
+            elif parsed_args.remove:
                 del(config[section][parsed_args.name])
                 config.save()
 
@@ -56,8 +56,8 @@ class Group(BaseCommand):
     def get_parser(self, prog_name):
         parser = super(Group, self).get_parser(prog_name)
         parser.add_argument('-s', '--show', action='store_true')
-        parser.add_argument('-c', '--create', action='store_true')
-        parser.add_argument('-d', '--delete', action='store_true')
+        parser.add_argument('-a', '--add', action='store_true')
+        parser.add_argument('-r', '--remove', action='store_true')
         parser.add_argument('-u', '--update', action='store_true')
         parser.add_argument('name')
         return parser
@@ -106,7 +106,7 @@ class Group(BaseCommand):
         if section not in config:
             config[section] = OrderedDict()
 
-        if parsed_args.create:
+        if parsed_args.add:
             if parsed_args.name in config[section]:
                 raise RuntimeError('%s already exists!' % parsed_args.name)
 
@@ -133,6 +133,6 @@ class Group(BaseCommand):
                 config[section][parsed_args.name] = group_items
                 config.save()
 
-            elif parsed_args.delete:
+            elif parsed_args.remove:
                 del(config[section][parsed_args.name])
                 config.save()

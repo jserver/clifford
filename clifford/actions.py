@@ -194,6 +194,9 @@ class Image(BaseCommand):
         return parser
 
     def take_action(self, parsed_args):
+        if not parsed_args.add and not parsed_args.remove:
+            raise RuntimeError('Use -a <ami_id> to add or -r to remove images')
+
         if parsed_args.add:
             image = self.app.ec2_conn.get_image(parsed_args.add)
             if not image:
@@ -210,12 +213,15 @@ class Image(BaseCommand):
             name = raw_input('Enter nickname of image: ')
             if not name:
                 raise RuntimeError('Nickname required')
+            if name in config.images:
+                raise RuntimeError('Nickname already in use')
 
             img = OrderedDict()
             img['Id'] = image.id
             img['Login'] = login
             img['Name'] = image.name
             config.images[name] = img
+            config['Images'] = OrderedDict(sorted(config.images.items(), key=lambda i: i[0].lower()))
             config.save()
 
         elif parsed_args.remove:
