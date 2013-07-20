@@ -1,10 +1,21 @@
+import os
+import time
+
 import paramiko
 
-from commands import BaseCommand, InstanceCommand
+from commands import BaseCommand
+from main import config
 
 
-class Associate(InstanceCommand):
+class Associate(BaseCommand):
     "Associate an Elastic IP with an ec2 instance."
+
+    def get_parser(self, prog_name):
+        parser = super(Associate, self).get_parser(prog_name)
+        parser.add_argument('--id', dest='arg_is_id', action='store_true')
+        parser.add_argument('-e', '--etc-hosts', action='store_true')
+        parser.add_argument('name')
+        return parser
 
     def take_action(self, parsed_args):
         instance = self.get_instance(parsed_args.name, parsed_args.arg_is_id)
@@ -19,10 +30,16 @@ class Associate(InstanceCommand):
             self.app.stdout.write('Attaching to Elastic IP...\n')
             address.associate(instance.id)
 
-        if 'Domain' in config:
+        if parsed_args.etc_hosts and 'Domain' in config:
+            time.sleep(10)
+            instance = self.get_instance(parsed_args.name, parsed_args.arg_is_id)
+            login = instance.tags.get('Login', '')
+            if not login:
+                raise RuntimeError('No Login tag found!')
+            self.app.stdout.write('Updating Hostname on %s...\n' % parsed_args.name)
             ssh = paramiko.SSHClient()
             ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-            ssh.connect(instance.public_dns_name, username=self.get_user(instance), key_filename='%s/%s.pem' % (self.key_path, instance.key_name))
+            ssh.connect(instance.public_dns_name, username=login, key_filename=os.path.join(config.aws_key_path, instance.key_name + ".pem"))
             stdin, stdout, stderr = ssh.exec_command('sudo su -c "echo %s > /etc/hostname && hostname -F /etc/hostname"' % parsed_args.name)
             fqdn = '%s.%s' % (parsed_args.name, config['Domain'])
             stdin, stdout, stderr = ssh.exec_command('sudo su -c "echo \'\n### CLIFFORD\n%s\t%s\t%s\' >> /etc/hosts"' % (address.public_ip, fqdn, parsed_args.name))
@@ -32,12 +49,18 @@ class Associate(InstanceCommand):
 class Disassociate(BaseCommand):
     "Disassociate an Elastic IP with an ec2 instance."
 
+    def get_parser(self, prog_name):
+        parser = super(Disassociate, self).get_parser(prog_name)
+        parser.add_argument('--id', dest='arg_is_id', action='store_true')
+        parser.add_argument('name')
+        return parser
+
     def take_action(self, parsed_args):
-        addresses = [address for address in self.app.ec2_conn.get_all_addresses() if address.instance_id]
+        instance = self.get_instance(parsed_args.name, parsed_args.arg_is_id)
+        addresses = [address for address in self.app.ec2_conn.get_all_addresses() if address.instance_id == instance.id]
         if not addresses:
             raise RuntimeError('No attached addresses found!')
-        addresses = [{'text': address.public_ip, 'obj': address} for address in addresses]
-        address = self.question_maker('Attached IP Addresses', 'address', addresses)
+        address = addresses[0]
 
         if self.sure_check():
             self.app.stdout.write('Disassociating Elastic IP...\n')
@@ -50,7 +73,8 @@ class Allocate(BaseCommand):
     def take_action(self, parsed_args):
         if self.sure_check():
             self.app.stdout.write('Allocating Elastic IP...\n')
-            self.app.ec2_conn.allocate_address()
+            address = self.app.ec2_conn.allocate_address()
+            self.app.stdout.write('%s\n' % address)
 
 
 class Release(BaseCommand):

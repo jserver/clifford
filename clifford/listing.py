@@ -219,13 +219,14 @@ class Instances(Lister):
                                   instance.instance_type[3:],
                                   'Y' if instance.root_device_type == 'ebs' else 'N',
                                   'Y' if instance.architecture == 'x86_64' else 'N',
-                                  instance.placement))
+                                  instance.placement,
+                                  instance.tags.get('Login', '')))
                 instances = sorted(instances, key=lambda instance: instance[0].lower())
 
         if not instances:
             raise RuntimeError('No Instances found!')
 
-        return (('Project', 'Build', 'Name', 'Id', 'State', 'Type', 'ebs', '64', 'Zone'),
+        return (('Project', 'Build', 'Name', 'Id', 'State', 'Type', 'ebs', '64', 'Zone', 'Login'),
                 tuple(instances)
                 )
 
