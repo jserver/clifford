@@ -66,15 +66,15 @@ class Group(BaseCommand):
         group_items = []
         while True:
             type_options = [{'text': 'Finished'}]
-            if 'Bundles' in config and config['Bundles'].keys():
+            if 'Bundles' in config and config.bundles.keys():
                 type_options.append({'text': 'Bundle'})
-            if 'Groups' in config and config['Groups'].keys():
+            if 'Groups' in config and config.groups.keys():
                 type_options.append({'text': 'Group'})
             type_options.append({'text': 'Packages'})
 
             type_option = self.question_maker('Select item type', 'item_type', type_options, start_at=0)
             if type_option == 'Bundle':
-                bundle_options = [{'text': bundle} for bundle in config['Bundles'].keys()]
+                bundle_options = [{'text': bundle} for bundle in config.bundles.keys()]
                 bundle_option = self.question_maker('Select bundle', 'bundle', bundle_options)
                 if not bundle_option:
                     self.app.stdout.write('Fail!')
@@ -82,7 +82,7 @@ class Group(BaseCommand):
                 group_items.append({'Type': 'bundle', 'Value': bundle_option})
 
             elif type_option == 'Group':
-                group_options = [{'text': group} for group in config['Groups'].keys()]
+                group_options = [{'text': group} for group in config.groups.keys()]
                 group_option = self.question_maker('Select group', 'group', group_options)
                 if not group_option:
                     self.app.stdout.write('Fail!')

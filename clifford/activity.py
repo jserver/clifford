@@ -2,7 +2,57 @@ import logging
 import os
 import time
 
+import boto
 import paramiko
+
+
+def launcher(image_id, project, build, name, aws_key_path, login, **kwargs):
+    output = ''
+    conn = boto.connect_ec2()
+    image = conn.get_image(image_id=image_id)
+    reservation = image.run(**kwargs)
+    time.sleep(10)
+
+    instances = reservation.instances
+    count = len(instances)
+    time.sleep(10)
+    output += 'Adding Tags to instance(s)\n'
+    for idx, inst in enumerate(instances):
+        if count == 1:
+            inst.add_tag('Name', name)
+        else:
+            inst.add_tag('Name', '%s-%s' % (name, idx + 1))
+        if project:
+            inst.add_tag('Project', project)
+        if build:
+            inst.add_tag('Build', build)
+        inst.add_tag('Login', login)
+
+    cnt = 0
+    while cnt < 6:
+        cnt += 1
+        time.sleep(20)
+        ready = True
+        for inst in instances:
+            status = inst.update()
+            if status != 'running':
+                output += '%s\n' % status
+                ready = False
+                break
+        if ready:
+            break
+    if cnt == 6:
+        output += 'All instance(s) are not created equal!\n'
+        return output
+
+    time.sleep(20)
+    output += 'Instance(s) should now be running\n'
+    for inst in instances:
+        if aws_key_path:
+            output += 'ssh -i %s.pem %s@%s\n' % (os.path.join(aws_key_path, inst.key_name), login, inst.public_dns_name)
+        else:
+            output += 'Public DNS: %s\n' % inst.public_dns_name
+    return output
 
 
 def group_installer(instance, username, bundles, aws_key_path):

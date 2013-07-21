@@ -3,7 +3,7 @@ from multiprocessing import Pool
 import os
 import time
 
-from activity import group_installer, pip_installer, script_runner, upgrade
+from activity import group_installer, launcher, pip_installer, script_runner, upgrade
 from commands import BaseCommand
 from main import config
 from mixins import LaunchOptionsMixin
@@ -46,20 +46,23 @@ class Build(BaseCommand, LaunchOptionsMixin):
 
         options = config.builds[parsed_args.name]
 
-        cmd = 'launch -y'
-        cmd += ' --project %s' % parsed_args.project
-        cmd += ' --build %s' % parsed_args.name
-        cmd += ' --size %s' % options['Size']
-        cmd += ' --image %s' % options['Login']
-        cmd += ' --image %s' % options['Image']
-        cmd += ' --key %s' % options['Key']
-        cmd += ' --zone %s' % options['Zone']
-        cmd += ' --security-groups %s' % ','.join(options['SecurityGroups'])
+        kwargs = {
+            'key_name': options['Key'],
+            'instance_type': options['Size'],
+            'security_group_ids': ','.join(options['SecurityGroups']),
+        }
         if 'UserData' in options:
-            cmd += ' --user-data %s' % options['UserData']
-        cmd +=' --num %s' % parsed_args.num
-        cmd += ' ' + launch_name
-        self.app.run_subcommand(cmd.split(' '))
+            kwargs['user_data'] = options['UserData']
+        if 'Zone' in options:
+            kwargs['placement'] = options['Zone']
+
+        if parsed_args.num > 1:
+            kwargs['min_count'] = parsed_args.num
+            kwargs['max_count'] = parsed_args.num
+
+        project = parsed_args.project or ''
+        build = parsed_args.name or ''
+        launcher(options['Image'], project, build, parsed_args.name, config.aws_key_path, options['Login'], **kwargs)
         time.sleep(10)
 
         reservation = self.get_reservation(parsed_args.name)

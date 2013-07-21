@@ -15,33 +15,22 @@ class LaunchOptionsMixin(object):
         return instance_type
 
     def get_image(self, image_id='', return_item=False):
-        image = None
-        if image_id:
-            try:
-                image = self.app.ec2_conn.get_image(image_id=image_id)
-            except:
-                pass
+        keys = config.images.keys()
 
-        if not image:
-            if 'Images' not in config:
-                raise RuntimeError('No Images found!\n')
+        image_ids = [config.images[key]['Id'] for key in keys]
+        if not image_ids:
+            raise RuntimeError('No images found!')
 
-            items = config['Images'].keys()
+        images = []
+        for aws_image in self.app.ec2_conn.get_all_images(image_ids=image_ids):
+            for key in keys:
+                if config.images[key]['Id'] == aws_image.id:
+                    images.append({'text': '%s - %s' % (key, aws_image.id), 'obj': aws_image})
+        images = sorted(images, key=lambda image: image['text'].lower())
+        image = self.question_maker('Available Images', 'image', images)
 
-            image_ids = [config['Images'][item]['Id'] for item in items]
-            if not image_ids:
-                raise RuntimeError('No images found!')
-
-            images = []
-            for aws_image in self.app.ec2_conn.get_all_images(image_ids=image_ids):
-                for item in items:
-                    if config['Images'][item]['Id'] == aws_image.id:
-                        images.append({'text': '%s - %s' % (item, aws_image.id), 'obj': aws_image})
-            images = sorted(images, key=lambda image: image['text'].lower())
-            image = self.question_maker('Available Images', 'image', images)
-
-            if return_item:
-                return [config['Images'][item] for item in items if config['Images'][item]['Id'] == image.id][0]
+        if return_item:
+            return [config.images[key] for key in keys if config.images[key]['Id'] == image.id][0]
 
         return image
 

@@ -1,6 +1,4 @@
-import os
-import time
-
+from activity import launcher
 from commands import BaseCommand
 from main import config
 from mixins import LaunchOptionsMixin
@@ -27,7 +25,7 @@ class Launch(BaseCommand, LaunchOptionsMixin):
 
     def take_action(self, parsed_args):
         instance_type = self.get_instance_type(parsed_args.size)
-        image = self.get_image(parsed_args.image)
+        image = self.get_image(parsed_args.image, return_item=True)
         key = self.get_key(parsed_args.key)
         zone = self.get_zone(parsed_args.zone)
         security_group_ids = self.get_security_groups(parsed_args.security_groups)
@@ -51,44 +49,6 @@ class Launch(BaseCommand, LaunchOptionsMixin):
             raise RuntimeError('Instance(s) not created!')
 
         # Launch this thing
-        self.app.stdout.write('Launching instance(s)...\n')
-        reservation = image.run(**kwargs)
-        time.sleep(10)
-
-        instances = reservation.instances
-        count = len(instances)
-        time.sleep(10)
-        self.app.stdout.write('Adding Tags to instance(s)\n')
-        for idx, inst in enumerate(instances):
-            if count == 1:
-                inst.add_tag('Name', parsed_args.name)
-            else:
-                inst.add_tag('Name', '%s-%s' % (parsed_args.name, idx + 1))
-            if parsed_args.project:
-                inst.add_tag('Project', parsed_args.project)
-            if parsed_args.build:
-                inst.add_tag('Build', parsed_args.build)
-
-        cnt = 0
-        while cnt < 6:
-            cnt += 1
-            time.sleep(20)
-            ready = True
-            for inst in instances:
-                status = inst.update()
-                if status != 'running':
-                    self.app.stdout.write('%s\n' % status)
-                    ready = False
-                    break
-            if ready:
-                break
-        if cnt == 6:
-            raise RuntimeError('All instance(s) are not created equal!')
-
-        time.sleep(20)
-        self.app.stdout.write('Instance(s) should now be running\n')
-        for inst in instances:
-            if config.aws_key_path:
-                self.app.stdout.write('ssh -i %s.pem %s@%s\n' % (os.path.join(config.aws_key_path, key.name), parsed_args.login, inst.public_dns_name))
-            else:
-                self.app.stdout.write('Public DNS: %s\n' % inst.public_dns_name)
+        project = parsed_args.project or ''
+        build = parsed_args.build or ''
+        launcher(image['Id'], project, build, parsed_args.name, config.aws_key_path, parsed_args.login, **kwargs)
