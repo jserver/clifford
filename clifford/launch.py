@@ -20,7 +20,7 @@ class Launch(BaseCommand, LaunchOptionsMixin):
         parser.add_argument('--security-groups')
         parser.add_argument('--user-data')
         parser.add_argument('--num', type=int, default=1)
-        parser.add_argument('name')
+        parser.add_argument('tag_name')
         return parser
 
     def take_action(self, parsed_args):
@@ -34,7 +34,7 @@ class Launch(BaseCommand, LaunchOptionsMixin):
         kwargs = {
             'key_name': key.name,
             'instance_type': instance_type,
-            'security_group_ids': security_group_ids,
+            'security_group_ids': security_group_ids.split(','),
         }
         if user_data:
             kwargs['user_data'] = user_data
@@ -51,4 +51,4 @@ class Launch(BaseCommand, LaunchOptionsMixin):
         # Launch this thing
         project = parsed_args.project or ''
         build = parsed_args.build or ''
-        launcher(image['Id'], project, build, parsed_args.name, config.aws_key_path, parsed_args.login, **kwargs)
+        launcher(image['Id'], project, build, parsed_args.tag_name, config.aws_key_path, parsed_args.login, **kwargs)

@@ -137,7 +137,9 @@ def read_config():
         with open(CONFIG_FILE, 'a') as fp:
             json.dump(default_config(), fp, indent=2, separators=(',', ': '))
     with open(CONFIG_FILE, 'r') as fp:
-        return json.load(fp, object_pairs_hook=OrderedConfig)
+        raw_config = json.load(fp, object_pairs_hook=OrderedDict)
+        return OrderedConfig(raw_config)
+        #return json.load(fp, object_pairs_hook=OrderedDict)
 
 
 CONFIG_FILE = '%s/.clifford/config.json' % expanduser("~")

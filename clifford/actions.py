@@ -257,7 +257,7 @@ class KeyPaths(BaseCommand):
         if parsed_args.pub:
             config['PubKeyPath'] = parsed_args.pub
 
-        config.write()
+        config.save()
 
 
 class Salt(BaseCommand):

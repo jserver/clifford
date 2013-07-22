@@ -17,39 +17,40 @@ class Build(BaseCommand, LaunchOptionsMixin):
         parser.add_argument('-n', '--num', type=int, default=1)
         parser.add_argument('--project')
         parser.add_argument('-r', '--remove', action='store_true')
-        parser.add_argument('name')
+        parser.add_argument('build_name')
+        parser.add_argument('tag_name')
         return parser
 
     def take_action(self, parsed_args):
         if parsed_args.add:
-            if parsed_args.name in config.builds:
+            if parsed_args.build_name in config.builds:
                 raise RuntimeError('A build already exists by that name!')
-            self.add(parsed_args.name)
+            self.add(parsed_args.build_name)
             return
 
-        if parsed_args.name not in config.builds:
+        if parsed_args.build_name not in config.builds:
             raise RuntimeError('Build not found!')
 
         if parsed_args.remove:
-            del(config.builds[parsed_args.name])
-            config.write()
+            del(config.builds[parsed_args.build_name])
+            config.save()
             return
 
         if parsed_args.project:
-            self.app.stdout.write('Project: %s; Build: %s\n' % (parsed_args.project, parsed_args.name))
-        launch_name = raw_input('Enter Tag:Name Value (%s): ' % parsed_args.name)
-        if not launch_name:
-            launch_name = parsed_args.name
+            self.app.stdout.write('Project: %s; Build: %s\n' % (parsed_args.project, parsed_args.build_name))
+        tag_name = raw_input('Enter Tag:Name Value (%s): ' % parsed_args.build_name)
+        if not tag_name:
+            tag_name = parsed_args.build_name
 
         if not self.sure_check():
             return
 
-        options = config.builds[parsed_args.name]
+        options = config.builds[parsed_args.build_name]
 
         kwargs = {
             'key_name': options['Key'],
             'instance_type': options['Size'],
-            'security_group_ids': ','.join(options['SecurityGroups']),
+            'security_group_ids': options['SecurityGroups'],
         }
         if 'UserData' in options:
             kwargs['user_data'] = options['UserData']
@@ -61,8 +62,8 @@ class Build(BaseCommand, LaunchOptionsMixin):
             kwargs['max_count'] = parsed_args.num
 
         project = parsed_args.project or ''
-        build = parsed_args.name or ''
-        launcher(options['Image'], project, build, parsed_args.name, config.aws_key_path, options['Login'], **kwargs)
+        build = parsed_args.build_name or ''
+        launcher(options['Image'], project, build, tag_name, config.aws_key_path, options['Login'], **kwargs)
         time.sleep(10)
 
         reservation = self.get_reservation(parsed_args.name)

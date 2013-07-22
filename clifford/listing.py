@@ -256,9 +256,10 @@ class Projects(Lister):
 
         project_tuples = []
         for project in projects.keys():
-            project_tuples.append((project,
-                                 projects[project].get('Build', ''),
-                                 projects[project].get('Num', '')))
+            for build in config.projects[project]['Builds']:
+                project_tuples.append((project,
+                                     build.get('Build', ''),
+                                     build.get('Num', '')))
 
         return (('Name', 'Build', 'Num'),
                 project_tuples

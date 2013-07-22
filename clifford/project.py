@@ -1,6 +1,8 @@
 from collections import OrderedDict
+from multiprocessing import Pool
 import time
 
+from activity import launcher
 from commands import BaseCommand
 from main import config
 
@@ -12,39 +14,72 @@ class Project(BaseCommand):
         parser = super(Project, self).get_parser(prog_name)
         parser.add_argument('-a', '--add', action='store_true')
         parser.add_argument('-r', '--remove', action='store_true')
-        parser.add_argument('name')
+        parser.add_argument('project_name')
         return parser
 
     def take_action(self, parsed_args):
         if parsed_args.add:
-            if parsed_args.name in config.projects:
+            if parsed_args.project_name in config.projects:
                 raise RuntimeError('A project already exists by that name!')
-            self.add(parsed_args.name)
+            self.add(parsed_args.project_name)
             return
 
-        if parsed_args.name not in config.projects:
+        if parsed_args.project_name not in config.projects:
             raise RuntimeError('Project not found!')
 
         if parsed_args.remove:
-            del(config.projects[parsed_args.name])
-            config.write()
+            del(config.projects[parsed_args.project_name])
+            config.save()
             return
 
-        project = config.projects[parsed_args.name]
-        if 'Build' not in project:
-            raise RuntimeError('No build in project')
+        project = config.projects[parsed_args.project_name]
+        if 'Builds' not in project or not project['Builds']:
+            raise RuntimeError('No Builds in project')
+        tag_name = raw_input('Enter Tag:Name Value (%s): ' % parsed_args.project_name)
+        if not tag_name:
+            tag_name = parsed_args.project_name
 
-        self.app.stdout.write('This project will launch %s instance(s)\n' % project['Num'])
         if not self.sure_check():
             return
 
-        cmd = 'build'
-        if 'Num' in project:
-            cmd += ' --num %s' % project['Num']
-        cmd += ' --project %s' % parsed_args.name
-        cmd += ' ' + project['Build']
-        self.app.run_subcommand(cmd.split(' '))
-        time.sleep(15)
+        pool = Pool(processes=len(project['Builds']))
+
+        results = []
+        for build in project['Builds']:
+
+            options = config.builds[build['Build']]
+
+            kwargs = {
+                'key_name': options['Key'],
+                'instance_type': options['Size'],
+                'security_group_ids': options['SecurityGroups'],
+            }
+            if 'UserData' in options:
+                kwargs['user_data'] = options['UserData']
+            if 'Zone' in options:
+                kwargs['placement'] = options['Zone']
+
+            if build['Num'] > 1:
+                kwargs['min_count'] = build['Num']
+                kwargs['max_count'] = build['Num']
+
+            results.append(pool.apply_async(
+                               launcher,
+                               [options['Image'], parsed_args.project_name, build['Build'], tag_name, config.aws_key_path, options['Login']],
+                               kwargs))
+
+        completed = []
+        while results:
+            time.sleep(20)
+            results = [result for result in results if result not in completed]
+            for result in results:
+                if result.ready():
+                    self.app.stdout.write('-------------------------\n')
+                    self.app.stdout.write('Result: %s\n' % result.get())
+                    completed.append(result)
+
+        pool.close()
+        pool.join()
 
         '''
         instance = self.get_instance(parsed_args.name)
@@ -76,16 +111,25 @@ class Project(BaseCommand):
         '''
 
     def add(self, name):
-        build = self.question_maker('Select Build', 'build', [{'text': bld} for bld in config.builds.keys()])
-        if not build:
-            raise RuntimeError('No Build selected!\n')
-
-        num = raw_input('How many instances? ')
-        if not num.isdigit():
-            raise RuntimeError('Invalid number!')
-
         project = OrderedDict()
-        project['Build'] = build
-        project['Num'] = int(num)
-        config.projects[name] = project
-        config.save()
+        project['Builds'] = []
+        build_items = [{'text': 'Skip Step'}] + [{'text': bld} for bld in config.builds.keys()]
+        while True:
+            build = self.question_maker('Select Build', 'build', build_items, start_at=0)
+            if not build:
+                continue
+            if build == 'Skip Step':
+                break
+
+            num = raw_input('How many instances? ')
+            if not num.isdigit():
+                raise RuntimeError('Invalid number!')
+
+            _dict = OrderedDict()
+            _dict['Build'] = build
+            _dict['Num'] = num
+            project['Builds'].append(_dict)
+
+        if project['Builds']:
+            config.projects[name] = project
+            config.save()
