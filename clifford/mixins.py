@@ -163,12 +163,23 @@ class InstanceMixin(object):
         instance = res.instances[0]
         return instance
 
-    def get_reservation(self, name):
-        reservations = self.app.ec2_conn.get_all_instances(filters={'tag:Name': name})
-        if not reservations:
-            raise RuntimeError('No instances found')
+    def get_project_instances(self, name):
+        pass
 
-        if len(reservations) > 1:
-            raise RuntimeError('More than one reservation found!')
+    def get_build_instances(self, name):
+        pass
 
-        return reservations[0]
+    def get_reservation(self, name, project_name=None, build_name=None):
+        tag_name = name.split(' [')[0]
+        reservations = self.app.ec2_conn.get_all_instances()
+        for reservation in reservations:
+            for instance in reservation.instances:
+                inst_tag_name = instance.tags.get('Name', '').split(' [')[0]
+                if inst_tag_name != tag_name:
+                    continue
+                if project_name and instance.tags.get('Project', '') != project_name:
+                    continue
+                if build_name and instance.tags.get('Build', '') != build_name:
+                    continue
+                return reservation
+        raise RuntimeError('Reservation not found!')

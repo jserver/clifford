@@ -9,25 +9,26 @@ class Launch(BaseCommand, LaunchOptionsMixin):
 
     def get_parser(self, prog_name):
         parser = super(Launch, self).get_parser(prog_name)
-        parser.add_argument('-y', dest='assume_yes', action='store_true')
-        parser.add_argument('--size')
-        parser.add_argument('--login')
-        parser.add_argument('--image')
-        parser.add_argument('--key')
-        parser.add_argument('--zone')
-        parser.add_argument('--security-groups')
-        parser.add_argument('--user-data')
-        parser.add_argument('--num', type=int, default=1)
         parser.add_argument('tag_name')
         return parser
 
     def take_action(self, parsed_args):
-        instance_type = self.get_instance_type(parsed_args.size)
-        image = self.get_image(parsed_args.image, return_item=True)
-        key = self.get_key(parsed_args.key)
-        zone = self.get_zone(parsed_args.zone)
-        security_group_ids = self.get_security_groups(parsed_args.security_groups)
-        user_data = self.get_user_data(parsed_args.user_data, parsed_args.assume_yes)
+        if '[' in parsed_args.tag_name or ']' in parsed_args.tag_name:
+            self.app.stdout.write('Clifford Tag Names may not include brackets')
+            return
+
+        instance_type = self.get_instance_type()
+        image = self.get_image(return_item=True)
+        key = self.get_key()
+        zone = self.get_zone()
+        security_group_ids = self.get_security_groups()
+        user_data = self.get_user_data(assume_yes=False)
+
+        raw_num = raw_input('Number of instances to launch (1)? ')
+        if not raw_num or not raw_num.isdigit():
+            num = 1
+        else:
+            num = int(raw_num)
 
         build = {
             'Size': instance_type,
@@ -41,7 +42,8 @@ class Launch(BaseCommand, LaunchOptionsMixin):
         if user_data:
             build['UserData'] = user_data
 
-        if not parsed_args.assume_yes and not self.sure_check():
+        if not self.sure_check():
             raise RuntimeError('Instance(s) not created!')
 
-        launcher(config.aws_key_path, parsed_args.tag_name, build, num=parsed_args.num)
+        output = launcher(config.aws_key_path, parsed_args.tag_name, build=build, num=num)
+        self.app.stdout.write(output)

@@ -6,26 +6,32 @@ import boto
 import paramiko
 
 
-def launcher(aws_key_path, name, build, project=None, num=1):
+def launcher(aws_key_path, tag_name, **kwargs):
     output = ''
+
+    if 'build' not in kwargs:
+        output += 'Error: Build not found in kwargs to launcher'
+        return
+    build = kwargs['build']
+
     conn = boto.connect_ec2()
     image = conn.get_image(image_id=build['Image'])
 
-    kwargs = {
+    options = {
         'key_name': build['Key'],
         'instance_type': build['Size'],
         'security_group_ids': build['SecurityGroups'],
     }
     if 'UserData' in build:
-        kwargs['user_data'] = build['UserData']
+        options['user_data'] = build['UserData']
     if 'Zone' in build:
-        kwargs['placement'] = build['Zone']
+        options['placement'] = build['Zone']
 
-    if num > 1:
-        kwargs['min_count'] = num
-        kwargs['max_count'] = num
+    if 'num' in kwargs and kwargs['num'] > 1:
+        options['min_count'] = kwargs['num']
+        options['max_count'] = kwargs['num']
 
-    reservation = image.run(**kwargs)
+    reservation = image.run(**options)
     time.sleep(10)
 
     instances = reservation.instances
@@ -34,14 +40,14 @@ def launcher(aws_key_path, name, build, project=None, num=1):
     output += 'Adding Tags to instance(s)\n'
     for idx, inst in enumerate(instances):
         if count == 1:
-            inst.add_tag('Name', name)
+            inst.add_tag('Name', tag_name)
         else:
-            inst.add_tag('Name', '%s-%s' % (name, idx + 1))
-        if project:
-            inst.add_tag('Project', project)
-        if build:
-            inst.add_tag('Build', build)
-        inst.add_tag('Login', login)
+            inst.add_tag('Name', '%s [%s]' % (tag_name, idx + 1))
+        if 'project_name' in kwargs and kwargs['project_name']:
+            inst.add_tag('Project', kwargs['project_name'])
+        if 'build_name' in kwargs and kwargs['build_name']:
+            inst.add_tag('Build', kwargs['build_name'])
+        inst.add_tag('Login', build['Login'])
 
     cnt = 0
     while cnt < 6:
@@ -64,7 +70,7 @@ def launcher(aws_key_path, name, build, project=None, num=1):
     output += 'Instance(s) should now be running\n'
     for inst in instances:
         if aws_key_path:
-            output += 'ssh -i %s.pem %s@%s\n' % (os.path.join(aws_key_path, inst.key_name), login, inst.public_dns_name)
+            output += 'ssh -i %s.pem %s@%s\n' % (os.path.join(aws_key_path, inst.key_name), build['Login'], inst.public_dns_name)
         else:
             output += 'Public DNS: %s\n' % inst.public_dns_name
     return output
@@ -102,7 +108,10 @@ def group_installer(instance, username, bundles, aws_key_path):
             ssh.close()
             return output
         time.sleep(5)
-        output += 'Installed bundle %s\n' % name
+        if name == 'packages':
+            output += 'Installed packages: %s\n' % packages
+        else:
+            output += 'Installed bundle: %s\n' % name
 
     ssh.close()
     return output
@@ -180,13 +189,13 @@ def script_runner(instance, username, script, aws_key_path, copy_only=False):
 
 
 def upgrade(instance, username, action, aws_key_path):
+    output = 'Running %s on %s\n' % (action, instance.id)
+
     logname = 'upgrade.%s' % instance.id
     logger = logging.getLogger(logname)
     logger.setLevel(logging.ERROR)
     fh = logging.FileHandler('/tmp/upgrade_%s.log' % instance.id)
     logger.addHandler(fh)
-
-    output = 'Running %s on %s\n' % (action, instance.id)
 
     ssh = paramiko.SSHClient()
     ssh.set_log_channel(logname)
@@ -215,33 +224,8 @@ def upgrade(instance, username, action, aws_key_path):
             output += line + '\n'
     time.sleep(5)
 
-    if action != 'dist-upgrade':
-        if action == 'upgrade':
-            upgrade = 'y'
-        else:
-            upgrade = raw_input('Do you want to upgrade? ')
-        if upgrade.lower() in ['y', 'yes']:
-            stdin, stdout, stderr = ssh.exec_command('sudo su -c "env DEBIAN_FRONTEND=noninteractive apt-get -y -o DPkg::Options::=--force-confnew upgrade"')
-            for line in stderr.readlines():
-                if line.startswith('E: '):
-                    output += line + '\n'
-                    has_error = True
-            if has_error:
-                output += 'Unable to Continue...\n'
-                ssh.close()
-                return output
-            time.sleep(5)
-            output += 'UPGRADED\n'
-
-    if action == 'upgrade':
-        dist_upgrade = 'n'
-    elif action == 'dist_upgrade':
-        dist_upgrade = 'y'
-    else:
-        dist_upgrade = raw_input('Do you want to dist-upgrade? ')
-
-    if dist_upgrade.lower() in ['y', 'yes']:
-        stdin, stdout, stderr = ssh.exec_command('sudo su -c "env DEBIAN_FRONTEND=noninteractive apt-get -y -o DPkg::Options::=--force-confnew dist-upgrade"')
+    if action in ['upgrade', 'dist-upgrade']:
+        stdin, stdout, stderr = ssh.exec_command('sudo su -c "env DEBIAN_FRONTEND=noninteractive apt-get -y -o DPkg::Options::=--force-confnew %s"' % action)
         for line in stderr.readlines():
             if line.startswith('E: '):
                 output += line + '\n'
@@ -251,18 +235,11 @@ def upgrade(instance, username, action, aws_key_path):
             ssh.close()
             return output
         time.sleep(5)
-        output += 'DIST-UPGRADED\n'
+        output += '%sD\n' % action.upper()
 
     ssh.close()
 
     if action == 'dist-upgrade':
-        reboot = 'y'
-    elif action == 'upgrade':
-        reboot = 'n'
-    else:
-        reboot = raw_input('Do you want to reboot? ')
-
-    if reboot.lower() in ['y', 'yes']:
         time.sleep(5)
         output += 'Rebooting...\n'
         instance.reboot()

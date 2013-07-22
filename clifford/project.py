@@ -38,6 +38,9 @@ class Project(BaseCommand):
         tag_name = raw_input('Enter Tag:Name Value (%s): ' % parsed_args.project_name)
         if not tag_name:
             tag_name = parsed_args.project_name
+        if '[' in tag_name or ']' in tag_name:
+            self.app.stdout.write('Clifford Tag Names may not include brackets')
+            return
 
         if not self.sure_check():
             return
@@ -47,19 +50,27 @@ class Project(BaseCommand):
         results = []
         for project_build in project['Builds']:
             build = config.builds[project_build['Build']]
-            results.append(pool.apply_async(
-                               launcher,
-                               [config.aws_key_path, tag_name, build, project, project_build['Num']]))
+            kwargs = {
+                'build_name': project_build['Build'],
+                'build': build,
+                'project_name': parsed_args.project_name,
+                'project': project,
+                'num': project_build['Num']
+            }
+            results.append(pool.apply_async(launcher, [config.aws_key_path, tag_name], kwargs))
 
         completed = []
         while results:
             time.sleep(20)
-            results = [result for result in results if result not in completed]
             for result in results:
                 if result.ready():
                     self.app.stdout.write('-------------------------\n')
                     self.app.stdout.write('Result: %s\n' % result.get())
                     completed.append(result)
+            results = [result for result in results if result not in completed]
+            if not results:
+                break
+        self.app.stdout.write('-------------------------\n')
 
         pool.close()
         pool.join()

@@ -37,16 +37,21 @@ class Build(BaseCommand, LaunchOptionsMixin):
         tag_name = raw_input('Enter Tag:Name Value (%s): ' % parsed_args.build_name)
         if not tag_name:
             tag_name = parsed_args.build_name
+        if '[' in tag_name or ']' in tag_name:
+            self.app.stdout.write('Clifford Tag Names may not include brackets')
+            return
 
         if not self.sure_check():
             return
 
         build = config.builds[parsed_args.build_name]
 
-        launcher(config.aws_key_path, tag_name, build, num=parsed_args.num)
+        output = launcher(config.aws_key_path, tag_name, build_name=parsed_args.build_name, build=build, num=parsed_args.num)
+        self.app.stdout.write(output)
+
         time.sleep(10)
 
-        reservation = self.get_reservation(parsed_args.name)
+        reservation = self.get_reservation(tag_name, build_name=parsed_args.build_name)
 
         # begin the mutliprocessing
         pool = Pool(processes=len(reservation.instances))
@@ -57,14 +62,13 @@ class Build(BaseCommand, LaunchOptionsMixin):
             time.sleep(10)
 
         if 'Group' in build and build['Group'] in config.groups:
-            group = config.groups[build['Group']]
             bundles = []
-            self.get_bundles(group, bundles)
+            self.get_bundles(build['Group'], bundles)
             self.run_activity(reservation, pool, group_installer, [build['Login'], bundles, config.aws_key_path])
-            self.app.stdout.write('Pip Installer Finished\n')
+            self.app.stdout.write('Group Installer Finished\n')
             time.sleep(10)
 
-        if 'Pip' in build:
+        if 'Pip' in build and build['Pip'] in config.python_bundles:
             python_packages = config.python_bundles[build['Pip']]
             self.app.stdout.write('python: %s [%s]\n' % (build['Pip'], python_packages))
 
@@ -81,11 +85,12 @@ class Build(BaseCommand, LaunchOptionsMixin):
     def get_bundles(self, group, bundles):
         for item in config.groups[group]:
             if item['Type'] == 'bundle':
-                bundles.append(config.bundles[item['Value']])
+                bundles.append((item['Value'], config.bundles[item['Value']]))
             elif item['Type'] == 'group':
-                self.get_bundles(item['Value'], bundles)
+                if item['Value'] in config.groups:
+                    self.get_bundles(item['Value'], bundles)
             elif item['Type'] == 'packages':
-                bundles.append(item['Value'])
+                bundles.append(('packages', item['Value']))
 
     def run_activity(self, reservation, pool, func, arg_list):
         results = []
@@ -96,12 +101,15 @@ class Build(BaseCommand, LaunchOptionsMixin):
         completed = []
         while results:
             time.sleep(20)
-            results = [result for result in results if result not in completed]
             for result in results:
                 if result.ready():
                     self.app.stdout.write('-------------------------\n')
                     self.app.stdout.write('Result: %s\n' % result.get())
                     completed.append(result)
+            results = [result for result in results if result not in completed]
+            if not results:
+                break
+        self.app.stdout.write('-------------------------\n')
 
     def add(self, name):
         instance_type = self.get_instance_type()
