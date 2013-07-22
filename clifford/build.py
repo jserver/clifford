@@ -15,10 +15,8 @@ class Build(BaseCommand, LaunchOptionsMixin):
         parser = super(Build, self).get_parser(prog_name)
         parser.add_argument('-a', '--add', action='store_true')
         parser.add_argument('-n', '--num', type=int, default=1)
-        parser.add_argument('--project')
         parser.add_argument('-r', '--remove', action='store_true')
         parser.add_argument('build_name')
-        parser.add_argument('tag_name')
         return parser
 
     def take_action(self, parsed_args):
@@ -36,8 +34,6 @@ class Build(BaseCommand, LaunchOptionsMixin):
             config.save()
             return
 
-        if parsed_args.project:
-            self.app.stdout.write('Project: %s; Build: %s\n' % (parsed_args.project, parsed_args.build_name))
         tag_name = raw_input('Enter Tag:Name Value (%s): ' % parsed_args.build_name)
         if not tag_name:
             tag_name = parsed_args.build_name
@@ -45,25 +41,9 @@ class Build(BaseCommand, LaunchOptionsMixin):
         if not self.sure_check():
             return
 
-        options = config.builds[parsed_args.build_name]
+        build = config.builds[parsed_args.build_name]
 
-        kwargs = {
-            'key_name': options['Key'],
-            'instance_type': options['Size'],
-            'security_group_ids': options['SecurityGroups'],
-        }
-        if 'UserData' in options:
-            kwargs['user_data'] = options['UserData']
-        if 'Zone' in options:
-            kwargs['placement'] = options['Zone']
-
-        if parsed_args.num > 1:
-            kwargs['min_count'] = parsed_args.num
-            kwargs['max_count'] = parsed_args.num
-
-        project = parsed_args.project or ''
-        build = parsed_args.build_name or ''
-        launcher(options['Image'], project, build, tag_name, config.aws_key_path, options['Login'], **kwargs)
+        launcher(config.aws_key_path, tag_name, build, num=parsed_args.num)
         time.sleep(10)
 
         reservation = self.get_reservation(parsed_args.name)
@@ -71,29 +51,29 @@ class Build(BaseCommand, LaunchOptionsMixin):
         # begin the mutliprocessing
         pool = Pool(processes=len(reservation.instances))
 
-        if 'Upgrade' in options and options['Upgrade'] in ['upgrade', 'dist-upgrade']:
-            self.run_activity(reservation, pool, upgrade, [options['Login'], options['Upgrade'], config.aws_key_path])
+        if 'Upgrade' in build and build['Upgrade'] in ['upgrade', 'dist-upgrade']:
+            self.run_activity(reservation, pool, upgrade, [build['Login'], build['Upgrade'], config.aws_key_path])
             self.app.stdout.write('Upgrade Finished\n')
             time.sleep(10)
 
-        if 'Group' in options and options['Group'] in config.groups:
-            group = config.groups[options['Group']]
+        if 'Group' in build and build['Group'] in config.groups:
+            group = config.groups[build['Group']]
             bundles = []
             self.get_bundles(group, bundles)
-            self.run_activity(reservation, pool, group_installer, [options['Login'], bundles, config.aws_key_path])
+            self.run_activity(reservation, pool, group_installer, [build['Login'], bundles, config.aws_key_path])
             self.app.stdout.write('Pip Installer Finished\n')
             time.sleep(10)
 
-        if 'Pip' in options:
-            python_packages = config.python_bundles[options['Pip']]
-            self.app.stdout.write('python: %s [%s]\n' % (options['Pip'], python_packages))
+        if 'Pip' in build:
+            python_packages = config.python_bundles[build['Pip']]
+            self.app.stdout.write('python: %s [%s]\n' % (build['Pip'], python_packages))
 
-            self.run_activity(reservation, pool, pip_installer, [options['Login'], python_packages, config.aws_key_path])
+            self.run_activity(reservation, pool, pip_installer, [build['Login'], python_packages, config.aws_key_path])
             self.app.stdout.write('Pip Installer Finished\n')
             time.sleep(10)
 
-        if 'Script' in options:
-            self.run_activity(reservation, pool, script_runner, [options['Login'], os.path.join(config.script_path, options['Script']), config.aws_key_path])
+        if 'Script' in build:
+            self.run_activity(reservation, pool, script_runner, [build['Login'], os.path.join(config.script_path, build['Script']), config.aws_key_path])
 
         pool.close()
         pool.join()

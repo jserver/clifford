@@ -45,28 +45,11 @@ class Project(BaseCommand):
         pool = Pool(processes=len(project['Builds']))
 
         results = []
-        for build in project['Builds']:
-
-            options = config.builds[build['Build']]
-
-            kwargs = {
-                'key_name': options['Key'],
-                'instance_type': options['Size'],
-                'security_group_ids': options['SecurityGroups'],
-            }
-            if 'UserData' in options:
-                kwargs['user_data'] = options['UserData']
-            if 'Zone' in options:
-                kwargs['placement'] = options['Zone']
-
-            if build['Num'] > 1:
-                kwargs['min_count'] = build['Num']
-                kwargs['max_count'] = build['Num']
-
+        for project_build in project['Builds']:
+            build = config.builds[project_build['Build']]
             results.append(pool.apply_async(
                                launcher,
-                               [options['Image'], parsed_args.project_name, build['Build'], tag_name, config.aws_key_path, options['Login']],
-                               kwargs))
+                               [config.aws_key_path, tag_name, build, project, project_build['Num']]))
 
         completed = []
         while results:

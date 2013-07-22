@@ -6,10 +6,25 @@ import boto
 import paramiko
 
 
-def launcher(image_id, project, build, name, aws_key_path, login, **kwargs):
+def launcher(aws_key_path, name, build, project=None, num=1):
     output = ''
     conn = boto.connect_ec2()
-    image = conn.get_image(image_id=image_id)
+    image = conn.get_image(image_id=build['Image'])
+
+    kwargs = {
+        'key_name': build['Key'],
+        'instance_type': build['Size'],
+        'security_group_ids': build['SecurityGroups'],
+    }
+    if 'UserData' in build:
+        kwargs['user_data'] = build['UserData']
+    if 'Zone' in build:
+        kwargs['placement'] = build['Zone']
+
+    if num > 1:
+        kwargs['min_count'] = num
+        kwargs['max_count'] = num
+
     reservation = image.run(**kwargs)
     time.sleep(10)
 
