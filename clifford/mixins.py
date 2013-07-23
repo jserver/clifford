@@ -137,7 +137,7 @@ class PreseedMixin(object):
 
 
 class InstanceMixin(object):
-    def get_instance(self, name, arg_is_id=False):
+    def get_instance(self, name, arg_is_id=False, raise_error=True):
         if arg_is_id:
             reservations = self.app.ec2_conn.get_all_instances(instance_ids=[name])
         else:
@@ -163,11 +163,46 @@ class InstanceMixin(object):
         instance = res.instances[0]
         return instance
 
+    def get_instances(self, name):
+        instances = []
+        reservations = self.app.ec2_conn.get_all_instances()
+        for reservation in reservations:
+            for instance in reservation.instances:
+                name_tag = instance.tags.get('Name', '')
+                if name == name_tag.split(' [')[0]:
+                    instances.append(instance)
+        return instances
+
+    def get_instance_names(self):
+        names = set()
+        reservations = self.app.ec2_conn.get_all_instances()
+        for reservation in reservations:
+            for instance in reservation.instances:
+                tag = instance.tags.get('Name', '')
+                if tag:
+                    names.add(tag.split(' [')[0])
+        return names
+
     def get_project_instances(self, name):
-        pass
+        instances = []
+        reservations = self.app.ec2_conn.get_all_instances()
+        for reservation in reservations:
+            for instance in reservation.instances:
+                project_tag = instance.tags.get('Project', '')
+                if project_tag and project_tag == name:
+                    instances.append(instance)
+
+        return instances
 
     def get_build_instances(self, name):
-        pass
+        instances = []
+        reservations = self.app.ec2_conn.get_all_instances()
+        for reservation in reservations:
+            for instance in reservation.instances:
+                build_tag = instance.tags.get('Build', '')
+                if build_tag and build_tag == name:
+                    instances.append(instance)
+        return instances
 
     def get_reservation(self, name, project_name=None, build_name=None):
         tag_name = name.split(' [')[0]
@@ -177,9 +212,9 @@ class InstanceMixin(object):
                 inst_tag_name = instance.tags.get('Name', '').split(' [')[0]
                 if inst_tag_name != tag_name:
                     continue
-                if project_name and instance.tags.get('Project', '') != project_name:
+                if instance.tags.get('Project', '') != project_name:
                     continue
-                if build_name and instance.tags.get('Build', '') != build_name:
+                if instance.tags.get('Build', '') != build_name:
                     continue
                 return reservation
         raise RuntimeError('Reservation not found!')

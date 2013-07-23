@@ -11,16 +11,16 @@ class Reboot(BaseCommand):
     def get_parser(self, prog_name):
         parser = super(Reboot, self).get_parser(prog_name)
         parser.add_argument('--id', dest='arg_is_id', action='store_true')
-        parser.add_argument('names', nargs='+')
+        parser.add_argument('inst_names', nargs='+')
         return parser
 
     def take_action(self, parsed_args):
         if self.sure_check():
-            for name in parsed_args.names:
-                instance = self.get_instance(name, parsed_args.arg_is_id)
-                if instance:
-                    self.app.stdout.write('Rebooting %s\n' % name)
-                    instance.reboot()
+            for name in parsed_args.inst_names:
+                instances = self.get_instances(name)
+                for inst in instances:
+                    self.app.stdout.write('Rebooting %s\n' % inst.tags.get('Name', inst.id))
+                    inst.reboot()
 
 
 class Start(BaseCommand):
@@ -29,16 +29,16 @@ class Start(BaseCommand):
     def get_parser(self, prog_name):
         parser = super(Start, self).get_parser(prog_name)
         parser.add_argument('--id', dest='arg_is_id', action='store_true')
-        parser.add_argument('names', nargs='+')
+        parser.add_argument('inst_names', nargs='+')
         return parser
 
     def take_action(self, parsed_args):
         if self.sure_check():
-            for name in parsed_args.names:
-                instance = self.get_instance(name, parsed_args.arg_is_id)
-                if instance:
-                    self.app.stdout.write('Starting %s\n' % name)
-                    instance.start()
+            for name in parsed_args.inst_names:
+                instances = self.get_instances(name)
+                for inst in instances:
+                    self.app.stdout.write('Starting %s\n' % inst.tags.get('Name', inst.id))
+                    inst.start()
 
 
 class Stop(BaseCommand):
@@ -47,16 +47,16 @@ class Stop(BaseCommand):
     def get_parser(self, prog_name):
         parser = super(Stop, self).get_parser(prog_name)
         parser.add_argument('--id', dest='arg_is_id', action='store_true')
-        parser.add_argument('names', nargs='+')
+        parser.add_argument('inst_names', nargs='+')
         return parser
 
     def take_action(self, parsed_args):
         if self.sure_check():
-            for name in parsed_args.names:
-                instance = self.get_instance(name, parsed_args.arg_is_id)
-                if instance:
-                    self.app.stdout.write('Stopping %s\n' % name)
-                    instance.stop()
+            for name in parsed_args.inst_names:
+                instances = self.get_instances(name)
+                for inst in instances:
+                    self.app.stdout.write('Stopping %s\n' % inst.tags.get('Name', inst.id))
+                    inst.stop()
 
 
 class Terminate(BaseCommand):
@@ -65,16 +65,16 @@ class Terminate(BaseCommand):
     def get_parser(self, prog_name):
         parser = super(Terminate, self).get_parser(prog_name)
         parser.add_argument('--id', dest='arg_is_id', action='store_true')
-        parser.add_argument('names', nargs='+')
+        parser.add_argument('inst_names', nargs='+')
         return parser
 
     def take_action(self, parsed_args):
         if self.sure_check():
-            for name in parsed_args.names:
-                instance = self.get_instance(name, parsed_args.arg_is_id)
-                if instance:
-                    self.app.stdout.write('Terminating %s\n' % name)
-                    instance.terminate()
+            for name in parsed_args.inst_names:
+                instances = self.get_instances(name)
+                for inst in instances:
+                    self.app.stdout.write('Terminating %s\n' % inst.tags.get('Name', inst.id))
+                    inst.terminate()
 
 
 class CreateImage(BaseCommand):
@@ -83,11 +83,11 @@ class CreateImage(BaseCommand):
     def get_parser(self, prog_name):
         parser = super(CreateImage, self).get_parser(prog_name)
         parser.add_argument('--id', dest='arg_is_id', action='store_true')
-        parser.add_argument('name')
+        parser.add_argument('inst_name')
         return parser
 
     def take_action(self, parsed_args):
-        instance = self.get_instance(parsed_args.name, parsed_args.arg_is_id)
+        instance = self.get_instance(parsed_args.inst_name, parsed_args.arg_is_id)
         name = raw_input('Enter name: ')
         desc = raw_input('Enter desc: ')
         if instance and name and self.sure_check():
@@ -309,11 +309,11 @@ class Tag(BaseCommand):
         parser = super(Tag, self).get_parser(prog_name)
         parser.add_argument('-d', '--delete', action='store_true')
         parser.add_argument('--id', dest='arg_is_id', action='store_true')
-        parser.add_argument('name')
+        parser.add_argument('inst_name')
         return parser
 
     def take_action(self, parsed_args):
-        instance = self.get_instance(parsed_args.name, parsed_args.arg_is_id)
+        instance = self.get_instance(parsed_args.inst_name, parsed_args.arg_is_id)
         if not instance:
             raise RuntimeError('Instance not found!')
 

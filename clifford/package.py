@@ -12,42 +12,43 @@ class Bundle(BaseCommand):
         parser.add_argument('-a', '--add', action='store_true')
         parser.add_argument('-r', '--remove', action='store_true')
         parser.add_argument('-u', '--update', action='store_true')
-        parser.add_argument('name')
+        parser.add_argument('bundle_name')
         return parser
 
     def take_action(self, parsed_args):
+        name = parsed_args.bundle_name
         section = 'Bundles' if not parsed_args.is_py_bundle else 'PythonBundles'
         if section not in config:
             config[section] = OrderedDict()
 
         if parsed_args.add:
-            if parsed_args.name in config[section]:
-                raise RuntimeError('%s already exists!' % parsed_args.name)
+            if name in config[section]:
+                raise RuntimeError('%s already exists!' % name)
 
             packages = raw_input('Enter package names: ')
             if not packages:
                 raise RuntimeError('No package names given!\n')
 
-            config[section][parsed_args.name] = packages
+            config[section][name] = packages
             config.save()
 
         else:
-            if parsed_args.name not in config[section]:
-                raise RuntimeError('No %s %s found!' % (parsed_args.name, section[:-1]))
+            if name not in config[section]:
+                raise RuntimeError('No %s %s found!' % (name, section[:-1]))
 
             if parsed_args.show:
-                self.app.stdout.write(config[section][parsed_args.name] + '\n')
+                self.app.stdout.write(config[section][name] + '\n')
 
             elif parsed_args.update:
                 packages = raw_input('Enter package names: ')
                 if not packages:
                     raise RuntimeError('No package names given!\n')
 
-                config[section][parsed_args.name] = packages
+                config[section][name] = packages
                 config.save()
 
             elif parsed_args.remove:
-                del(config[section][parsed_args.name])
+                del(config[section][name])
                 config.save()
 
 
@@ -59,8 +60,45 @@ class Group(BaseCommand):
         parser.add_argument('-a', '--add', action='store_true')
         parser.add_argument('-r', '--remove', action='store_true')
         parser.add_argument('-u', '--update', action='store_true')
-        parser.add_argument('name')
+        parser.add_argument('group_name')
         return parser
+
+    def take_action(self, parsed_args):
+        name = parsed_args.group_name
+        section = 'Groups'
+        if section not in config:
+            config[section] = OrderedDict()
+
+        if parsed_args.add:
+            if name in config[section]:
+                raise RuntimeError('%s already exists!' % name)
+
+            group_items = self.get_group_items()
+            if not group_items:
+                raise RuntimeError('Nothing to save!\n')
+
+            config[section][name] = group_items
+            config.save()
+
+        else:
+            if name not in config[section]:
+                raise RuntimeError('No %s %s found!' % (name, section[:-1]))
+
+            if parsed_args.show:
+                for item in config[section][name]:
+                    self.app.stdout.write('[%s] %s\n' % (item['Type'], item['Value']))
+
+            elif parsed_args.update:
+                group_items = self.get_group_items()
+                if not group_items:
+                    raise RuntimeError('Nothing to save!\n')
+
+                config[section][name] = group_items
+                config.save()
+
+            elif parsed_args.remove:
+                del(config[section][name])
+                config.save()
 
     def get_group_items(self):
         group_items = []
@@ -100,39 +138,3 @@ class Group(BaseCommand):
                 break
 
         return group_items
-
-    def take_action(self, parsed_args):
-        section = 'Groups'
-        if section not in config:
-            config[section] = OrderedDict()
-
-        if parsed_args.add:
-            if parsed_args.name in config[section]:
-                raise RuntimeError('%s already exists!' % parsed_args.name)
-
-            group_items = self.get_group_items()
-            if not group_items:
-                raise RuntimeError('Nothing to save!\n')
-
-            config[section][parsed_args.name] = group_items
-            config.save()
-
-        else:
-            if parsed_args.name not in config[section]:
-                raise RuntimeError('No %s %s found!' % (parsed_args.name, section[:-1]))
-
-            if parsed_args.show:
-                for item in config[section][parsed_args.name]:
-                    self.app.stdout.write('[%s] %s\n' % (item['Type'], item['Value']))
-
-            elif parsed_args.update:
-                group_items = self.get_group_items()
-                if not group_items:
-                    raise RuntimeError('Nothing to save!\n')
-
-                config[section][parsed_args.name] = group_items
-                config.save()
-
-            elif parsed_args.remove:
-                del(config[section][parsed_args.name])
-                config.save()
