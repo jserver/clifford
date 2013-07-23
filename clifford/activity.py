@@ -39,10 +39,10 @@ def launcher(aws_key_path, tag_name, **kwargs):
     time.sleep(10)
     output += 'Adding Tags to instance(s)\n'
     for idx, inst in enumerate(instances):
-        if count == 1:
+        if count == 1 and 'counter' not in kwargs:
             inst.add_tag('Name', tag_name)
         else:
-            inst.add_tag('Name', '%s [%s]' % (tag_name, idx + 1))
+            inst.add_tag('Name', '%s [%s]' % (tag_name, idx + 1 + kwargs.get('counter', 0)))
         if 'project_name' in kwargs and kwargs['project_name']:
             inst.add_tag('Project', kwargs['project_name'])
         if 'build_name' in kwargs and kwargs['build_name']:
@@ -95,6 +95,7 @@ def group_installer(instance, username, bundles, aws_key_path):
         name = bundle[0]
         packages = bundle[1]
 
+        output = 'Installing %s\n' % packages
         stdin, stdout, stderr = ssh.exec_command('sudo apt-get -y install %s' % packages)
         for line in stdout.readlines():
             if any([item in line for item in ['Note, selecting', 'is already the newest version']]):
@@ -131,6 +132,7 @@ def pip_installer(instance, username, packages, aws_key_path):
     ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
     ssh.connect(instance.public_dns_name, username=username, key_filename='%s.pem' % os.path.join(aws_key_path, instance.key_name))
 
+    output = 'Installing %s\n' % packages
     stdin, stdout, stderr = ssh.exec_command('sudo pip install %s' % packages)
     for line in stdout.readlines():
         if line.startswith('Installed') or line.startswith('Finished') or line.startswith('Successfully'):

@@ -48,6 +48,7 @@ class Project(BaseCommand):
         pool = Pool(processes=len(project['Builds']))
 
         results = []
+        counter = 0
         for project_build in project['Builds']:
             build = config.builds[project_build['Build']]
             kwargs = {
@@ -55,9 +56,11 @@ class Project(BaseCommand):
                 'build': build,
                 'project_name': parsed_args.project_name,
                 'project': project,
-                'num': project_build['Num']
+                'num': project_build['Num'],
+                'counter': counter
             }
             results.append(pool.apply_async(launcher, [config.aws_key_path, tag_name], kwargs))
+            counter += project_build['Num']
 
         completed = []
         while results:
@@ -121,7 +124,7 @@ class Project(BaseCommand):
 
             _dict = OrderedDict()
             _dict['Build'] = build
-            _dict['Num'] = num
+            _dict['Num'] = int(num)
             project['Builds'].append(_dict)
 
         if project['Builds']:

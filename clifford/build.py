@@ -95,7 +95,7 @@ class Build(BaseCommand, LaunchOptionsMixin):
     def run_activity(self, reservation, pool, func, arg_list):
         results = []
         for inst in reservation.instances:
-            self.app.stdout.write('%s Starting: %s\n' % (func.func_name, inst.id))
+            self.app.stdout.write('===>%s starting: %s\n' % (func.func_name, inst.id))
             results.append(pool.apply_async(func, [inst] + arg_list))
 
         completed = []

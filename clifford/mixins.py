@@ -212,9 +212,9 @@ class InstanceMixin(object):
                 inst_tag_name = instance.tags.get('Name', '').split(' [')[0]
                 if inst_tag_name != tag_name:
                     continue
-                if instance.tags.get('Project', '') != project_name:
+                if project_name and instance.tags.get('Project', '') != project_name:
                     continue
-                if instance.tags.get('Build', '') != build_name:
+                if build_name and instance.tags.get('Build', '') != build_name:
                     continue
                 return reservation
         raise RuntimeError('Reservation not found!')
