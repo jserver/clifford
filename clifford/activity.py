@@ -1,16 +1,22 @@
 import logging
 import os
+import StringIO
 import time
+from collections import namedtuple
 
 import boto
 import paramiko
 
+LaunchResult = namedtuple('LaunchResult', ['build', 'reservation'])
 
 def launcher(aws_key_path, tag_name, **kwargs):
-    output = ''
+    if 'out' not in kwargs:
+        out = StringIO.StringIO()
+    else:
+        out = kwargs['out']
 
     if 'build' not in kwargs:
-        output += 'Error: Build not found in kwargs to launcher'
+        out.write('Error: Build not found in kwargs to launcher')
         return
     build = kwargs['build']
 
@@ -31,13 +37,17 @@ def launcher(aws_key_path, tag_name, **kwargs):
         options['min_count'] = kwargs['num']
         options['max_count'] = kwargs['num']
 
+    out.write('Running instance(s)\n')
     reservation = image.run(**options)
+    if 'q' in kwargs:
+        l = LaunchResult(build, reservation)
+        kwargs['q'].put(l)
     time.sleep(10)
 
     instances = reservation.instances
     count = len(instances)
     time.sleep(10)
-    output += 'Adding Tags to instance(s)\n'
+    out.write('Adding Tags to instance(s)\n')
     for idx, inst in enumerate(instances):
         if count == 1 and 'counter' not in kwargs:
             inst.add_tag('Name', tag_name)
@@ -57,23 +67,27 @@ def launcher(aws_key_path, tag_name, **kwargs):
         for inst in instances:
             status = inst.update()
             if status != 'running':
-                output += '%s\n' % status
+                out.write('%s\n' % status)
                 ready = False
                 break
         if ready:
             break
     if cnt == 6:
-        output += 'All instance(s) are not created equal!\n'
-        return output
+        out.write('All instance(s) are not created equal!\n')
+        if 'out' in kwargs:
+            return
+        return out
 
     time.sleep(20)
-    output += 'Instance(s) should now be running\n'
+    out.write('Instance(s) should now be running\n')
     for inst in instances:
         if aws_key_path:
-            output += 'ssh -i %s.pem %s@%s\n' % (os.path.join(aws_key_path, inst.key_name), build['Login'], inst.public_dns_name)
+            out.write('ssh -i %s.pem %s@%s\n' % (os.path.join(aws_key_path, inst.key_name), build['Login'], inst.public_dns_name))
         else:
-            output += 'Public DNS: %s\n' % inst.public_dns_name
-    return output
+            out.write('Public DNS: %s\n' % inst.public_dns_name)
+    if 'out' in kwargs:
+        return
+    return out
 
 
 def group_installer(instance, username, bundles, aws_key_path):

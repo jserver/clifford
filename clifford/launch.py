@@ -45,5 +45,4 @@ class Launch(BaseCommand, LaunchOptionsMixin):
         if not self.sure_check():
             raise RuntimeError('Instance(s) not created!')
 
-        output = launcher(config.aws_key_path, parsed_args.tag_name, build=build, num=num)
-        self.app.stdout.write(output)
+        launcher(config.aws_key_path, parsed_args.tag_name, build=build, num=num, out=self.app.stdout)

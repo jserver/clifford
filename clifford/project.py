@@ -1,8 +1,8 @@
 from collections import OrderedDict
-from multiprocessing import Pool
+from multiprocessing import Pool, Queue
 import time
 
-from activity import launcher
+from activity import launcher, upgrade
 from commands import BaseCommand
 from main import config
 
@@ -45,7 +45,9 @@ class Project(BaseCommand):
         if not self.sure_check():
             return
 
-        pool = Pool(processes=len(project['Builds']))
+        total = sum(b['Num'] for b in project['Builds'])
+        pool = Pool(processes=total)
+        q = Queue(total)
 
         results = []
         counter = 0
@@ -57,23 +59,37 @@ class Project(BaseCommand):
                 'project_name': parsed_args.project_name,
                 'project': project,
                 'num': project_build['Num'],
-                'counter': counter
+                'counter': counter,
+                'q': q
             }
             results.append(pool.apply_async(launcher, [config.aws_key_path, tag_name], kwargs))
             counter += project_build['Num']
+        launch_results = self.process_results(q, results)
 
-        completed = []
-        while results:
-            time.sleep(20)
-            for result in results:
-                if result.ready():
-                    self.app.stdout.write('-------------------------\n')
-                    self.app.stdout.write('Result: %s\n' % result.get())
-                    completed.append(result)
-            results = [result for result in results if result not in completed]
-            if not results:
-                break
-        self.app.stdout.write('-------------------------\n')
+
+        for lr in launch_results:
+            if 'Upgrade' in lr.build and lr.build['Upgrade'] in ['upgrade', 'dist-upgrade']:
+                self.run_activity(lr.reservation, pool, upgrade, [lr.build['Login'], lr.build['Upgrade'], config.aws_key_path])
+
+        '''
+        if 'Group' in build and build['Group'] in config.groups:
+            bundles = []
+            self.get_bundles(build['Group'], bundles)
+            self.run_activity(reservation, pool, group_installer, [build['Login'], bundles, config.aws_key_path])
+            self.app.stdout.write('Group Installer Finished\n')
+            time.sleep(10)
+
+        if 'Pip' in build and build['Pip'] in config.python_bundles:
+            python_packages = config.python_bundles[build['Pip']]
+            self.app.stdout.write('python: %s [%s]\n' % (build['Pip'], python_packages))
+
+            self.run_activity(reservation, pool, pip_installer, [build['Login'], python_packages, config.aws_key_path])
+            self.app.stdout.write('Pip Installer Finished\n')
+            time.sleep(10)
+
+        if 'Script' in build:
+            self.run_activity(reservation, pool, script_runner, [build['Login'], os.path.join(config.script_path, build['Script']), config.aws_key_path])
+        '''
 
         pool.close()
         pool.join()
@@ -106,6 +122,33 @@ class Project(BaseCommand):
             cmd += ' --id %s' % instance.id
             self.app.run_subcommand(cmd.split(' '))
         '''
+
+    def process_results(self, q, results):
+        launch_results = []
+        completed = []
+        while results:
+            time.sleep(20)
+            for result in results:
+                if result.ready():
+                    launch_results.append(q.get())
+                    self.app.stdout.write('-------------------------\n')
+                    self.app.stdout.write('Result: %s\n' % result.get())
+                    completed.append(result)
+            results = [result for result in results if result not in completed]
+            if not results:
+                break
+        self.app.stdout.write('-------------------------\n')
+        return launch_results
+
+    def run_activity(self, reservation, pool, func, arg_list):
+        results = []
+        for inst in reservation.instances:
+            self.app.stdout.write('===>%s starting: %s\n' % (func.func_name, inst.id))
+            results.append(pool.apply_async(func, [inst] + arg_list))
+
+
+            self.app.stdout.write('Upgrade Finished\n')
+            time.sleep(10)
 
     def add(self, name):
         project = OrderedDict()

@@ -1,5 +1,5 @@
 from collections import OrderedDict
-from multiprocessing import Pool
+from multiprocessing import Pool, Queue
 import os
 import time
 
@@ -7,6 +7,7 @@ from activity import group_installer, launcher, pip_installer, script_runner, up
 from commands import BaseCommand
 from main import config
 from mixins import LaunchOptionsMixin
+
 
 class Build(BaseCommand, LaunchOptionsMixin):
     "Launch and bootstrap a new ec2 instance"
@@ -46,25 +47,26 @@ class Build(BaseCommand, LaunchOptionsMixin):
 
         build = config.builds[parsed_args.build_name]
 
-        output = launcher(config.aws_key_path, tag_name, build_name=parsed_args.build_name, build=build, num=parsed_args.num)
-        self.app.stdout.write(output)
+        q = Queue()
+        launcher(config.aws_key_path, tag_name,
+                 build_name=parsed_args.build_name, build=build,
+                 num=parsed_args.num, q=q, out=self.app.stdout)
+        lr = q.get()
 
         time.sleep(10)
 
-        reservation = self.get_reservation(tag_name, build_name=parsed_args.build_name)
-
         # begin the mutliprocessing
-        pool = Pool(processes=len(reservation.instances))
+        pool = Pool(processes=len(lr.reservation.instances))
 
         if 'Upgrade' in build and build['Upgrade'] in ['upgrade', 'dist-upgrade']:
-            self.run_activity(reservation, pool, upgrade, [build['Login'], build['Upgrade'], config.aws_key_path])
+            self.run_activity(lr.reservation, pool, upgrade, [build['Login'], build['Upgrade'], config.aws_key_path])
             self.app.stdout.write('Upgrade Finished\n')
             time.sleep(10)
 
         if 'Group' in build and build['Group'] in config.groups:
             bundles = []
             self.get_bundles(build['Group'], bundles)
-            self.run_activity(reservation, pool, group_installer, [build['Login'], bundles, config.aws_key_path])
+            self.run_activity(lr.reservation, pool, group_installer, [build['Login'], bundles, config.aws_key_path])
             self.app.stdout.write('Group Installer Finished\n')
             time.sleep(10)
 
@@ -72,12 +74,12 @@ class Build(BaseCommand, LaunchOptionsMixin):
             python_packages = config.python_bundles[build['Pip']]
             self.app.stdout.write('python: %s [%s]\n' % (build['Pip'], python_packages))
 
-            self.run_activity(reservation, pool, pip_installer, [build['Login'], python_packages, config.aws_key_path])
+            self.run_activity(lr.reservation, pool, pip_installer, [build['Login'], python_packages, config.aws_key_path])
             self.app.stdout.write('Pip Installer Finished\n')
             time.sleep(10)
 
         if 'Script' in build:
-            self.run_activity(reservation, pool, script_runner, [build['Login'], os.path.join(config.script_path, build['Script']), config.aws_key_path])
+            self.run_activity(lr.reservation, pool, script_runner, [build['Login'], os.path.join(config.script_path, build['Script']), config.aws_key_path])
 
         pool.close()
         pool.join()
