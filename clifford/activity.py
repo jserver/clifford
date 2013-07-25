@@ -10,10 +10,7 @@ import paramiko
 LaunchResult = namedtuple('LaunchResult', ['build', 'reservation'])
 
 def launcher(aws_key_path, tag_name, **kwargs):
-    if 'out' not in kwargs:
-        out = StringIO.StringIO()
-    else:
-        out = kwargs['out']
+    out = kwargs.get('out', StringIO.StringIO())
 
     if 'build' not in kwargs:
         out.write('Error: Build not found in kwargs to launcher')

@@ -104,7 +104,8 @@ class LaunchOptionsMixin(object):
     def get_user_data(self, filename='', assume_yes=False, return_name=False):
         script_path = config.script_path
         if filename:
-            user_data = open('%s/%s' % (script_path, filename), 'r').read()
+            with open('%s/%s' % (script_path, filename), 'r') as fh:
+                user_data = fh.read()
         elif assume_yes:
             user_data = None
         else:
@@ -117,7 +118,8 @@ class LaunchOptionsMixin(object):
             elif return_name:
                 user_data = script
             else:
-                user_data = open('%s/%s' % (script_path, script), 'r').read()
+                with open('%s/%s' % (script_path, script), 'r') as fh:
+                    user_data = fh.read()
 
         return user_data
 
