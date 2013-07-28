@@ -22,13 +22,15 @@ class Launch(BaseCommand, LaunchOptionsMixin):
         key = self.get_key()
         zone = self.get_zone()
         security_group_ids = self.get_security_groups()
-        user_data = self.get_user_data(assume_yes=False)
+        user_data = self.get_user_data(return_name=True)
 
         raw_num = raw_input('Number of instances to launch (1)? ')
         if not raw_num or not raw_num.isdigit():
             num = 1
         else:
             num = int(raw_num)
+        if num < 1:
+            raise RuntimeError('Need to launch at least 1!')
 
         build = {
             'Size': instance_type,
@@ -45,4 +47,5 @@ class Launch(BaseCommand, LaunchOptionsMixin):
         if not self.sure_check():
             raise RuntimeError('Instance(s) not created!')
 
-        launcher(config.aws_key_path, parsed_args.tag_name, build=build, num=num, out=self.app.stdout)
+        launcher(parsed_args.tag_name, config.aws_key_path, config.script_path,
+                 build=build, num=num, out=self.app.stdout)

@@ -2,6 +2,7 @@ from collections import OrderedDict
 from multiprocessing import Pool, Queue
 import time
 
+from activity import Task
 from activity import launcher, upgrade
 from commands import BaseCommand
 from main import config
@@ -34,7 +35,7 @@ class Project(BaseCommand):
 
         project = config.projects[parsed_args.project_name]
         if 'Builds' not in project or not project['Builds']:
-            raise RuntimeError('No Builds in project')
+            raise RuntimeError('No Builds in project!')
         tag_name = raw_input('Enter Tag:Name Value (%s): ' % parsed_args.project_name)
         if not tag_name:
             tag_name = parsed_args.project_name
@@ -62,16 +63,33 @@ class Project(BaseCommand):
                 'counter': counter,
                 'q': q
             }
-            results.append(pool.apply_async(launcher, [config.aws_key_path, tag_name], kwargs))
+            results.append(pool.apply_async(launcher, [tag_name, config.aws_key_path, config.script_path], kwargs))
             counter += project_build['Num']
         launch_results = self.process_results(q, results)
 
+        tasks = []
+        for lr in launch_results:
+            if lr.build.get('Upgrade', '') in ['upgrade', 'dist-upgrade']:
+                for inst_id in lr.instance_ids:
+                    tasks.append(Task(lr.build, inst_id, []))
+        self.run_activity(pool, upgrade, tasks)
+
+        '''
+        instances = []
+        for lr in launch_results:
+            if lr.build.get('Upgrade', '') in ['upgrade', 'dist-upgrade']:
+                reservations = self.app.ec2_conn.get_all_instances(instance_ids=lr.instance_ids)
+                for res in reservations:
+                    for inst in res.instances:
+                        instances.append(inst)
+
+
 
         for lr in launch_results:
+            reservations = self.app.ec2_conn.get_all_instances(instance_ids=lr.instance_ids)
             if 'Upgrade' in lr.build and lr.build['Upgrade'] in ['upgrade', 'dist-upgrade']:
                 self.run_activity(lr.reservation, pool, upgrade, [lr.build['Login'], lr.build['Upgrade'], config.aws_key_path])
 
-        '''
         if 'Group' in build and build['Group'] in config.groups:
             bundles = []
             self.get_bundles(build['Group'], bundles)
@@ -140,15 +158,26 @@ class Project(BaseCommand):
         self.app.stdout.write('-------------------------\n')
         return launch_results
 
-    def run_activity(self, reservation, pool, func, arg_list):
+    def run_activity(self, pool, func, tasks):
         results = []
-        for inst in reservation.instances:
-            self.app.stdout.write('===>%s starting: %s\n' % (func.func_name, inst.id))
-            results.append(pool.apply_async(func, [inst] + arg_list))
-
-
+        for task in tasks:
+            self.app.stdout.write('==>%s starting: %s\n' % (func.func_name, task.inst_id))
+            results.append(pool.apply_async(func, [config.aws_key_path, task]))
             self.app.stdout.write('Upgrade Finished\n')
             time.sleep(10)
+
+        completed = []
+        while results:
+            time.sleep(20)
+            for result in results:
+                if result.ready():
+                    self.app.stdout.write('-------------------------\n')
+                    self.app.stdout.write('Result: %s\n' % result.get())
+                    completed.append(result)
+            results = [result for result in results if result not in completed]
+            if not results:
+                break
+        self.app.stdout.write('-------------------------\n')
 
     def add(self, name):
         project = OrderedDict()

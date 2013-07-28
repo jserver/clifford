@@ -7,9 +7,10 @@ from collections import namedtuple
 import boto
 import paramiko
 
-LaunchResult = namedtuple('LaunchResult', ['build', 'reservation'])
+Task = namedtuple('Task', ['build', 'instance_id', 'arg_list'])
+LaunchResult = namedtuple('LaunchResult', ['build', 'instance_ids'])
 
-def launcher(aws_key_path, tag_name, **kwargs):
+def launcher(tag_name, aws_key_path, script_path, **kwargs):
     out = kwargs.get('out', StringIO.StringIO())
 
     if 'build' not in kwargs:
@@ -26,24 +27,44 @@ def launcher(aws_key_path, tag_name, **kwargs):
         'security_group_ids': build['SecurityGroups'],
     }
     if 'UserData' in build:
-        options['user_data'] = build['UserData']
+        with open(os.path.join(script_path, build['UserData']), 'r') as fh:
+            options['user_data'] = fh.read()
     if 'Zone' in build:
         options['placement'] = build['Zone']
 
-    if 'num' in kwargs and kwargs['num'] > 1:
+    if kwargs.get('num', 1) > 1:
         options['min_count'] = kwargs['num']
         options['max_count'] = kwargs['num']
 
     out.write('Running instance(s)\n')
     reservation = image.run(**options)
-    if 'q' in kwargs:
-        l = LaunchResult(build, reservation)
-        kwargs['q'].put(l)
-    time.sleep(10)
+    time.sleep(15)
 
     instances = reservation.instances
+    if 'q' in kwargs:
+        l = LaunchResult(build, [inst.id for inst in instances])
+        kwargs['q'].put(l)
     count = len(instances)
-    time.sleep(10)
+
+    out.write('Waiting for instance(s) to come up\n')
+    for i in range(8):
+        time.sleep(15)
+        ready = True
+        for inst in instances:
+            status = inst.update()
+            if status != 'running':
+                out.write('%s\n' % status)
+                ready = False
+                break
+        if ready:
+            out.write('Instance(s) now running\n')
+            break
+    else:
+        out.write('All instance(s) are not created equal!\n')
+        if 'out' in kwargs:
+            return
+        return out
+
     out.write('Adding Tags to instance(s)\n')
     for idx, inst in enumerate(instances):
         if count == 1 and 'counter' not in kwargs:
@@ -55,25 +76,6 @@ def launcher(aws_key_path, tag_name, **kwargs):
         if 'build_name' in kwargs and kwargs['build_name']:
             inst.add_tag('Build', kwargs['build_name'])
         inst.add_tag('Login', build['Login'])
-
-    cnt = 0
-    while cnt < 6:
-        cnt += 1
-        time.sleep(20)
-        ready = True
-        for inst in instances:
-            status = inst.update()
-            if status != 'running':
-                out.write('%s\n' % status)
-                ready = False
-                break
-        if ready:
-            break
-    if cnt == 6:
-        out.write('All instance(s) are not created equal!\n')
-        if 'out' in kwargs:
-            return
-        return out
 
     time.sleep(20)
     out.write('Instance(s) should now be running\n')
@@ -87,26 +89,33 @@ def launcher(aws_key_path, tag_name, **kwargs):
     return out
 
 
-def group_installer(instance, username, bundles, aws_key_path):
+def group_installer(aws_key_path, task):
+    output = 'Running Group Installer on %s\n' % task.instance_id
+
+    output += 'instance, '
+    conn = boto.connect_ec2()
+    reservations = conn.get_all_instances(instance_ids=[task.instance_id])
+    instance = reservations[0].instances[0]
+
+    output += 'logger, '
     logname = 'group_installer.%s' % instance.id
     logger = logging.getLogger(logname)
     logger.setLevel(logging.ERROR)
     fh = logging.FileHandler('/tmp/group_installer_%s.log' % instance.id)
     logger.addHandler(fh)
 
-    output = 'Running Group Installer on %s\n' % instance.id
-
+    output += 'connecting, '
     ssh = paramiko.SSHClient()
     ssh.set_log_channel(logname)
     ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-    ssh.connect(instance.public_dns_name, username=username, key_filename='%s.pem' % os.path.join(aws_key_path, instance.key_name))
+    ssh.connect(instance.public_dns_name, username=task.build['Login'], key_filename='%s.pem' % os.path.join(aws_key_path, instance.key_name))
 
+    output += 'installing\n'
     has_error = False
-    for bundle in bundles:
+    for bundle in task.arg_list[0]:
         name = bundle[0]
         packages = bundle[1]
 
-        output = 'Installing %s\n' % packages
         stdin, stdout, stderr = ssh.exec_command('sudo apt-get -y install %s' % packages)
         for line in stdout.readlines():
             if any([item in line for item in ['Note, selecting', 'is already the newest version']]):
@@ -129,49 +138,64 @@ def group_installer(instance, username, bundles, aws_key_path):
     return output
 
 
-def pip_installer(instance, username, packages, aws_key_path):
+def pip_installer(aws_key_path, task):
+    output = 'Running Pip Installer on %s\n' % task.instance_id
+
+    output += 'instance, '
+    conn = boto.connect_ec2()
+    reservations = conn.get_all_instances(instance_ids=[task.instance_id])
+    instance = reservations[0].instances[0]
+
+    output += 'logger, '
     logname = 'pip_installer.%s' % instance.id
     logger = logging.getLogger(logname)
     logger.setLevel(logging.ERROR)
     fh = logging.FileHandler('/tmp/pip_installer_%s.log' % instance.id)
     logger.addHandler(fh)
 
-    output = 'Running Pip Installer on %s\n' % instance.id
-
+    output += 'connecting\n'
     ssh = paramiko.SSHClient()
     ssh.set_log_channel(logname)
     ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-    ssh.connect(instance.public_dns_name, username=username, key_filename='%s.pem' % os.path.join(aws_key_path, instance.key_name))
+    ssh.connect(instance.public_dns_name, username=task.build['Login'], key_filename='%s.pem' % os.path.join(aws_key_path, instance.key_name))
 
-    output = 'Installing %s\n' % packages
+    packages = task.arg_list[0]
     stdin, stdout, stderr = ssh.exec_command('sudo pip install %s' % packages)
     for line in stdout.readlines():
         if line.startswith('Installed') or line.startswith('Finished') or line.startswith('Successfully'):
-            output += line + '\n'
+            output += line
 
     ssh.close()
     return output
 
 
-def script_runner(instance, username, script, aws_key_path, copy_only=False):
+def script_runner(aws_key_path, task):
+    output = 'Running Script on %s\n' % task.instance_id
+
+    output += 'instance, '
+    conn = boto.connect_ec2()
+    reservations = conn.get_all_instances(instance_ids=[task.instance_id])
+    instance = reservations[0].instances[0]
+
+    output += 'logger, '
     logname = 'script_runner.%s' % instance.id
     logger = logging.getLogger(logname)
     logger.setLevel(logging.ERROR)
     fh = logging.FileHandler('/tmp/script_runner_%s.log' % instance.id)
     logger.addHandler(fh)
 
-    output = 'Running Pip Installer on %s\n' % instance.id
-
+    output += 'connecting\n'
     ssh = paramiko.SSHClient()
     ssh.set_log_channel(logname)
     ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
 
-    # quite fragile, what if an ubuntu machine has a user named admin
-    if username in ['admin', 'ubuntu']:
-        ssh.connect(instance.public_dns_name, username=username, key_filename='%s.pem' % os.path.join(aws_key_path, instance.key_name))
+    if task.build['Login'] in ['admin', 'ubuntu']:
+        ssh.connect(instance.public_dns_name, username=task.build['Login'], key_filename='%s.pem' % os.path.join(aws_key_path, instance.key_name))
     else:
-        ssh.connect(instance.public_dns_name, username=username)
+        ssh.connect(instance.public_dns_name, username=task.build['Login'])
 
+    script = task.arg_list[0]
+    copy_only = task.arg_list[1]
     script_name = os.path.basename(script)
 
     with open(script, 'r') as f:
@@ -185,7 +209,7 @@ def script_runner(instance, username, script, aws_key_path, copy_only=False):
         channel.input_enabled = True
         forward = paramiko.agent.AgentRequestHandler(channel)
 
-        channel.exec_command('/home/%s/%s' % (username, script_name))
+        channel.exec_command('/home/%s/%s' % (task.build['Login'], script_name))
 
         while True:
             time.sleep(5)
@@ -201,20 +225,28 @@ def script_runner(instance, username, script, aws_key_path, copy_only=False):
     return output
 
 
-def upgrade(instance, username, action, aws_key_path):
-    output = 'Running %s on %s\n' % (action, instance.id)
+def upgrade(aws_key_path, task):
+    output = 'Running %s on %s\n' % (task.build['Upgrade'], task.instance_id)
 
+    output += 'instance, '
+    conn = boto.connect_ec2()
+    reservations = conn.get_all_instances(instance_ids=[task.instance_id])
+    instance = reservations[0].instances[0]
+
+    output += 'logger, '
     logname = 'upgrade.%s' % instance.id
     logger = logging.getLogger(logname)
     logger.setLevel(logging.ERROR)
     fh = logging.FileHandler('/tmp/upgrade_%s.log' % instance.id)
     logger.addHandler(fh)
 
+    output += 'connecting, '
     ssh = paramiko.SSHClient()
     ssh.set_log_channel(logname)
     ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-    ssh.connect(instance.public_dns_name, username=username, key_filename='%s.pem' % os.path.join(aws_key_path, instance.key_name))
+    ssh.connect(instance.public_dns_name, username=task.build['Login'], key_filename='%s.pem' % os.path.join(aws_key_path, instance.key_name))
 
+    output += 'hosts\n'
     stdin, stdout, stderr = ssh.exec_command('sudo su -c "echo \'\n### CLIFFORD\n127.0.1.1\t%s\' >> /etc/hosts"' % instance.tags.get('Name'))
 
     has_error = False
@@ -237,8 +269,8 @@ def upgrade(instance, username, action, aws_key_path):
             output += line + '\n'
     time.sleep(5)
 
-    if action in ['upgrade', 'dist-upgrade']:
-        stdin, stdout, stderr = ssh.exec_command('sudo su -c "env DEBIAN_FRONTEND=noninteractive apt-get -y -o DPkg::Options::=--force-confnew %s"' % action)
+    if task.build['Upgrade'] in ['upgrade', 'dist-upgrade']:
+        stdin, stdout, stderr = ssh.exec_command('sudo su -c "env DEBIAN_FRONTEND=noninteractive apt-get -y -o DPkg::Options::=--force-confnew %s"' % task.build['Upgrade'])
         for line in stderr.readlines():
             if line.startswith('E: '):
                 output += line + '\n'
@@ -248,11 +280,11 @@ def upgrade(instance, username, action, aws_key_path):
             ssh.close()
             return output
         time.sleep(5)
-        output += '%sD\n' % action.upper()
+        output += '%sD\n' % task.build['Upgrade'].upper()
 
     ssh.close()
 
-    if action == 'dist-upgrade':
+    if task.build['Upgrade'] == 'dist-upgrade':
         time.sleep(5)
         output += 'Rebooting...\n'
         instance.reboot()

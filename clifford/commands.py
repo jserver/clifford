@@ -5,7 +5,14 @@ from cliff.command import Command
 from mixins import PreseedMixin, InstanceMixin
 
 
+def enum(**enums):
+    return type('Enum', (), enums)
+
+
 class BaseCommand(Command, InstanceMixin):
+    Bld = enum(SIZE='Size', LOGIN='Login', IMAGE='Image', KEY='Key',
+               SECURITY_GROUPS='SecurityGroups', ZONE='Zone', USER_DATA='UserData',
+               UPGRADE='Upgrade', GROUP='Group', PIP='Pip')
 
     log = logging.getLogger(__name__)
 
