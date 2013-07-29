@@ -1,5 +1,5 @@
 from collections import OrderedDict
-from multiprocessing import Pool, Queue
+from multiprocessing import Manager, Pool, Queue
 import time
 
 from activity import Task
@@ -48,7 +48,8 @@ class Project(BaseCommand):
 
         total = sum(b['Num'] for b in project['Builds'])
         pool = Pool(processes=total)
-        q = Queue(total)
+        m = Manager()
+        q = m.Queue(total)
 
         results = []
         counter = 0
@@ -73,6 +74,7 @@ class Project(BaseCommand):
                 for inst_id in lr.instance_ids:
                     tasks.append(Task(lr.build, inst_id, []))
         self.run_activity(pool, upgrade, tasks)
+        self.app.stdout.write('Upgrade Finished\n')
 
         '''
         instances = []
@@ -150,7 +152,7 @@ class Project(BaseCommand):
                 if result.ready():
                     launch_results.append(q.get())
                     self.app.stdout.write('-------------------------\n')
-                    self.app.stdout.write('Result: %s\n' % result.get())
+                    self.app.stdout.write(result.get().getvalue())
                     completed.append(result)
             results = [result for result in results if result not in completed]
             if not results:
@@ -161,10 +163,8 @@ class Project(BaseCommand):
     def run_activity(self, pool, func, tasks):
         results = []
         for task in tasks:
-            self.app.stdout.write('==>%s starting: %s\n' % (func.func_name, task.inst_id))
+            self.app.stdout.write('==>%s starting: %s\n' % (func.func_name, task.instance_id))
             results.append(pool.apply_async(func, [config.aws_key_path, task]))
-            self.app.stdout.write('Upgrade Finished\n')
-            time.sleep(10)
 
         completed = []
         while results:
@@ -172,7 +172,7 @@ class Project(BaseCommand):
             for result in results:
                 if result.ready():
                     self.app.stdout.write('-------------------------\n')
-                    self.app.stdout.write('Result: %s\n' % result.get())
+                    self.app.stdout.write(result.get())
                     completed.append(result)
             results = [result for result in results if result not in completed]
             if not results:
