@@ -39,9 +39,8 @@ class Build(BaseCommand, LaunchOptionsMixin):
         tag_name = raw_input('Enter Tag:Name Value (%s): ' % parsed_args.build_name)
         if not tag_name:
             tag_name = parsed_args.build_name
-        if '[' in tag_name or ']' in tag_name:
-            self.app.stdout.write('Clifford Tag Names may not include brackets')
-            return
+        if not tag_name.isalnum():
+            raise RuntimeError('Keep names simple alpha-numeric!')
 
         if not self.sure_check():
             return
@@ -145,6 +144,8 @@ class Build(BaseCommand, LaunchOptionsMixin):
         else:
             bundle_option = 'Skip Step'
 
+        suffix = raw_input('Optional short suffix (i.e. www,db,lb,mq)? ')
+
         build = OrderedDict()
         build['Size'] = instance_type
         build['Login'] = image_item['Login']
@@ -157,6 +158,9 @@ class Build(BaseCommand, LaunchOptionsMixin):
 
         if user_data:
             build['UserData'] = user_data
+
+        if suffix:
+            build['Suffix'] = suffix
 
         if upgrade_option != 'Skip Step':
             build['Upgrade'] = upgrade_option

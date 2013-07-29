@@ -67,14 +67,22 @@ def launcher(tag_name, aws_key_path, script_path, **kwargs):
 
     out.write('Adding Tags to instance(s)\n')
     for idx, inst in enumerate(instances):
-        if count == 1 and 'counter' not in kwargs:
-            inst.add_tag('Name', tag_name)
+        if 'Suffix' in build:
+            full_name = '%s-%s' % (tag_name, build['Suffix'])
         else:
-            inst.add_tag('Name', '%s [%s]' % (tag_name, idx + 1 + kwargs.get('counter', 0)))
+            full_name = tag_name
+
+        if count == 1 and 'counter' not in kwargs:
+            inst.add_tag('Name', full_name)
+        else:
+            inst.add_tag('Name', '%s-%s' % (full_name, idx + 1 + kwargs.get('counter', 0)))
+
         if 'project_name' in kwargs and kwargs['project_name']:
             inst.add_tag('Project', kwargs['project_name'])
+
         if 'build_name' in kwargs and kwargs['build_name']:
             inst.add_tag('Build', kwargs['build_name'])
+
         inst.add_tag('Login', build['Login'])
 
     time.sleep(20)

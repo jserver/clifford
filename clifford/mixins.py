@@ -1,4 +1,5 @@
 import glob
+import re
 
 from main import config
 
@@ -166,12 +167,14 @@ class InstanceMixin(object):
         return instance
 
     def get_instances(self, name):
+        regex = re.compile('(.*)-([0-9]+)$')
         instances = []
         reservations = self.app.ec2_conn.get_all_instances()
         for reservation in reservations:
             for instance in reservation.instances:
                 name_tag = instance.tags.get('Name', '')
-                if name == name_tag.split(' [')[0]:
+                m = regex.match(name_tag)
+                if name == m.group(1):
                     instances.append(instance)
         return instances
 

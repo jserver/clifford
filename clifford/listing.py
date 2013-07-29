@@ -74,12 +74,12 @@ class Builds(Lister):
                                  builds[build].get('Image', ''),
                                  builds[build].get('Key', ''),
                                  builds[build].get('Zone', ''),
-                                 builds[build].get('Group', '')))
+                                 builds[build].get('Group', ''),
+                                 builds[build].get('Suffix', '')))
 
-        return (('Name', 'Size', 'Image', 'Key', 'Zone', 'Group'),
+        return (('Name', 'Size', 'Image', 'Key', 'Zone', 'Group', 'Suffix'),
                 build_tuples
                 )
-
 
 
 class Bundles(Lister):
