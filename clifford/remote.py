@@ -23,7 +23,7 @@ class AddAptInstall(BaseCommand):
         section = 'Apt:%s' % parsed_args.option
 
         if not self.app.cparser.has_section(section):
-            raise RuntimeError('No apt repo named %s' % parsed_args.option)
+            raise RuntimeError('No apt repo named %s!' % parsed_args.option)
         options = self.app.cparser.options(section)
 
         ssh = paramiko.SSHClient()
@@ -41,7 +41,7 @@ class AddAptInstall(BaseCommand):
             stdin, stdout, stderr = ssh.exec_command('sudo apt-key add %s 2>&1' % key.split('/').pop())
             self.printOutError(stdout, stderr)
         else:
-            raise RuntimeError('Invalid apt section')
+            raise RuntimeError('Invalid apt section!')
 
         package = self.app.get_option(section, 'package')
         time.sleep(5)
@@ -158,7 +158,7 @@ class CreateUser(BaseCommand):
 
         keys = glob.glob('%s/*.pub' % self.app.pub_key_path)
         if not keys:
-            raise RuntimeError('No public keys found in key_path')
+            raise RuntimeError('No public keys found in key_path!')
 
         password_salt = self.app.get_option('General', 'password_salt')
 
@@ -174,7 +174,7 @@ class CreateUser(BaseCommand):
         else:
             password = getpass.getpass('Enter password: ')
         if not password:
-            raise RuntimeError('password not specified')
+            raise RuntimeError('password not specified!')
 
         self.app.stdout.write('The following keys will be copied:\n')
         for key in keys:
@@ -281,7 +281,7 @@ class GroupInstall(BaseCommand):
                         has_error = True
                 if has_error:
                     ssh.close()
-                    raise RuntimeError('Unable to continue...')
+                    raise RuntimeError('Unable to continue!')
                 time.sleep(5)
                 self.app.stdout.write('Installed bundle %s\n' % bundle_name)
             ssh.close()
@@ -327,7 +327,7 @@ class PPAInstall(BaseCommand):
         instance = self.get_instance(parsed_args.name, parsed_args.arg_is_id)
 
         if not self.app.cparser.has_section('PPAs'):
-            raise RuntimeError('No PPAs available')
+            raise RuntimeError('No PPAs available!')
 
         if parsed_args.option:
             package_name = parsed_args.option
@@ -337,7 +337,7 @@ class PPAInstall(BaseCommand):
 
         ppa_name = self.app.get_option('PPAs', package_name)
         if not ppa_name:
-            raise RuntimeError('PPA Name not found')
+            raise RuntimeError('PPA Name not found!')
 
         ssh = paramiko.SSHClient()
         ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
@@ -452,7 +452,7 @@ class Upgrade(BaseCommand):
                     self.app.stdout.write(line)
                     has_error = True
             if has_error:
-                raise RuntimeError("Unable to continue...")
+                raise RuntimeError("Unable to continue!")
             time.sleep(5)
             self.app.stdout.write('UPDATED\n')
 
@@ -475,7 +475,7 @@ class Upgrade(BaseCommand):
                             self.app.stdout.write(line)
                             has_error = True
                     if has_error:
-                        raise RuntimeError("Unable to continue...")
+                        raise RuntimeError("Unable to continue!")
                     time.sleep(5)
                     self.app.stdout.write('UPGRADED\n')
 
@@ -493,7 +493,7 @@ class Upgrade(BaseCommand):
                         self.app.stdout.write(line)
                         has_error = True
                 if has_error:
-                    raise RuntimeError("Unable to continue...")
+                    raise RuntimeError("Unable to continue!")
                 time.sleep(5)
                 self.app.stdout.write('DIST-UPGRADED\n')
 

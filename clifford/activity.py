@@ -133,7 +133,7 @@ def group_installer(aws_key_path, task):
                 output += line + '\n'
                 has_error = True
         if has_error:
-            output += 'Unable to Continue...\n'
+            output += 'Unable to Continue!\n'
             ssh.close()
             return output
         time.sleep(5)
@@ -264,7 +264,7 @@ def upgrade(aws_key_path, task):
             output += line + '\n'
             has_error = True
     if has_error:
-        output += 'Unable to Continue...\n'
+        output += 'Unable to Continue!\n'
         ssh.close()
         return output
     time.sleep(5)
@@ -284,7 +284,7 @@ def upgrade(aws_key_path, task):
                 output += line + '\n'
                 has_error = True
         if has_error:
-            output += 'Unable to Continue...\n'
+            output += 'Unable to Continue!\n'
             ssh.close()
             return output
         time.sleep(5)

@@ -55,7 +55,7 @@ class Download(BaseCommand):
         if os.path.exists(parsed_args.key_name):
             raise RuntimeError('File already exists!')
         # TODO: seems easier to just use curl/wget, have to think of a good use-case
-        raise RuntimeError('NO IMPLEMENTATION YET')
+        raise RuntimeError('NO IMPLEMENTATION YET!')
 
 
 class Upload(BaseCommand):

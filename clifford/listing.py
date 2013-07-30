@@ -18,7 +18,7 @@ class Addresses(Lister):
     def take_action(self, parsed_args):
         addresses = self.app.ec2_conn.get_all_addresses()
         if not addresses:
-            raise RuntimeError('No IP Addresses attached to account')
+            raise RuntimeError('No IP Addresses attached to account!')
 
         reservations = self.app.ec2_conn.get_all_instances(instance_ids=[address.instance_id for address in addresses if address.instance_id])
         instance_dict = {}

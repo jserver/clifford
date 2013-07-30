@@ -153,13 +153,13 @@ class InstanceMixin(object):
                     else:
                         possible_reservations.append(res)
             if len(possible_reservations) > 1:
-                raise RuntimeError('More than one reservation returned, use --id')
+                raise RuntimeError('More than one reservation returned, use --id!')
             reservations = possible_reservations
         if not reservations:
-            raise RuntimeError('No instances found')
+            raise RuntimeError('No instances found!')
         res = reservations[0]
         if not res.instances:
-            raise RuntimeError('No instances wth name %s' % name)
+            raise RuntimeError('No instances wth name %s!' % name)
         elif len(res.instances) > 1:
             raise RuntimeError('More than one instance in reservation!' % name)
 

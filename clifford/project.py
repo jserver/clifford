@@ -117,7 +117,7 @@ class Project(BaseCommand):
         '''
         instance = self.get_instance(parsed_args.name)
         if not instance:
-            raise RuntimeError('Cannot find instance')
+            raise RuntimeError('Cannot find instance!')
 
         if 'user_name' in options:
             cmd = 'remote create user -y'

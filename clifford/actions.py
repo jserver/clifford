@@ -120,7 +120,7 @@ class CreateSnapshot(BaseCommand):
             instance = instances[volume.attach_data.instance_id]
             if instance.state == 'running':
                 if not self.sure_check('This will stop the attached instance! continue? '):
-                    raise RuntimeError('Aborting action')
+                    raise RuntimeError('Aborting action!')
                 self.app.stdout.write('Stopping %s\n' % instance.tags.get('Name', instance.id))
                 instance.stop()
                 time.sleep(30)
@@ -136,7 +136,7 @@ class CreateSnapshot(BaseCommand):
         name = raw_input('Enter name: ')
         description = raw_input('Enter description: ')
         if not description:
-            raise RuntimeError('Description required')
+            raise RuntimeError('Description required!')
         snapshot = volume.create_snapshot(description)
         time.sleep(5)
         if name:
@@ -203,7 +203,7 @@ class Image(BaseCommand):
 
     def take_action(self, parsed_args):
         if not parsed_args.add and not parsed_args.remove:
-            raise RuntimeError('Use -a <ami_id> to add or -r to remove images')
+            raise RuntimeError('Use -a <ami_id> to add or -r to remove images!')
 
         if parsed_args.add:
             image = self.app.ec2_conn.get_image(parsed_args.add)
@@ -216,13 +216,13 @@ class Image(BaseCommand):
 
             login = raw_input('Enter login: ')
             if not login:
-                raise RuntimeError('Login required')
+                raise RuntimeError('Login required!')
 
             name = raw_input('Enter nickname of image: ')
             if not name:
-                raise RuntimeError('Nickname required')
+                raise RuntimeError('Nickname required!')
             if name in config.images:
-                raise RuntimeError('Nickname already in use')
+                raise RuntimeError('Nickname already in use!')
 
             img = OrderedDict()
             img['Id'] = image.id
@@ -320,16 +320,16 @@ class Tag(BaseCommand):
         if parsed_args.delete:
             tag_name = raw_input('Tag: ')
             if not tag_name or tag_name == 'Name':
-                raise RuntimeError('Invalid Tag')
+                raise RuntimeError('Invalid Tag!')
 
             instance.remove_tag(tag_name)
 
         else:
             tag_name = raw_input('Tag: ')
             if not tag_name:
-                raise RuntimeError('Invalid Tag')
+                raise RuntimeError('Invalid Tag!')
             value = raw_input('Value: ')
             if not value:
-                raise RuntimeError('Invalid Value')
+                raise RuntimeError('Invalid Value!')
 
             instance.add_tag(tag_name, value)
