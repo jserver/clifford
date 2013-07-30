@@ -127,10 +127,10 @@ def group_installer(aws_key_path, task):
         stdin, stdout, stderr = ssh.exec_command('sudo apt-get -y install %s' % packages)
         for line in stdout.readlines():
             if any([item in line for item in ['Note, selecting', 'is already the newest version']]):
-                output += line + '\n'
+                output += line
         for line in stderr.readlines():
             if line.startswith('E: '):
-                output += line + '\n'
+                output += line
                 has_error = True
         if has_error:
             output += 'Unable to Continue!\n'
@@ -261,7 +261,7 @@ def upgrade(aws_key_path, task):
     stdin, stdout, stderr = ssh.exec_command('sudo apt-get -y update')
     for line in stderr.readlines():
         if line.startswith('E: '):
-            output += line + '\n'
+            output += line
             has_error = True
     if has_error:
         output += 'Unable to Continue!\n'
@@ -274,14 +274,14 @@ def upgrade(aws_key_path, task):
     string_list = ['The following packages have been kept back:', 'The following packages will be upgraded:']
     for line in stdout.readlines():
         if line.rstrip() in string_list or line.startswith('  '):
-            output += line + '\n'
+            output += line
     time.sleep(5)
 
     if task.build['Upgrade'] in ['upgrade', 'dist-upgrade']:
         stdin, stdout, stderr = ssh.exec_command('sudo su -c "env DEBIAN_FRONTEND=noninteractive apt-get -y -o DPkg::Options::=--force-confnew %s"' % task.build['Upgrade'])
         for line in stderr.readlines():
             if line.startswith('E: '):
-                output += line + '\n'
+                output += line
                 has_error = True
         if has_error:
             output += 'Unable to Continue!\n'
