@@ -1,6 +1,4 @@
 *.pyc
-*.egg
 *.egg-info
-*.gz
 build
 dist

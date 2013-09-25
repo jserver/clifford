@@ -5,19 +5,10 @@ PROJECT = 'clifford'
 # Change docs/sphinx/conf.py too!
 VERSION = '0.1'
 
-# Bootstrap installation of Distribute
-import distribute_setup
-distribute_setup.use_setuptools()
-
 from setuptools import setup, find_packages
 
-from distutils.util import convert_path
-from fnmatch import fnmatchcase
-import os
-import sys
-
 try:
-    long_description = open('README', 'rt').read()
+    long_description = open('README.rst', 'rt').read()
 except IOError:
     long_description = ''
 
@@ -48,7 +39,7 @@ setup(
     scripts=[],
 
     provides=[],
-    install_requires=['distribute', 'cliff', 'boto', 'paramiko'],
+    install_requires=['cliff', 'boto', 'paramiko'],
 
     namespace_packages=[],
     packages=find_packages(),
@@ -129,4 +120,4 @@ setup(
         },
 
     zip_safe=False,
-    )
+)
