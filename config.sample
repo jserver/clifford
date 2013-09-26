@@ -1,100 +1,184 @@
-[General]
-domain_name = blah.com
-aws_key_path = ~/.keys
-pub_key_path = ~/keys
-password_salt = omgSoSOOOOOsecret
-script_path = ~/.clifford/scripts
-
-[Images]
-precise = ami-23d9a94a
-raring = ami-10314d79
-wheezy = ami-9e95e8f7
-
-[Bundles]
-dev = autoconf automake build-essential ntp
-etc = apache2-utils htop python-pip sqlite3 unzip zip
-img-libs = libfreetype6-dev libjpeg8-dev liblcms1-dev libpng12-dev zlib1g-dev
-libs = libevent-dev libgmp-dev libjson0-dev libsqlite3-dev libssl-dev libxslt1-dev libyaml-dev python-dev
-vcs = bzr git mercurial
-memcached = memcached libmemcached-dev
-mysql-client = mysql-client libmysqlclient-dev
-php = php5-cli php5-cgi spawn-fcgi php5-mysql php5-pgsql
-postgres = postgresql postgresql-client libpq-dev
-
-[Python Bundles]
-basic = virtualenv virtualenvwrapper
-
-[Groups]
-# $ = install single package
-# & = install another group
-# @ = add/install from ppa
-# + = add/install from 3rd-party repo
-base = dev etc img-libs libs vcs
-postgres-rabbit = &base postgres $rabbitmq-server $supervisor
-rethink = &base @rethinkdb $rabbitmq-server
-
-[Apt:MongoDB]
-keyserver = 7F0CEB10
-deb = http://downloads-distro.mongodb.org/repo/ubuntu-upstart dist 10gen
-package = mongodb-10gen
-
-[Apt:RabbitMQ]
-publickey = http://www.rabbitmq.com/rabbitmq-signing-key-public.asc
-deb = http://www.rabbitmq.com/debian/ testing main
-package = rabbitmq-server
-
-[PPAs]
-nodejs = chris-lea/node.js
-redis-server = chris-lea/redis-server
-rethinkdb = rethinkdb/ppa
-
-[Build:basic]
-size = t1.micro
-image = raring
-key = <pem keyname>
-zone = NoPreference
-security_groups = ssh-only
-
-[Build:django]
-size = m1.small
-image = raring
-key = <pem keyname>
-zone = us-east-1b
-security_groups = django-dev
-user_data = build.sh
-upgrade = dist-upgrade
-group = postgres-rabbit
-pip = basic
-
-[Build:flask]
-size = t1.micro
-image = raring
-key = <pem keyname>
-zone = us-east-1b
-security_groups = flask-dev,eighty-eighty-dev
-user_data = build.sh
-upgrade = dist-upgrade
-group = rethink
-pip = basic
-
-[Project:django]
-build = django
-user_name = <username>
-user_fullname = <fullname>
-user_password = <password>
-script_name = dotfiles.sh
-
-[Project:flask]
-build = flask
-user_name = <username>
-user_fullname = <fullname>
-user_password = <password>
-script_name = dotfiles.sh
-
-[debconf:golang]
-dashboard = golang-go golang-go/dashboard boolean false
-
-[debconf:mysql-server]
-root_password = mysql-server-5.5 mysql-server/root_password password sql23
-root_password_again = mysql-server-5.5 mysql-server/root_password_again password sql23
-
+{
+  "AwsKeyPath": "~/.keys",
+  "PubKeyPath": "~/keys",
+  "ScriptPath": "~/.clifford/scripts",
+  "Domain": "blah.io",
+  "Salt": "OmgSuperSecret",
+  "Images": {
+    "precise": {
+      "Id": "ami-23d9a94a",
+      "Login": "ubuntu",
+      "Name": "ubuntu/images/ebs/ubuntu-precise-12.04-amd64-server-20130624"
+    },
+    "raring": {
+      "Id": "ami-10314d79",
+      "Login": "ubuntu",
+      "Name": "ubuntu/images/ebs/ubuntu-raring-13.04-amd64-server-20130706"
+    },
+    "wheezy": {
+      "Id": "ami-9e95e8f7",
+      "Login": "admin",
+      "Name": "debian-wheezy-amd64-20130704"
+    }
+  },
+  "Bundles": {
+    "dev": "autoconf automake bash-completion build-essential debconf-utils libtool ntp python",
+    "etc": "apache2-utils curl htop python-pip sqlite3 tmux unzip vim-nox zip",
+    "img-libs": "libfreetype6-dev libjpeg-dev liblcms-dev libpng-dev libtiff-dev libwebp-dev zlib1g-dev",
+    "libs": "libevent-dev libgmp-dev libjson0-dev libsqlite3-dev libssl-dev libxslt-dev libyaml-dev libzmq-dev python-dev uuid-dev",
+    "vcs": "bzr git mercurial",
+    "postgres": "postgresql postgresql-client libpq-dev",
+    "postgres-client": "postgresql-client libpq-dev"
+  },
+  "PythonBundles": {
+    "base": "pyflakes virtualenv virtualenvwrapper yolk"
+  },
+  "Groups": {
+    "base": [
+      {
+        "Type": "bundle",
+        "Value": "dev"
+      },
+      {
+        "Type": "bundle",
+        "Value": "etc"
+      },
+      {
+        "Type": "bundle",
+        "Value": "img-libs"
+      },
+      {
+        "Type": "bundle",
+        "Value": "libs"
+      },
+      {
+        "Type": "bundle",
+        "Value": "vcs"
+      }
+    ],
+    "django": [
+      {
+        "Type": "group",
+        "Value": "base"
+      },
+      {
+        "Type": "bundle",
+        "Value": "postgres-client"
+      }
+    ],
+    "postgres": [
+      {
+        "Type": "group",
+        "Value": "base"
+      },
+      {
+        "Type": "bundle",
+        "Value": "postgres"
+      }
+    ],
+    "rabbit": [
+      {
+        "Type": "group",
+        "Value": "base"
+      },
+      {
+        "Type": "bundle",
+        "Value": "postgres-client"
+      },
+      {
+        "Type": "packages",
+        "Value": "rabbitmq-server"
+      }
+    ]
+  },
+  "Builds": {
+    "micro": {
+      "Size": "t1.micro",
+      "Login": "admin",
+      "Image": "ami-9e95e8f7",
+      "Key": "key_name",
+      "SecurityGroups": [
+        "default",
+        "ssh-only"
+      ],
+      "Zone": "us-east-1b"
+    },
+    "small": {
+      "Size": "m1.small",
+      "Login": "admin",
+      "Image": "ami-9e95e8f7",
+      "Key": "key_name",
+      "SecurityGroups": [
+        "default",
+        "ssh-only"
+      ],
+      "Zone": "us-east-1b"
+    },
+    "django": {
+      "Size": "m1.small",
+      "Login": "admin",
+      "Image": "ami-9e95e8f7",
+      "Key": "jserver",
+      "SecurityGroups": [
+        "default",
+        "django-dev"
+      ],
+      "Zone": "us-east-1b",
+      "Suffix": "www",
+      "Upgrade": "upgrade",
+      "Group": "django",
+      "Pip": "base",
+      "Script": "install_go.sh"
+    },
+    "postgres": {
+      "Size": "m1.small",
+      "Login": "admin",
+      "Image": "ami-9e95e8f7",
+      "Key": "key_name",
+      "SecurityGroups": [
+        "default",
+        "ssh-only"
+      ],
+      "Zone": "us-east-1b",
+      "Suffix": "db",
+      "Upgrade": "upgrade",
+      "Group": "postgres",
+      "Pip": "base",
+      "Script": "install_go.sh"
+    },
+    "rabbit": {
+      "Size": "m1.small",
+      "Login": "admin",
+      "Image": "ami-9e95e8f7",
+      "Key": "key_name",
+      "SecurityGroups": [
+        "default",
+        "ssh-only"
+      ],
+      "Zone": "us-east-1b",
+      "Suffix": "mq",
+      "Upgrade": "upgrade",
+      "Group": "rabbit",
+      "Pip": "base",
+      "Script": "install_go.sh"
+    }
+  },
+  "Projects": {
+    "sample_project": {
+      "Builds": [
+        {
+          "Build": "django",
+          "Num": 2
+        },
+        {
+          "Build": "postgres",
+          "Num": 1
+        },
+        {
+          "Build": "rabbit",
+          "Num": 1
+        }
+      ]
+    }
+  }
+}
