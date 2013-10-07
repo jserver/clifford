@@ -173,8 +173,11 @@ class InstanceMixin(object):
         for reservation in reservations:
             for instance in reservation.instances:
                 name_tag = instance.tags.get('Name', '')
+                if name == name_tag:
+                    instances.append(instance)
+                    continue
                 m = regex.match(name_tag)
-                if name == m.group(1):
+                if m and name == m.group(1):
                     instances.append(instance)
         return instances
 
