@@ -79,6 +79,7 @@ setup(
             'image = clifford.actions:Image',
             'create image = clifford.actions:CreateImage',
             'create snapshot = clifford.actions:CreateSnapshot',
+            'del aws_image = clifford.actions:DeleteAwsImage',
             'del snapshot = clifford.actions:DeleteSnapshot',
             'del volume = clifford.actions:DeleteVolume',
 

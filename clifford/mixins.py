@@ -130,12 +130,12 @@ class PreseedMixin(object):
         preseeds = []
         packages = bundle.split(' ')
         for package in packages:
-            if not self.app.cparser.has_section('debconf:%s' % package):
+            full_name = 'debconf:%s' % package
+            if full_name not in config:
                 continue
-            options = self.app.cparser.options('debconf:%s' % package)
-            if options:
-                for option in options:
-                    preseeds.append(self.app.cparser.get('debconf:%s' % package, option))
+            options = config[full_name]
+            for option in options:
+                preseeds.append(config[full_name][option])
         return preseeds
 
 
@@ -226,3 +226,10 @@ class InstanceMixin(object):
                     continue
                 return reservation
         raise RuntimeError('Reservation not found!')
+
+    def get_user(self, instance):
+        keys = config.images.keys()
+        for key in keys:
+            if config.images[key]['Id'] == instance.image_id:
+                return config.images[key]['Login']
+        raise RuntimeError('Login not found!')

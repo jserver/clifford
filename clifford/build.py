@@ -53,7 +53,7 @@ class Build(BaseCommand, LaunchOptionsMixin):
                  num=parsed_args.num, q=q, out=self.app.stdout)
         lr = q.get()
 
-        time.sleep(10)
+        time.sleep(20)
 
         # begin the mutliprocessing
         pool = Pool(processes=len(lr.instance_ids))

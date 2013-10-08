@@ -184,6 +184,7 @@ def script_runner(aws_key_path, task):
     conn = boto.connect_ec2()
     reservations = conn.get_all_instances(instance_ids=[task.instance_id])
     instance = reservations[0].instances[0]
+    name_tag = instance.tags.get('Name')
 
     output += 'logger, '
     logname = 'script_runner.%s' % instance.id
@@ -208,6 +209,10 @@ def script_runner(aws_key_path, task):
 
     with open(script, 'r') as f:
         contents = f.read()
+        if 'ScriptFormatArgs' in task.build:
+            format_args = task.build['ScriptFormatArgs'].split(',')
+            format_args = [name_tag for arg in format_args if arg == '@name']
+            contents = contents % tuple(format_args)
         ssh.exec_command('cat << EOF > %s\n%s\nEOF' % (script_name, contents))
         ssh.exec_command('chmod 744 %s' % script_name)
 
@@ -296,6 +301,6 @@ def upgrade(aws_key_path, task):
         time.sleep(5)
         output += 'Rebooting...\n'
         instance.reboot()
-        time.sleep(20)
+        time.sleep(30)
 
     return output

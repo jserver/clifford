@@ -5,6 +5,7 @@ import time
 import paramiko
 
 from commands import BaseCommand
+from main import config
 from mixins import PreseedMixin
 
 
@@ -22,19 +23,19 @@ class AddAptInstall(BaseCommand):
         instance = self.get_instance(parsed_args.name, parsed_args.arg_is_id)
         section = 'Apt:%s' % parsed_args.option
 
-        if not self.app.cparser.has_section(section):
+        if section not in config:
             raise RuntimeError('No apt repo named %s!' % parsed_args.option)
-        options = self.app.cparser.options(section)
+        options = config[section]
 
         ssh = paramiko.SSHClient()
         ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-        ssh.connect(instance.public_dns_name, username=self.get_user(instance), key_filename='%s/%s.pem' % (self.app.aws_key_path, instance.key_name))
+        ssh.connect(instance.public_dns_name, username=self.get_user(instance), key_filename='%s/%s.pem' % (config.aws_key_path, instance.key_name))
 
         if 'keyserver' in options:
-            stdin, stdout, stderr = ssh.exec_command('sudo apt-key adv --keyserver keyserver.ubuntu.com --recv %s 2>&1' % self.app.get_option(section, 'keyserver'))
+            stdin, stdout, stderr = ssh.exec_command('sudo apt-key adv --keyserver keyserver.ubuntu.com --recv %s 2>&1' % options['keyserver'])
             self.printOutError(stdout, stderr)
         elif 'publickey' in options:
-            key = self.app.get_option(section, 'publickey')
+            key = config[section]['publickey']
             stdin, stdout, stderr = ssh.exec_command('wget %s 2>&1' % key)
             self.printOutError(stdout, stderr)
             time.sleep(2)
@@ -43,9 +44,9 @@ class AddAptInstall(BaseCommand):
         else:
             raise RuntimeError('Invalid apt section!')
 
-        package = self.app.get_option(section, 'package')
+        package = config[section]['package']
         time.sleep(5)
-        stdin, stdout, stderr = ssh.exec_command('sudo su -c "echo \'deb %s\' > /etc/apt/sources.list.d/%s.list"' % (self.app.get_option(section, 'deb'), package))
+        stdin, stdout, stderr = ssh.exec_command('sudo su -c "echo \'deb %s\' > /etc/apt/sources.list.d/%s.list"' % (config[section]['deb'], package))
 
         stdin, stdout, stderr = ssh.exec_command('sudo apt-get -y update 2>&1')
         self.printOutError(stdout, stderr)
@@ -78,7 +79,7 @@ class AptGetInstall(BaseCommand, PreseedMixin):
         if self.sure_check():
             ssh = paramiko.SSHClient()
             ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-            ssh.connect(instance.public_dns_name, username=self.get_user(instance), key_filename='%s/%s.pem' % (self.app.aws_key_path, instance.key_name))
+            ssh.connect(instance.public_dns_name, username=self.get_user(instance), key_filename='%s/%s.pem' % (config.aws_key_path, instance.key_name))
 
             preseeds = self.get_preseeds(packages)
             cmd = 'apt-get -y install %s' % packages
@@ -112,12 +113,12 @@ class BundleInstall(BaseCommand):
 
     def take_action(self, parsed_args):
         instance = self.get_instance(parsed_args.name, parsed_args.arg_is_id)
-        bundle = self.app.get_option('Bundles', parsed_args.option)
+        bundle = config.bundles[parsed_args.option]
 
         if self.sure_check():
             ssh = paramiko.SSHClient()
             ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-            ssh.connect(instance.public_dns_name, username=self.get_user(instance), key_filename='%s/%s.pem' % (self.app.aws_key_path, instance.key_name))
+            ssh.connect(instance.public_dns_name, username=self.get_user(instance), key_filename='%s/%s.pem' % (config.aws_key_path, instance.key_name))
 
             preseeds = self.get_preseeds(bundle)
             cmd = 'apt-get -y install %s' % bundle
@@ -147,6 +148,8 @@ class CreateUser(BaseCommand):
         parser.add_argument('-y', dest='assume_yes', action='store_true')
         parser.add_argument('--fullname', nargs='+')
         parser.add_argument('--password', nargs='+')
+        parser.add_argument('--group')
+        parser.add_argument('--sudo', action='store_true')
         parser.add_argument('--id', dest='arg_is_id', action='store_true')
         parser.add_argument('name')
         parser.add_argument('user')
@@ -156,11 +159,11 @@ class CreateUser(BaseCommand):
         instance = self.get_instance(parsed_args.name, parsed_args.arg_is_id)
         user = parsed_args.user
 
-        keys = glob.glob('%s/*.pub' % self.app.pub_key_path)
+        keys = glob.glob('%s/*.pub' % config.pub_key_path)
         if not keys:
             raise RuntimeError('No public keys found in key_path!')
 
-        password_salt = self.app.get_option('General', 'password_salt')
+        password_salt = config['Salt']
 
         if parsed_args.fullname:
             fullname = ' '.join(parsed_args.fullname)
@@ -178,20 +181,36 @@ class CreateUser(BaseCommand):
 
         self.app.stdout.write('The following keys will be copied:\n')
         for key in keys:
-            key = key[len(self.app.pub_key_path) + 1:]
+            key = key[len(config.pub_key_path) + 1:]
             self.app.stdout.write(key + '\n')
 
         if parsed_args.assume_yes or self.sure_check():
             ssh = paramiko.SSHClient()
             ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-            ssh.connect(instance.public_dns_name, username=self.get_user(instance), key_filename='%s/%s.pem' % (self.app.aws_key_path, instance.key_name))
+            ssh.connect(instance.public_dns_name, username=self.get_user(instance), key_filename='%s/%s.pem' % (config.aws_key_path, instance.key_name))
 
             contents = ''
             for key in keys:
                 with open(key, 'r') as f:
                     contents += f.read()
 
-            cmd = 'sudo useradd -m -g users -G sudo -c \'%s\' -s /bin/bash' % fullname
+            # COMMANDS
+            # sudo useradd -m -g users -G sudo -c 'John Doe' -s /bin/bash john
+            # sudo useradd -m -g staff -G users,sudo -c 'John Doe' -s /bin/bash john
+            # sudo useradd -m -G sudo -c 'John Doe' -s /bin/bash john
+            # sudo useradd -m -c 'John Doe' -s /bin/bash john
+            # sudo adduser --disabled-password --gecos "John Doe" john
+
+            if parsed_args.group:
+                group = ' -g %s' % parsed_args.group
+            else:
+                group = ''
+            if parsed_args.sudo:
+                sudo = ' -G sudo'
+            else:
+                sudo = ''
+
+            cmd = "sudo useradd -m %s %s -c '%s' -s /bin/bash" % (group, sudo, fullname)
             if parsed_args.password:
                 cmd += ' -p $(perl -e \'print crypt("%s", "%s")\')' % (password, password_salt)
             cmd += ' ' + user
@@ -224,18 +243,18 @@ class GroupInstall(BaseCommand):
     def take_action(self, parsed_args):
         instance = self.get_instance(parsed_args.name, parsed_args.arg_is_id)
 
-        group = self.app.get_option('Groups', parsed_args.option)
+        group = config.groups[parsed_args.option]
         bundle_names = group.split(' ')
 
         if bundle_names and (parsed_args.assume_yes or self.sure_check()):
             ssh = paramiko.SSHClient()
             ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-            ssh.connect(instance.public_dns_name, username=self.get_user(instance), key_filename='%s/%s.pem' % (self.app.aws_key_path, instance.key_name))
+            ssh.connect(instance.public_dns_name, username=self.get_user(instance), key_filename='%s/%s.pem' % (config.aws_key_path, instance.key_name))
 
             has_error = False
             for bundle_name in bundle_names:
-                if self.app.cparser.has_option('Bundles', bundle_name):
-                    bundle = self.app.cparser.get('Bundles', bundle_name)
+                if bundle_name in config.bundles:
+                    bundle = config.bundles[bundle_name]
                 else:
                     if bundle_name.startswith('&'):
                         cmd = 'remote group install -y'
@@ -300,12 +319,12 @@ class PipInstall(BaseCommand):
 
     def take_action(self, parsed_args):
         instance = self.get_instance(parsed_args.name, parsed_args.arg_is_id)
-        bundle = self.app.get_option('Python Bundles', parsed_args.option)
+        bundle = config.python_bundles[parsed_args.option]
 
         if parsed_args.assume_yes or self.sure_check():
             ssh = paramiko.SSHClient()
             ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-            ssh.connect(instance.public_dns_name, username=self.get_user(instance), key_filename='%s/%s.pem' % (self.app.aws_key_path, instance.key_name))
+            ssh.connect(instance.public_dns_name, username=self.get_user(instance), key_filename='%s/%s.pem' % (config.aws_key_path, instance.key_name))
             stdin, stdout, stderr = ssh.exec_command('sudo pip install %s' % bundle)
             for line in stdout.readlines():
                 if line.startswith('Installed') or line.startswith('Finished'):
@@ -326,22 +345,22 @@ class PPAInstall(BaseCommand):
     def take_action(self, parsed_args):
         instance = self.get_instance(parsed_args.name, parsed_args.arg_is_id)
 
-        if not self.app.cparser.has_section('PPAs'):
+        if 'PPAs' not in config:
             raise RuntimeError('No PPAs available!')
 
         if parsed_args.option:
             package_name = parsed_args.option
         else:
-            options = self.app.cparser.options('PPAs')
+            options = config['PPAs']
             package_name = self.question_maker('Select PPA', 'ppa', [{'text': item} for item in options])
 
-        ppa_name = self.app.get_option('PPAs', package_name)
+        ppa_name = config['PPAs'][package_name]
         if not ppa_name:
             raise RuntimeError('PPA Name not found!')
 
         ssh = paramiko.SSHClient()
         ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-        ssh.connect(instance.public_dns_name, username=self.get_user(instance), key_filename='%s/%s.pem' % (self.app.aws_key_path, instance.key_name))
+        ssh.connect(instance.public_dns_name, username=self.get_user(instance), key_filename='%s/%s.pem' % (config.aws_key_path, instance.key_name))
 
         stdin, stdout, stderr = ssh.exec_command('sudo add-apt-repository -y ppa:%s 2>&1' % ppa_name)
         self.printOutError(stdout, stderr)
@@ -367,15 +386,15 @@ class Script(BaseCommand):
         parser.add_argument('-y', dest='assume_yes', action='store_true')
         parser.add_argument('--script')
         parser.add_argument('--user')
+        parser.add_argument('--format')
         parser.add_argument('--copy-only', action='store_true')
         parser.add_argument('--id', dest='arg_is_id', action='store_true')
         parser.add_argument('name')
-        parser.add_argument('option')
         return parser
 
     def take_action(self, parsed_args):
         instance = self.get_instance(parsed_args.name, parsed_args.arg_is_id)
-        script_path = self.app.script_path
+        script_path = config.script_path
 
         if parsed_args.script:
             script_name = parsed_args.script
@@ -392,10 +411,13 @@ class Script(BaseCommand):
             if parsed_args.user:
                 ssh.connect(instance.public_dns_name, username=parsed_args.user)
             else:
-                ssh.connect(instance.public_dns_name, username=self.get_user(instance), key_filename='%s/%s.pem' % (self.app.aws_key_path, instance.key_name))
+                ssh.connect(instance.public_dns_name, username=self.get_user(instance), key_filename='%s/%s.pem' % (config.aws_key_path, instance.key_name))
 
             with open(script, 'r') as f:
                 contents = f.read()
+                if parsed_args.format:
+                    format_args = parsed_args.format.split(',')
+                    contents = contents % tuple(format_args)
                 ssh.exec_command('cat << EOF > %s\n%s\nEOF' % (script_name, contents))
                 ssh.exec_command('chmod 744 %s' % script_name)
 
@@ -441,7 +463,7 @@ class Upgrade(BaseCommand):
         if parsed_args.assume_yes or self.sure_check():
             ssh = paramiko.SSHClient()
             ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-            ssh.connect(instance.public_dns_name, username=self.get_user(instance), key_filename='%s/%s.pem' % (self.app.aws_key_path, instance.key_name))
+            ssh.connect(instance.public_dns_name, username=self.get_user(instance), key_filename='%s/%s.pem' % (config.aws_key_path, instance.key_name))
 
             stdin, stdout, stderr = ssh.exec_command('sudo su -c "echo \'\n### CLIFFORD\n127.0.1.1\t%s\' >> /etc/hosts"' % instance.tags.get('Name'))
 

@@ -94,7 +94,7 @@ class CreateImage(BaseCommand):
             if not desc:
                 desc = None
             image_id = instance.create_image(name, desc)
-            self.app.stdout.write(image_id)
+            self.app.stdout.write('Image created: %s\n' % image_id)
 
 
 class CreateSnapshot(BaseCommand):
@@ -141,6 +141,23 @@ class CreateSnapshot(BaseCommand):
         time.sleep(5)
         if name:
             snapshot.add_tag('Name', name)
+
+
+class DeleteAwsImage(BaseCommand):
+    "Deletes an AWS Image"
+
+    def take_action(self, parsed_args):
+        all_images = self.app.ec2_conn.get_all_images(owners='self')
+        if not all_images:
+            raise RuntimeError('No AWS Images found!')
+        images = []
+        for image in all_images:
+            image_info = '%s - %s' % (image.id, image.name)
+            images.append({'text': image_info, 'obj': image})
+        image = self.question_maker('Available AWS Images', 'image', images)
+
+        if self.sure_check():
+            image.deregister(delete_snapshot=True)
 
 
 class DeleteSnapshot(BaseCommand):
