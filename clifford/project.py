@@ -125,10 +125,6 @@ class Project(BaseCommand):
                 cmd += ' --fullname %s' % options['user_fullname']
             else:
                 cmd += ' --fullname %s' + options['user_name']
-            if 'user_password' in options:
-                cmd += ' --password %s' % options['user_password']
-            else:
-                cmd += ' --password %s' % options['user_name']
             cmd += ' --id %s' % instance.id
             cmd += ' ' + options['user_name']
             self.app.run_subcommand(cmd.split(' '))

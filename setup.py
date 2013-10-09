@@ -53,7 +53,6 @@ setup(
             # General
             'domain = clifford.actions:Domain',
             'key_paths = clifford.actions:KeyPaths',
-            'salt = clifford.actions:Salt',
             'script_path = clifford.actions:ScriptPath',
 
             # Lister tools
@@ -93,15 +92,18 @@ setup(
             'start = clifford.actions:Start',
             'tag = clifford.actions:Tag',
 
-            'remote add-apt install = clifford.remote:AddAptInstall',
-            'remote apt-get install = clifford.remote:AptGetInstall',
-            'remote bundle install = clifford.remote:BundleInstall',
-            'remote create user = clifford.remote:CreateUser',
-            'remote pip install = clifford.remote:PipInstall',
-            'remote group install = clifford.remote:GroupInstall',
-            'remote ppa install = clifford.remote:PPAInstall',
-            'remote script = clifford.remote:Script',
-            'remote upgrade = clifford.remote:Upgrade',
+            'adduser = clifford.remote:AddUser',
+
+            'run script = clifford.remote:Script',
+            'upgrade = clifford.remote:Upgrade',
+
+            'apt install = clifford.remote:AptGetInstall',
+            'pip install = clifford.remote:PipInstall',
+            'install bundle = clifford.remote:BundleInstall',
+            'install group = clifford.remote:GroupInstall',
+
+            #'add-apt = clifford.remote:AddAptInstall',
+            #'ppa install = clifford.remote:PPAInstall',
 
             'bundle = clifford.package:Bundle',
             'group = clifford.package:Group',

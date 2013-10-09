@@ -140,16 +140,15 @@ class BundleInstall(BaseCommand):
             ssh.close()
 
 
-class CreateUser(BaseCommand):
+class AddUser(BaseCommand):
     "Run useradd and scp all public (*.pub) keys to the ec2 instance."
 
     def get_parser(self, prog_name):
-        parser = super(CreateUser, self).get_parser(prog_name)
+        parser = super(AddUser, self).get_parser(prog_name)
         parser.add_argument('-y', dest='assume_yes', action='store_true')
+        parser.add_argument('--no-keys', action='store_true')
         parser.add_argument('--fullname', nargs='+')
-        parser.add_argument('--password', nargs='+')
         parser.add_argument('--group')
-        parser.add_argument('--sudo', action='store_true')
         parser.add_argument('--id', dest='arg_is_id', action='store_true')
         parser.add_argument('name')
         parser.add_argument('user')
@@ -163,8 +162,6 @@ class CreateUser(BaseCommand):
         if not keys:
             raise RuntimeError('No public keys found in key_path!')
 
-        password_salt = config['Salt']
-
         if parsed_args.fullname:
             fullname = ' '.join(parsed_args.fullname)
         else:
@@ -172,17 +169,11 @@ class CreateUser(BaseCommand):
         if not fullname:
             raise RuntimeError('fullname not specified!')
 
-        if parsed_args.password:
-            password = ' '.join(parsed_args.password)
-        else:
-            password = getpass.getpass('Enter password: ')
-        if not password:
-            raise RuntimeError('password not specified!')
-
-        self.app.stdout.write('The following keys will be copied:\n')
-        for key in keys:
-            key = key[len(config.pub_key_path) + 1:]
-            self.app.stdout.write(key + '\n')
+        if not parsed_args.no_keys:
+            self.app.stdout.write('The following keys will be copied:\n')
+            for key in keys:
+                key = key[len(config.pub_key_path) + 1:]
+                self.app.stdout.write(key + '\n')
 
         if parsed_args.assume_yes or self.sure_check():
             ssh = paramiko.SSHClient()
@@ -194,37 +185,23 @@ class CreateUser(BaseCommand):
                 with open(key, 'r') as f:
                     contents += f.read()
 
-            # COMMANDS
-            # sudo useradd -m -g users -G sudo -c 'John Doe' -s /bin/bash john
-            # sudo useradd -m -g staff -G users,sudo -c 'John Doe' -s /bin/bash john
-            # sudo useradd -m -G sudo -c 'John Doe' -s /bin/bash john
-            # sudo useradd -m -c 'John Doe' -s /bin/bash john
-            # sudo adduser --disabled-password --gecos "John Doe" john
-
+            self.app.stdout.write('Creating user, make sure to set password on first login.\n')
+            cmd = 'sudo adduser --disabled-password'
             if parsed_args.group:
-                group = ' -g %s' % parsed_args.group
-            else:
-                group = ''
-            if parsed_args.sudo:
-                sudo = ' -G sudo'
-            else:
-                sudo = ''
-
-            cmd = "sudo useradd -m %s %s -c '%s' -s /bin/bash" % (group, sudo, fullname)
-            if parsed_args.password:
-                cmd += ' -p $(perl -e \'print crypt("%s", "%s")\')' % (password, password_salt)
-            cmd += ' ' + user
+                cmd += ' --ingroup %s' % parsed_args.group
+            cmd += ' --gecos "%s" %s' % (fullname, user)
             stdin, stdout, stderr = ssh.exec_command(cmd)
             self.printOutError(stdout, stderr)
 
-            stdin, stdout, stderr = ssh.exec_command('sudo su -c "mkdir /home/%s/.ssh && chown %s:users /home/%s/.ssh && chmod 700 /home/%s/.ssh"' % (user, user, user, user))
-            self.printOutError(stdout, stderr)
+            if not parsed_args.no_keys:
+                stdin, stdout, stderr = ssh.exec_command('sudo su -c "mkdir /home/%s/.ssh && chown %s:users /home/%s/.ssh && chmod 700 /home/%s/.ssh"' % (user, user, user, user))
+                self.printOutError(stdout, stderr)
 
-            stdin, stdout, stderr = ssh.exec_command('sudo su -c "cat << EOF > /home/%s/.ssh/authorized_keys\n%sEOF"' % (user, contents))
-            self.printOutError(stdout, stderr)
+                stdin, stdout, stderr = ssh.exec_command('sudo su -c "cat << EOF > /home/%s/.ssh/authorized_keys\n%sEOF"' % (user, contents))
+                self.printOutError(stdout, stderr)
 
-            stdin, stdout, stderr = ssh.exec_command('sudo su -c "chown %s:users /home/%s/.ssh/authorized_keys; chmod 600 /home/%s/.ssh/authorized_keys"' % (user, user, user))
-            self.printOutError(stdout, stderr)
+                stdin, stdout, stderr = ssh.exec_command('sudo su -c "chown %s:users /home/%s/.ssh/authorized_keys; chmod 600 /home/%s/.ssh/authorized_keys"' % (user, user, user))
+                self.printOutError(stdout, stderr)
 
             ssh.close()
 

@@ -285,23 +285,6 @@ class KeyPaths(BaseCommand):
         config.save()
 
 
-class Salt(BaseCommand):
-    "Add/Update the salt."
-
-    def get_parser(self, prog_name):
-        parser = super(Salt, self).get_parser(prog_name)
-        parser.add_argument('-u', '--update')
-        return parser
-
-    def take_action(self, parsed_args):
-        if not parsed_args.update:
-            self.app.stdout.write('%s\n' % config.get('Salt', '<<Salt not set!>>'))
-            return
-
-        config['Salt'] = parsed_args.update
-        config.save()
-
-
 class ScriptPath(BaseCommand):
     "Add/Update script_path."
 
