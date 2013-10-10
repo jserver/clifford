@@ -34,6 +34,7 @@ class CliffordApp(App):
         if err:
             self.log.debug('got an error: %s', err)
 
+
 class OrderedConfig(OrderedDict):
     @property
     def aws_key_path(self):
@@ -139,7 +140,6 @@ def read_config():
     with open(CONFIG_FILE, 'r') as fp:
         raw_config = json.load(fp, object_pairs_hook=OrderedDict)
         return OrderedConfig(raw_config)
-        #return json.load(fp, object_pairs_hook=OrderedDict)
 
 
 CONFIG_FILE = '%s/.clifford/config.json' % expanduser("~")

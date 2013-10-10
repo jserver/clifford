@@ -95,6 +95,7 @@ setup(
             'adduser = clifford.remote:AddUser',
 
             'run script = clifford.remote:Script',
+            'update = clifford.remote:Update',
             'upgrade = clifford.remote:Upgrade',
 
             'apt install = clifford.remote:AptGetInstall',
@@ -115,10 +116,10 @@ setup(
             'release = clifford.address:Release',
 
             # S3
-            's3 create bucket = clifford.storage:CreateBucket',
-            's3 del bucket = clifford.storage:DeleteBucket',
-            's3 download = clifford.storage:Download',
-            's3 upload = clifford.storage:Upload',
+            'create bucket = clifford.storage:CreateBucket',
+            'del bucket = clifford.storage:DeleteBucket',
+            'download = clifford.storage:Download',
+            'upload = clifford.storage:Upload',
             ],
         },
 

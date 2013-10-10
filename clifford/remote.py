@@ -1,4 +1,3 @@
-import getpass
 import glob
 import time
 
@@ -422,14 +421,12 @@ class Script(BaseCommand):
             ssh.close()
 
 
-class Upgrade(BaseCommand):
-    "Update and upgrade an ec2 instance."
+class Update(BaseCommand):
+    "Update an ec2 instance."
 
     def get_parser(self, prog_name):
-        parser = super(Upgrade, self).get_parser(prog_name)
+        parser = super(Update, self).get_parser(prog_name)
         parser.add_argument('-y', dest='assume_yes', action='store_true')
-        parser.add_argument('--upgrade', action='store_true')
-        parser.add_argument('--dist-upgrade', action='store_true')
         parser.add_argument('--id', dest='arg_is_id', action='store_true')
         parser.add_argument('name')
         return parser
@@ -442,8 +439,6 @@ class Upgrade(BaseCommand):
             ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
             ssh.connect(instance.public_dns_name, username=self.get_user(instance), key_filename='%s/%s.pem' % (config.aws_key_path, instance.key_name))
 
-            stdin, stdout, stderr = ssh.exec_command('sudo su -c "echo \'\n### CLIFFORD\n127.0.1.1\t%s\' >> /etc/hosts"' % instance.tags.get('Name'))
-
             has_error = False
             stdin, stdout, stderr = ssh.exec_command('sudo apt-get -y update')
             for line in stderr.readlines():
@@ -455,56 +450,50 @@ class Upgrade(BaseCommand):
             time.sleep(5)
             self.app.stdout.write('UPDATED\n')
 
-            stdin, stdout, stderr = ssh.exec_command('sudo apt-get -s upgrade')
+
+class Upgrade(BaseCommand):
+    "Update and upgrade an ec2 instance."
+
+    def get_parser(self, prog_name):
+        parser = super(Upgrade, self).get_parser(prog_name)
+        parser.add_argument('-y', dest='assume_yes', action='store_true')
+        parser.add_argument('--dry-run', action='store_true')
+        parser.add_argument('--dist-upgrade', action='store_true')
+        parser.add_argument('--reboot', action='store_true')
+        parser.add_argument('--id', dest='arg_is_id', action='store_true')
+        parser.add_argument('name')
+        return parser
+
+    def take_action(self, parsed_args):
+        instance = self.get_instance(parsed_args.name, parsed_args.arg_is_id)
+
+        if parsed_args.assume_yes or self.sure_check():
+            ssh = paramiko.SSHClient()
+            ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+            ssh.connect(instance.public_dns_name, username=self.get_user(instance), key_filename='%s/%s.pem' % (config.aws_key_path, instance.key_name))
+
+            if parsed_args.dry_run:
+                cmd = 'sudo apt-get --dry-run %s'
+            else:
+                cmd = 'sudo su -c "env DEBIAN_FRONTEND=noninteractive apt-get -y -o DPkg::Options::=--force-confnew %s"'
+            if parsed_args.dist_upgrade:
+                cmd = cmd % 'dist-upgrade'
+            else:
+                cmd = cmd % 'upgrade'
+
+            stdin, stdout, stderr = ssh.exec_command(cmd)
             string_list = ['The following packages have been kept back:', 'The following packages will be upgraded:']
             for line in stdout.readlines():
                 if line.rstrip() in string_list or line.startswith('  '):
                     self.app.stdout.write(line)
-            time.sleep(5)
-
-            if not parsed_args.dist_upgrade:
-                if parsed_args.upgrade:
-                    upgrade = 'y'
-                else:
-                    upgrade = raw_input('Do you want to upgrade? ')
-                if upgrade.lower() in ['y', 'yes']:
-                    stdin, stdout, stderr = ssh.exec_command('sudo su -c "env DEBIAN_FRONTEND=noninteractive apt-get -y -o DPkg::Options::=--force-confnew upgrade"')
-                    for line in stderr.readlines():
-                        if line.startswith('E: '):
-                            self.app.stdout.write(line)
-                            has_error = True
-                    if has_error:
-                        raise RuntimeError("Unable to continue!")
-                    time.sleep(5)
-                    self.app.stdout.write('UPGRADED\n')
-
-            if parsed_args.upgrade:
-                dist_upgrade = 'n'
-            elif parsed_args.dist_upgrade:
-                dist_upgrade = 'y'
-            else:
-                dist_upgrade = raw_input('Do you want to dist-upgrade? ')
-
-            if dist_upgrade.lower() in ['y', 'yes']:
-                stdin, stdout, stderr = ssh.exec_command('sudo su -c "env DEBIAN_FRONTEND=noninteractive apt-get -y -o DPkg::Options::=--force-confnew dist-upgrade"')
                 for line in stderr.readlines():
                     if line.startswith('E: '):
                         self.app.stdout.write(line)
-                        has_error = True
-                if has_error:
-                    raise RuntimeError("Unable to continue!")
-                time.sleep(5)
-                self.app.stdout.write('DIST-UPGRADED\n')
 
             ssh.close()
 
-            if parsed_args.upgrade or parsed_args.dist_upgrade:
-                reboot = 'y'
-            else:
-                reboot = raw_input('Do you want to reboot? ')
-
-            if reboot.lower() in ['y', 'yes']:
+            if parsed_args.reboot:
                 time.sleep(5)
                 self.app.stdout.write('Rebooting...\n')
                 instance.reboot()
-                time.sleep(20)
+                time.sleep(30)
