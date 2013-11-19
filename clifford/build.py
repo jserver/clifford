@@ -53,7 +53,9 @@ class Build(BaseCommand, LaunchOptionsMixin):
                  num=parsed_args.num, q=q, out=self.app.stdout)
         lr = q.get()
 
-        time.sleep(20)
+
+        self.app.stdout.write('Sleeping 1 minute to allow server to come up...\n')
+        time.sleep(60)
 
         # begin the mutliprocessing
         pool = Pool(processes=len(lr.instance_ids))

@@ -7,8 +7,10 @@ from collections import namedtuple
 import boto
 import paramiko
 
+
 Task = namedtuple('Task', ['build', 'instance_id', 'arg_list'])
 LaunchResult = namedtuple('LaunchResult', ['build', 'instance_ids'])
+
 
 def launcher(tag_name, aws_key_path, script_path, **kwargs):
     out = kwargs.get('out', StringIO.StringIO())
@@ -116,7 +118,13 @@ def group_installer(aws_key_path, task):
     ssh = paramiko.SSHClient()
     ssh.set_log_channel(logname)
     ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-    ssh.connect(instance.public_dns_name, username=task.build['Login'], key_filename='%s.pem' % os.path.join(aws_key_path, instance.key_name))
+    while True:
+        try:
+            ssh.connect(instance.public_dns_name, username=task.build['Login'], key_filename='%s.pem' % os.path.join(aws_key_path, instance.key_name))
+            break
+        except:
+            output += 'sleep, '
+            time.sleep(60)
 
     output += 'installing\n'
     has_error = False
@@ -161,11 +169,18 @@ def pip_installer(aws_key_path, task):
     fh = logging.FileHandler('/tmp/pip_installer_%s.log' % instance.id)
     logger.addHandler(fh)
 
-    output += 'connecting\n'
+    output += 'connecting'
     ssh = paramiko.SSHClient()
     ssh.set_log_channel(logname)
     ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-    ssh.connect(instance.public_dns_name, username=task.build['Login'], key_filename='%s.pem' % os.path.join(aws_key_path, instance.key_name))
+    while True:
+        try:
+            ssh.connect(instance.public_dns_name, username=task.build['Login'], key_filename='%s.pem' % os.path.join(aws_key_path, instance.key_name))
+            break
+        except:
+            output += ', sleep'
+            time.sleep(60)
+    output += "\n"
 
     packages = task.arg_list[0]
     stdin, stdout, stderr = ssh.exec_command('sudo pip install %s' % packages)
@@ -193,15 +208,22 @@ def script_runner(aws_key_path, task):
     fh = logging.FileHandler('/tmp/script_runner_%s.log' % instance.id)
     logger.addHandler(fh)
 
-    output += 'connecting\n'
+    output += 'connecting'
     ssh = paramiko.SSHClient()
     ssh.set_log_channel(logname)
     ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
 
-    if task.build['Login'] in ['admin', 'ubuntu']:
-        ssh.connect(instance.public_dns_name, username=task.build['Login'], key_filename='%s.pem' % os.path.join(aws_key_path, instance.key_name))
-    else:
-        ssh.connect(instance.public_dns_name, username=task.build['Login'])
+    while True:
+        try:
+            if task.build['Login'] in ['admin', 'ubuntu']:
+                ssh.connect(instance.public_dns_name, username=task.build['Login'], key_filename='%s.pem' % os.path.join(aws_key_path, instance.key_name))
+            else:
+                ssh.connect(instance.public_dns_name, username=task.build['Login'])
+            break
+        except:
+            output += ', sleep'
+            time.sleep(60)
+    output += '\n'
 
     script = task.arg_list[0]
     copy_only = task.arg_list[1]
@@ -257,7 +279,13 @@ def upgrade(aws_key_path, task):
     ssh = paramiko.SSHClient()
     ssh.set_log_channel(logname)
     ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-    ssh.connect(instance.public_dns_name, username=task.build['Login'], key_filename='%s.pem' % os.path.join(aws_key_path, instance.key_name))
+    while True:
+        try:
+            ssh.connect(instance.public_dns_name, username=task.build['Login'], key_filename='%s.pem' % os.path.join(aws_key_path, instance.key_name))
+            break
+        except:
+            output += 'sleep, '
+            time.sleep(60)
 
     output += 'hosts\n'
     stdin, stdout, stderr = ssh.exec_command('sudo su -c "echo \'\n### CLIFFORD\n127.0.1.1\t%s\' >> /etc/hosts"' % instance.tags.get('Name'))
@@ -301,6 +329,6 @@ def upgrade(aws_key_path, task):
         time.sleep(5)
         output += 'Rebooting...\n'
         instance.reboot()
-        time.sleep(30)
+        time.sleep(60)
 
     return output
