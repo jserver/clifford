@@ -1,5 +1,6 @@
 import glob
 import time
+from subprocess import call
 
 import paramiko
 
@@ -352,6 +353,36 @@ class PPAInstall(BaseCommand):
         self.printOutError(stdout, stderr)
 
         ssh.close()
+
+
+class CopyFile(BaseCommand):
+    "Copy a file to a remote ec2 instance."
+
+    def get_parser(self, prog_name):
+        parser = super(CopyFile, self).get_parser(prog_name)
+        parser.add_argument('-y', dest='assume_yes', action='store_true')
+        parser.add_argument('--user')
+        parser.add_argument('--id', dest='arg_is_id', action='store_true')
+        parser.add_argument('name')
+        parser.add_argument('file_name', nargs='+')
+        return parser
+
+    def take_action(self, parsed_args):
+        instance = self.get_instance(parsed_args.name, parsed_args.arg_is_id)
+
+        try:
+            if parsed_args.user:
+                retcode = call('scp %s %s@%s:~' % (' '.join(parsed_args.file_name), parsed_args.user, instance.public_dns_name), shell=True)
+            else:
+                retcode = call('scp -i %s/%s.pem %s %s@%s:~' % (config.aws_key_path, instance.key_name, ' '.join(parsed_args.file_name), self.get_user(instance), instance.public_dns_name), shell=True)
+
+            if retcode < 0:
+                self.app.stdout.write("Child was terminated by signal %s\n" % -retcode)
+            else:
+                self.app.stderr.write("Child returned %s\n" % retcode)
+
+        except OSError as e:
+            self.app.stderr.write("Execution failed: %s\n" % e)
 
 
 class Script(BaseCommand):

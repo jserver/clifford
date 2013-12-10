@@ -95,6 +95,7 @@ setup(
             'adduser = clifford.remote:AddUser',
 
             'run script = clifford.remote:Script',
+            'copy = clifford.remote:CopyFile',
             'update = clifford.remote:Update',
             'upgrade = clifford.remote:Upgrade',
 

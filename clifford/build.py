@@ -4,7 +4,7 @@ import os
 import time
 
 from activity import Task
-from activity import group_installer, launcher, pip_installer, script_runner, upgrade
+from activity import add_user, group_installer, launcher, pip_installer, script_runner, upgrade
 from commands import BaseCommand
 from main import config
 from mixins import LaunchOptionsMixin
@@ -84,8 +84,16 @@ class Build(BaseCommand, LaunchOptionsMixin):
                 time.sleep(10)
 
         if 'Script' in build:
-            tasks = [Task(build, inst_id, [os.path.join(config.script_path, build['Script']), False]) for inst_id in lr.instance_ids]
+            tasks = [Task(build, inst_id, [build['Login'], os.path.join(config.script_path, build['Script']), False]) for inst_id in lr.instance_ids]
             self.run_activity(pool, script_runner, tasks)
+
+        if 'Adduser' in build:
+            tasks = [Task(build, inst_id, [config.pub_key_path]) for inst_id in lr.instance_ids]
+            self.run_activity(pool, add_user, tasks)
+
+            if 'Script' in build['Adduser']:
+                tasks = [Task(build, inst_id, [build['Adduser']['User'], os.path.join(config.script_path, build['Adduser']['Script']), False]) for inst_id in lr.instance_ids]
+                self.run_activity(pool, script_runner, tasks)
 
         pool.close()
         pool.join()
