@@ -18,6 +18,7 @@ class Build(BaseCommand, LaunchOptionsMixin):
         parser.add_argument('-a', '--add', action='store_true')
         parser.add_argument('-n', '--num', type=int, default=1)
         parser.add_argument('-r', '--remove', action='store_true')
+        parser.add_argument('-u', '--update')
         parser.add_argument('build_name')
         return parser
 
@@ -35,6 +36,15 @@ class Build(BaseCommand, LaunchOptionsMixin):
             del(config.builds[parsed_args.build_name])
             config.save()
             return
+
+        if parsed_args.update:
+            aws_images = self.app.ec2_conn.get_all_images(image_ids=[parsed_args.update])
+            if aws_images:
+                config.builds[parsed_args.build_name]['Image'] = parsed_args.update
+                config.save()
+                return
+            else:
+                raise RuntimeError('Image not found!')
 
         tag_name = raw_input('Enter Tag:Name Value (%s): ' % parsed_args.build_name)
         if not tag_name:
