@@ -398,7 +398,7 @@ def upgrade(aws_key_path, task):
             time.sleep(60)
 
     output += 'hosts\n'
-    stdin, stdout, stderr = ssh.exec_command('sudo su -c "echo \'\n### CLIFFORD\n127.0.1.1\t%s\' >> /etc/hosts"' % instance.tags.get('Name'))
+    stdin, stdout, stderr = ssh.exec_command('grep -Fq CLIFFORD /etc/hosts || sudo su -c "echo \'\n### CLIFFORD\n127.0.1.1\t%s\' >> /etc/hosts"' % instance.tags.get('Name'))
 
     has_error = False
     stdin, stdout, stderr = ssh.exec_command('sudo apt-get -y update')
