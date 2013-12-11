@@ -4,7 +4,7 @@ import os
 import time
 
 from activity import Task
-from activity import add_user, group_installer, launcher, pip_installer, script_runner, upgrade
+from activity import add_user, elastic_ip, group_installer, launcher, pip_installer, script_runner, upgrade
 from commands import BaseCommand
 from main import config
 from mixins import LaunchOptionsMixin
@@ -69,6 +69,12 @@ class Build(BaseCommand, LaunchOptionsMixin):
 
         # begin the mutliprocessing
         pool = Pool(processes=len(lr.instance_ids))
+
+        if 'ElasticIP' in build:
+            tasks = [Task(build, inst_id, []) for inst_id in lr.instance_ids]
+            self.run_activity(pool, elastic_ip, tasks)
+            self.app.stdout.write('ElasticIP Finished\n')
+            time.sleep(10)
 
         if build.get('Upgrade', '') in ['upgrade', 'dist-upgrade']:
             tasks = [Task(build, inst_id, []) for inst_id in lr.instance_ids]

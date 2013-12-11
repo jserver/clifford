@@ -206,6 +206,67 @@ def copier(aws_key_path, task):
         output += 'Execution failed: %s\n' % e
 
 
+def elastic_ip(aws_key_path, task):
+    output = 'Running elastic_ip on %s\n' % task.instance_id
+
+    output += 'instance, '
+    conn = boto.connect_ec2()
+    reservations = conn.get_all_instances(instance_ids=[task.instance_id])
+    instance = reservations[0].instances[0]
+    elasticip = task.build['ElasticIP']
+
+    output += 'logger, '
+    logname = 'elasticip.%s' % instance.id
+    logger = logging.getLogger(logname)
+    logger.setLevel(logging.ERROR)
+    fh = logging.FileHandler('/tmp/elasticip_%s.log' % instance.id)
+    logger.addHandler(fh)
+
+    output += 'connecting'
+    ssh = paramiko.SSHClient()
+    ssh.set_log_channel(logname)
+    ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+    while True:
+        try:
+            ssh.connect(instance.public_dns_name, username=task.build['Login'], key_filename='%s.pem' % os.path.join(aws_key_path, instance.key_name))
+            break
+        except:
+            output += ', sleep'
+            time.sleep(60)
+
+    output += '\n'
+
+    output += 'Setting Hostname and updating hosts.\n'
+    addresses = [address for address in conn.get_all_addresses() if not address.instance_id]
+    #addresses = [address.public_ip for address in addresses]
+    for address in addresses:
+        if elasticip['ip'] == address.public_ip:
+            address.associate(instance.id)
+            break
+    else:
+        output += 'Address not available\n'
+        return output
+
+    stdin, stdout, stderr = ssh.exec_command('sudo su -c "echo \'\n%s\t%s\t%s\' >> /etc/hosts"' % (elasticip['IP'], elasticip['FQDN'], elasticip['Hostname']))
+    for line in stderr.readlines():
+        output += 'ERROR (elasticip): %s\n' % line
+    stdin, stdout, stderr = ssh.exec_command('sudo su -c "echo \'%s\' > /etc/hostname"' % elasticip['Hostname'])
+    for line in stderr.readlines():
+        output += 'ERROR (elasticip): %s\n' % line
+    # reboot instead
+    #stdin, stdout, stderr = ssh.exec_command('sudo hostname -F /etc/hostname')
+    #for line in stderr.readlines():
+    #    output += 'ERROR (elasticip): %s\n' % line
+
+    time.sleep(5)
+    output += 'Rebooting...\n'
+    instance.reboot()
+    time.sleep(60)
+
+    ssh.close()
+    return output
+
+
 def group_installer(aws_key_path, task):
     output = 'Running Group Installer on %s\n' % task.instance_id
 
