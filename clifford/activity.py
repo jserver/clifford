@@ -94,7 +94,7 @@ def launcher(tag_name, aws_key_path, script_path, **kwargs):
     out.write('Instance(s) should now be running\n')
     for inst in instances:
         if aws_key_path:
-            out.write('ssh -i %s.pem %s@%s\n' % (os.path.join(aws_key_path, inst.key_name), build['Login'], inst.public_dns_name))
+            out.write('ssh -i %s/%s.pem %s@%s\n' % (aws_key_path, inst.key_name, build['Login'], inst.public_dns_name))
         else:
             out.write('Public DNS: %s\n' % inst.public_dns_name)
     if 'out' in kwargs:
@@ -125,7 +125,7 @@ def add_user(aws_key_path, task):
     ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
     while True:
         try:
-            ssh.connect(instance.public_dns_name, username=task.build['Login'], key_filename='%s.pem' % os.path.join(aws_key_path, instance.key_name))
+            ssh.connect(instance.public_dns_name, username=task.build['Login'], key_filename='%s/%s.pem' % (aws_key_path, instance.key_name))
             break
         except:
             output += ', sleep'
@@ -197,7 +197,7 @@ def copier(aws_key_path, task):
     file_name = task.arg_list[0]
 
     try:
-        retcode = call('scp -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -i %s.pem %s %s@%s:~' % (os.path.join(aws_key_path, instance.key_name), file_name, task.build['Login'], instance.public_dns_name), shell=True)
+        retcode = call('scp -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -i %s/%s.pem %s %s@%s:~' % (aws_key_path, instance.key_name, file_name, task.build['Login'], instance.public_dns_name), shell=True)
         if retcode < 0:
             output += 'Child was terminated by signal %s\n' % -retcode
         else:
@@ -228,7 +228,7 @@ def elastic_ip(aws_key_path, task):
     ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
     while True:
         try:
-            ssh.connect(instance.public_dns_name, username=task.build['Login'], key_filename='%s.pem' % os.path.join(aws_key_path, instance.key_name))
+            ssh.connect(instance.public_dns_name, username=task.build['Login'], key_filename='%s/%s.pem' % (aws_key_path, instance.key_name))
             break
         except:
             output += ', sleep'
@@ -288,7 +288,7 @@ def group_installer(aws_key_path, task):
     ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
     while True:
         try:
-            ssh.connect(instance.public_dns_name, username=task.build['Login'], key_filename='%s.pem' % os.path.join(aws_key_path, instance.key_name))
+            ssh.connect(instance.public_dns_name, username=task.build['Login'], key_filename='%s/%s.pem' % (aws_key_path, instance.key_name))
             break
         except:
             output += 'sleep, '
@@ -343,7 +343,7 @@ def pip_installer(aws_key_path, task):
     ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
     while True:
         try:
-            ssh.connect(instance.public_dns_name, username=task.build['Login'], key_filename='%s.pem' % os.path.join(aws_key_path, instance.key_name))
+            ssh.connect(instance.public_dns_name, username=task.build['Login'], key_filename='%s/%s.pem' % (aws_key_path, instance.key_name))
             break
         except:
             output += ', sleep'
@@ -386,7 +386,7 @@ def script_runner(aws_key_path, task):
     while True:
         try:
             if user in ['admin', 'ec2-user', 'ubuntu']:
-                ssh.connect(instance.public_dns_name, username=user, key_filename='%s.pem' % os.path.join(aws_key_path, instance.key_name))
+                ssh.connect(instance.public_dns_name, username=user, key_filename='%s/%s.pem' % (aws_key_path, instance.key_name))
             else:
                 ssh.connect(instance.public_dns_name, username=user)
             break
@@ -452,7 +452,7 @@ def upgrade(aws_key_path, task):
     ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
     while True:
         try:
-            ssh.connect(instance.public_dns_name, username=task.build['Login'], key_filename='%s.pem' % os.path.join(aws_key_path, instance.key_name))
+            ssh.connect(instance.public_dns_name, username=task.build['Login'], key_filename='%s/%s.pem' % (aws_key_path, instance.key_name))
             break
         except:
             output += ', sleep'
