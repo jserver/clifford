@@ -113,10 +113,10 @@ def add_user(aws_key_path, task):
     adduser = task.build['Adduser']
 
     output += 'logger, '
-    logname = 'adduser.%s' % instance.id
+    logname = 'add_user.%s' % instance.id
     logger = logging.getLogger(logname)
     logger.setLevel(logging.ERROR)
-    fh = logging.FileHandler('/tmp/adduser_%s.log' % instance.id)
+    fh = logging.FileHandler('/tmp/add_user_%s.log' % instance.id)
     logger.addHandler(fh)
 
     output += 'connecting'
@@ -216,10 +216,10 @@ def elastic_ip(aws_key_path, task):
     elasticip = task.build['ElasticIP']
 
     output += 'logger, '
-    logname = 'elasticip.%s' % instance.id
+    logname = 'elastic_ip.%s' % instance.id
     logger = logging.getLogger(logname)
     logger.setLevel(logging.ERROR)
-    fh = logging.FileHandler('/tmp/elasticip_%s.log' % instance.id)
+    fh = logging.FileHandler('/tmp/elastic_ip_%s.log' % instance.id)
     logger.addHandler(fh)
 
     output += 'connecting'
@@ -234,9 +234,8 @@ def elastic_ip(aws_key_path, task):
             output += ', sleep'
             time.sleep(60)
 
-    output += '\n'
+    output += '\nUpdating /etc/hosts and setting Hostname.\n'
 
-    output += 'Setting Hostname and updating hosts.\n'
     addresses = [address for address in conn.get_all_addresses() if not address.instance_id]
     #addresses = [address.public_ip for address in addresses]
     for address in addresses:
@@ -247,21 +246,22 @@ def elastic_ip(aws_key_path, task):
         output += 'Address not available\n'
         return output
 
-    stdin, stdout, stderr = ssh.exec_command('sudo su -c "echo \'\n## CLIFFORD\n127.0.0.1\t%s\n%s\t%s\t%s\' >> /etc/hosts"' % (elasticip['Hostname'], elasticip['IP'], elasticip['FQDN'], elasticip['Hostname']))
+    stdin, stdout, stderr = ssh.exec_command('sudo su -c "echo \'\n### CLIFFORD\n127.0.0.1\t%s\n%s\t%s\t%s\' >> /etc/hosts"' % (elasticip['Hostname'], elasticip['IP'], elasticip['FQDN'], elasticip['Hostname']))
     for line in stderr.readlines():
         output += 'ERROR (elasticip): %s\n' % line
+
     stdin, stdout, stderr = ssh.exec_command('sudo su -c "echo \'%s\' > /etc/hostname"' % elasticip['Hostname'])
     for line in stderr.readlines():
         output += 'ERROR (elasticip): %s\n' % line
-    # reboot instead
-    #stdin, stdout, stderr = ssh.exec_command('sudo hostname -F /etc/hostname')
-    #for line in stderr.readlines():
-    #    output += 'ERROR (elasticip): %s\n' % line
+
+    stdin, stdout, stderr = ssh.exec_command('sudo hostname -F /etc/hostname')
+    for line in stderr.readlines():
+        output += 'ERROR (elasticip): %s\n' % line
 
     time.sleep(5)
-    output += 'Rebooting...\n'
-    instance.reboot()
-    time.sleep(60)
+    #output += 'Rebooting...\n'
+    #instance.reboot()
+    #time.sleep(60)
 
     ssh.close()
     return output
@@ -429,6 +429,58 @@ def script_runner(aws_key_path, task):
 
     ssh.close()
     return output
+
+
+def static_host(aws_key_path, task):
+    output = 'Running static_host on %s\n' % task.instance_id
+
+    output += 'instance, '
+    conn = boto.connect_ec2()
+    reservations = conn.get_all_instances(instance_ids=[task.instance_id])
+    instance = reservations[0].instances[0]
+    tag_name = task.arg_list[0]
+
+    output += 'logger, '
+    logname = 'static_host.%s' % instance.id
+    logger = logging.getLogger(logname)
+    logger.setLevel(logging.ERROR)
+    fh = logging.FileHandler('/tmp/static_host_%s.log' % instance.id)
+    logger.addHandler(fh)
+
+    output += 'connecting'
+    ssh = paramiko.SSHClient()
+    ssh.set_log_channel(logname)
+    ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+    while True:
+        try:
+            ssh.connect(instance.public_dns_name, username=task.build['Login'], key_filename='%s/%s.pem' % (aws_key_path, instance.key_name))
+            break
+        except:
+            output += ', sleep'
+            time.sleep(60)
+
+    output += '\nUpdating /etc/hosts and setting Hostname.\n'
+
+    stdin, stdout, stderr = ssh.exec_command('sudo su -c "echo \'\n### CLIFFORD\n127.0.0.1\t%s\' >> /etc/hosts"' % tag_name)
+    for line in stderr.readlines():
+        output += 'ERROR (static_host hosts): %s\n' % line
+
+    stdin, stdout, stderr = ssh.exec_command('sudo su -c "echo \'%s\' > /etc/hostname"' % tag_name)
+    for line in stderr.readlines():
+        output += 'ERROR (static_host hostname): %s\n' % line
+
+    stdin, stdout, stderr = ssh.exec_command('sudo hostname -F /etc/hostname')
+    for line in stderr.readlines():
+        output += 'ERROR (static_host reload): %s\n' % line
+
+    time.sleep(5)
+    #output += 'Rebooting...\n'
+    #instance.reboot()
+    #time.sleep(60)
+
+    ssh.close()
+    return output
+
 
 
 def upgrade(aws_key_path, task):

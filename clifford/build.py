@@ -4,7 +4,7 @@ import os
 import time
 
 from activity import Task
-from activity import add_user, elastic_ip, group_installer, launcher, pip_installer, script_runner, upgrade
+from activity import add_user, elastic_ip, group_installer, launcher, pip_installer, script_runner, static_host, upgrade
 from commands import BaseCommand
 from main import config
 from mixins import LaunchOptionsMixin
@@ -74,6 +74,11 @@ class Build(BaseCommand, LaunchOptionsMixin):
             tasks = [Task(build, inst_id, []) for inst_id in lr.instance_ids]
             self.run_activity(pool, elastic_ip, tasks)
             self.app.stdout.write('ElasticIP Finished\n')
+            time.sleep(10)
+        else:
+            tasks = [Task(build, inst_id, [tag_name]) for inst_id in lr.instance_ids]
+            self.run_activity(pool, static_host, tasks)
+            self.app.stdout.write('Static Host Finished\n')
             time.sleep(10)
 
         if build.get('Upgrade', '') in ['upgrade', 'dist-upgrade']:
