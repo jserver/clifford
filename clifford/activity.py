@@ -240,14 +240,14 @@ def elastic_ip(aws_key_path, task):
     addresses = [address for address in conn.get_all_addresses() if not address.instance_id]
     #addresses = [address.public_ip for address in addresses]
     for address in addresses:
-        if elasticip['ip'] == address.public_ip:
+        if elasticip['IP'] == address.public_ip:
             address.associate(instance.id)
             break
     else:
         output += 'Address not available\n'
         return output
 
-    stdin, stdout, stderr = ssh.exec_command('sudo su -c "echo \'\n%s\t%s\t%s\' >> /etc/hosts"' % (elasticip['IP'], elasticip['FQDN'], elasticip['Hostname']))
+    stdin, stdout, stderr = ssh.exec_command('sudo su -c "echo \'\n## CLIFFORD\n127.0.0.1\t%s\n%s\t%s\t%s\' >> /etc/hosts"' % (elasticip['Hostname'], elasticip['IP'], elasticip['FQDN'], elasticip['Hostname']))
     for line in stderr.readlines():
         output += 'ERROR (elasticip): %s\n' % line
     stdin, stdout, stderr = ssh.exec_command('sudo su -c "echo \'%s\' > /etc/hostname"' % elasticip['Hostname'])
@@ -446,7 +446,7 @@ def upgrade(aws_key_path, task):
     fh = logging.FileHandler('/tmp/upgrade_%s.log' % instance.id)
     logger.addHandler(fh)
 
-    output += 'connecting, '
+    output += 'connecting'
     ssh = paramiko.SSHClient()
     ssh.set_log_channel(logname)
     ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
@@ -455,11 +455,12 @@ def upgrade(aws_key_path, task):
             ssh.connect(instance.public_dns_name, username=task.build['Login'], key_filename='%s.pem' % os.path.join(aws_key_path, instance.key_name))
             break
         except:
-            output += 'sleep, '
+            output += ', sleep'
             time.sleep(60)
 
-    output += 'hosts\n'
-    stdin, stdout, stderr = ssh.exec_command('grep -Fq CLIFFORD /etc/hosts || sudo su -c "echo \'\n### CLIFFORD\n127.0.1.1\t%s\' >> /etc/hosts"' % instance.tags.get('Name'))
+    output += '\n'
+    #output += 'hosts\n'
+    #stdin, stdout, stderr = ssh.exec_command('grep -Fq CLIFFORD /etc/hosts || sudo su -c "echo \'\n### CLIFFORD\n127.0.1.1\t%s\' >> /etc/hosts"' % instance.tags.get('Name'))
 
     has_error = False
     stdin, stdout, stderr = ssh.exec_command('sudo apt-get -y update')
