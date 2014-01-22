@@ -18,7 +18,7 @@ class Launch(BaseCommand, LaunchOptionsMixin):
             return
 
         instance_type = self.get_instance_type()
-        image = self.get_image(return_item=True)
+        image_key = self.get_image(return_key=True)
         key = self.get_key()
         zone = self.get_zone()
         security_group_ids = self.get_security_groups()
@@ -34,8 +34,7 @@ class Launch(BaseCommand, LaunchOptionsMixin):
 
         build = {
             'Size': instance_type,
-            'Login': image['Login'],
-            'Image': image['Id'],
+            'Image': image_key,
             'Key': key.name,
             'SecurityGroups': security_group_ids,
         }
@@ -47,5 +46,7 @@ class Launch(BaseCommand, LaunchOptionsMixin):
         if not self.sure_check():
             raise RuntimeError('Instance(s) not created!')
 
+        image = config.images[image_key]
+
         launcher(parsed_args.tag_name, config.aws_key_path, config.script_path,
-                 build=build, num=num, out=self.app.stdout)
+                 build=build, image=image, num=num, out=self.app.stdout)

@@ -15,7 +15,7 @@ class LaunchOptionsMixin(object):
 
         return instance_type
 
-    def get_image(self, image_id='', return_item=False):
+    def get_image(self, image_id='', return_key=False):
         keys = config.images.keys()
 
         image_ids = [config.images[key]['Id'] for key in keys]
@@ -30,8 +30,8 @@ class LaunchOptionsMixin(object):
         images = sorted(images, key=lambda image: image['text'].lower())
         image = self.question_maker('Available Images', 'image', images)
 
-        if return_item:
-            return [config.images[key] for key in keys if config.images[key]['Id'] == image.id][0]
+        if return_key:
+            return [key for key in keys if config.images[key]['Id'] == image.id][0]
 
         return image
 

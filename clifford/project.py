@@ -55,9 +55,11 @@ class Project(BaseCommand):
         counter = 0
         for project_build in project['Builds']:
             build = config.builds[project_build['Build']]
+            image = config.images[build['Image']]
             kwargs = {
                 'build_name': project_build['Build'],
                 'build': build,
+                'image': image,
                 'project_name': parsed_args.project_name,
                 'project': project,
                 'num': project_build['Num'],
@@ -72,7 +74,7 @@ class Project(BaseCommand):
         for lr in launch_results:
             if lr.build.get('Upgrade', '') in ['upgrade', 'dist-upgrade']:
                 for inst_id in lr.instance_ids:
-                    tasks.append(Task(lr.build, inst_id, []))
+                    tasks.append(Task(lr.build, lr.image, inst_id, []))
         self.run_activity(pool, upgrade, tasks)
         self.app.stdout.write('Upgrade Finished\n')
 
@@ -89,26 +91,27 @@ class Project(BaseCommand):
 
         for lr in launch_results:
             reservations = self.app.ec2_conn.get_all_instances(instance_ids=lr.instance_ids)
+
             if 'Upgrade' in lr.build and lr.build['Upgrade'] in ['upgrade', 'dist-upgrade']:
-                self.run_activity(lr.reservation, pool, upgrade, [lr.build['Login'], lr.build['Upgrade'], config.aws_key_path])
+                self.run_activity(lr.reservation, pool, upgrade, [lr.image['Login'], lr.build['Upgrade'], config.aws_key_path])
 
-        if 'Group' in build and build['Group'] in config.groups:
-            bundles = []
-            self.get_bundles(build['Group'], bundles)
-            self.run_activity(reservation, pool, group_installer, [build['Login'], bundles, config.aws_key_path])
-            self.app.stdout.write('Group Installer Finished\n')
-            time.sleep(10)
+            if 'Group' in lr.build and lr.build['Group'] in config.groups:
+                bundles = []
+                self.get_bundles(lr.build['Group'], bundles)
+                self.run_activity(reservation, pool, group_installer, [lr.image['Login'], bundles, config.aws_key_path])
+                self.app.stdout.write('Group Installer Finished\n')
+                time.sleep(10)
 
-        if 'Pip' in build and build['Pip'] in config.python_bundles:
-            python_packages = config.python_bundles[build['Pip']]
-            self.app.stdout.write('python: %s [%s]\n' % (build['Pip'], python_packages))
+            if 'Pip' in lr.build and lr.build['Pip'] in config.python_bundles:
+                python_packages = config.python_bundles[lr.build['Pip']]
+                self.app.stdout.write('python: %s [%s]\n' % (lr.build['Pip'], python_packages))
 
-            self.run_activity(reservation, pool, pip_installer, [build['Login'], python_packages, config.aws_key_path])
-            self.app.stdout.write('Pip Installer Finished\n')
-            time.sleep(10)
+                self.run_activity(reservation, pool, pip_installer, [lr.image['Login'], python_packages, config.aws_key_path])
+                self.app.stdout.write('Pip Installer Finished\n')
+                time.sleep(10)
 
-        if 'Script' in build:
-            self.run_activity(reservation, pool, script_runner, [build['Login'], os.path.join(config.script_path, build['Script']), config.aws_key_path])
+            if 'Script' in lr.build:
+                self.run_activity(reservation, pool, script_runner, [lr.image['Login'], os.path.join(config.script_path, lr.build['Script']), config.aws_key_path])
         '''
 
         pool.close()

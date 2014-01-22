@@ -56,10 +56,11 @@ class Build(BaseCommand, LaunchOptionsMixin):
             return
 
         build = config.builds[parsed_args.build_name]
+        image = config.images[build['Image']]
 
         q = Queue()
         launcher(tag_name, config.aws_key_path, config.script_path,
-                 build_name=parsed_args.build_name, build=build,
+                 build_name=parsed_args.build_name, build=build, image=image,
                  num=parsed_args.num, q=q, out=self.app.stdout)
         lr = q.get()
 
@@ -70,18 +71,18 @@ class Build(BaseCommand, LaunchOptionsMixin):
         pool = Pool(processes=len(lr.instance_ids))
 
         if 'ElasticIP' in build:
-            tasks = [Task(build, inst_id, []) for inst_id in lr.instance_ids]
+            tasks = [Task(build, image, inst_id, []) for inst_id in lr.instance_ids]
             self.run_activity(pool, elastic_ip, tasks)
             self.app.stdout.write('ElasticIP Finished\n')
             time.sleep(10)
-        else:
-            tasks = [Task(build, inst_id, [tag_name]) for inst_id in lr.instance_ids]
+        elif 'StaticHost' not in build or build['StaticHost'] != 'skip':
+            tasks = [Task(build, image, inst_id, [tag_name]) for inst_id in lr.instance_ids]
             self.run_activity(pool, static_host, tasks)
             self.app.stdout.write('Static Host Finished\n')
             time.sleep(10)
 
         if build.get('Upgrade', '') in ['upgrade', 'dist-upgrade']:
-            tasks = [Task(build, inst_id, []) for inst_id in lr.instance_ids]
+            tasks = [Task(build, image, inst_id, []) for inst_id in lr.instance_ids]
             self.run_activity(pool, upgrade, tasks)
             self.app.stdout.write('Upgrade Finished\n')
             time.sleep(10)
@@ -90,7 +91,7 @@ class Build(BaseCommand, LaunchOptionsMixin):
             bundles = []
             self.get_bundles(build['Group'], bundles)
             if bundles:
-                tasks = [Task(build, inst_id, [bundles]) for inst_id in lr.instance_ids]
+                tasks = [Task(build, image, inst_id, [bundles]) for inst_id in lr.instance_ids]
                 self.run_activity(pool, group_installer, tasks)
                 self.app.stdout.write('Group Installer Finished\n')
                 time.sleep(10)
@@ -98,21 +99,21 @@ class Build(BaseCommand, LaunchOptionsMixin):
         if build.get('Pip', '') in config.python_bundles:
             python_packages = config.python_bundles[build['Pip']]
             if python_packages:
-                tasks = [Task(build, inst_id, [python_packages]) for inst_id in lr.instance_ids]
+                tasks = [Task(build, image, inst_id, [python_packages]) for inst_id in lr.instance_ids]
                 self.run_activity(pool, pip_installer, tasks)
                 self.app.stdout.write('Pip Installer Finished\n')
                 time.sleep(10)
 
         if 'Script' in build:
-            tasks = [Task(build, inst_id, [build['Login'], os.path.join(config.script_path, build['Script']), False]) for inst_id in lr.instance_ids]
+            tasks = [Task(build, image, inst_id, [image['Login'], os.path.join(config.script_path, build['Script']), False]) for inst_id in lr.instance_ids]
             self.run_activity(pool, script_runner, tasks)
 
         if 'Adduser' in build:
-            tasks = [Task(build, inst_id, [config.pub_key_path]) for inst_id in lr.instance_ids]
+            tasks = [Task(build, image, inst_id, [config.pub_key_path]) for inst_id in lr.instance_ids]
             self.run_activity(pool, add_user, tasks)
 
             if 'Script' in build['Adduser']:
-                tasks = [Task(build, inst_id, [build['Adduser']['User'], os.path.join(config.script_path, build['Adduser']['Script']), False]) for inst_id in lr.instance_ids]
+                tasks = [Task(build, image, inst_id, [build['Adduser']['User'], os.path.join(config.script_path, build['Adduser']['Script']), False]) for inst_id in lr.instance_ids]
                 self.run_activity(pool, script_runner, tasks)
 
         pool.close()
@@ -149,7 +150,7 @@ class Build(BaseCommand, LaunchOptionsMixin):
 
     def add(self, name):
         instance_type = self.get_instance_type()
-        image_item = self.get_image(return_item=True)
+        image = self.get_image(return_key=True)
         key = self.get_key()
         zone = self.get_zone()
         security_groups = self.get_security_groups(return_names=True)
@@ -178,8 +179,7 @@ class Build(BaseCommand, LaunchOptionsMixin):
 
         build = OrderedDict()
         build['Size'] = instance_type
-        build['Login'] = image_item['Login']
-        build['Image'] = image_item['Id']
+        build['Image'] = image
         build['Key'] = key.name
         build['SecurityGroups'] = security_groups
 

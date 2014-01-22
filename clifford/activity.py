@@ -11,8 +11,8 @@ import boto
 import paramiko
 
 
-Task = namedtuple('Task', ['build', 'instance_id', 'arg_list'])
-LaunchResult = namedtuple('LaunchResult', ['build', 'instance_ids'])
+Task = namedtuple('Task', ['build', 'image', 'instance_id', 'arg_list'])
+LaunchResult = namedtuple('LaunchResult', ['build', 'image', 'instance_ids'])
 
 
 def launcher(tag_name, aws_key_path, script_path, **kwargs):
@@ -23,8 +23,13 @@ def launcher(tag_name, aws_key_path, script_path, **kwargs):
         return
     build = kwargs['build']
 
+    if 'image' not in kwargs:
+        out.write('Error: Image not found in kwargs to launcher')
+        return
+    image = kwargs['image']
+
     conn = boto.connect_ec2()
-    image = conn.get_image(image_id=build['Image'])
+    aws_image = conn.get_image(image_id=image['Id'])
 
     options = {
         'key_name': build['Key'],
@@ -42,12 +47,12 @@ def launcher(tag_name, aws_key_path, script_path, **kwargs):
         options['max_count'] = kwargs['num']
 
     out.write('Running instance(s)\n')
-    reservation = image.run(**options)
+    reservation = aws_image.run(**options)
     time.sleep(15)
 
     instances = reservation.instances
     if 'q' in kwargs:
-        l = LaunchResult(build, [inst.id for inst in instances])
+        l = LaunchResult(build, image, [inst.id for inst in instances])
         kwargs['q'].put(l)
     count = len(instances)
 
@@ -88,13 +93,13 @@ def launcher(tag_name, aws_key_path, script_path, **kwargs):
         if 'build_name' in kwargs and kwargs['build_name']:
             inst.add_tag('Build', kwargs['build_name'])
 
-        inst.add_tag('Login', build['Login'])
+        inst.add_tag('Login', image['Login'])
 
     time.sleep(20)
     out.write('Instance(s) should now be running\n')
     for inst in instances:
         if aws_key_path:
-            out.write('ssh -i %s/%s.pem %s@%s\n' % (aws_key_path, inst.key_name, build['Login'], inst.public_dns_name))
+            out.write('ssh -i %s/%s.pem %s@%s\n' % (aws_key_path, inst.key_name, image['Login'], inst.public_dns_name))
         else:
             out.write('Public DNS: %s\n' % inst.public_dns_name)
     if 'out' in kwargs:
@@ -125,7 +130,7 @@ def add_user(aws_key_path, task):
     ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
     while True:
         try:
-            ssh.connect(instance.public_dns_name, username=task.build['Login'], key_filename='%s/%s.pem' % (aws_key_path, instance.key_name))
+            ssh.connect(instance.public_dns_name, username=task.image['Login'], key_filename='%s/%s.pem' % (aws_key_path, instance.key_name))
             break
         except:
             output += ', sleep'
@@ -197,7 +202,7 @@ def copier(aws_key_path, task):
     file_name = task.arg_list[0]
 
     try:
-        retcode = call('scp -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -i %s/%s.pem %s %s@%s:~' % (aws_key_path, instance.key_name, file_name, task.build['Login'], instance.public_dns_name), shell=True)
+        retcode = call('scp -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -i %s/%s.pem %s %s@%s:~' % (aws_key_path, instance.key_name, file_name, task.image['Login'], instance.public_dns_name), shell=True)
         if retcode < 0:
             output += 'Child was terminated by signal %s\n' % -retcode
         else:
@@ -228,7 +233,7 @@ def elastic_ip(aws_key_path, task):
     ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
     while True:
         try:
-            ssh.connect(instance.public_dns_name, username=task.build['Login'], key_filename='%s/%s.pem' % (aws_key_path, instance.key_name))
+            ssh.connect(instance.public_dns_name, username=task.image['Login'], key_filename='%s/%s.pem' % (aws_key_path, instance.key_name))
             break
         except:
             output += ', sleep'
@@ -288,7 +293,7 @@ def group_installer(aws_key_path, task):
     ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
     while True:
         try:
-            ssh.connect(instance.public_dns_name, username=task.build['Login'], key_filename='%s/%s.pem' % (aws_key_path, instance.key_name))
+            ssh.connect(instance.public_dns_name, username=task.image['Login'], key_filename='%s/%s.pem' % (aws_key_path, instance.key_name))
             break
         except:
             output += 'sleep, '
@@ -343,7 +348,7 @@ def pip_installer(aws_key_path, task):
     ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
     while True:
         try:
-            ssh.connect(instance.public_dns_name, username=task.build['Login'], key_filename='%s/%s.pem' % (aws_key_path, instance.key_name))
+            ssh.connect(instance.public_dns_name, username=task.image['Login'], key_filename='%s/%s.pem' % (aws_key_path, instance.key_name))
             break
         except:
             output += ', sleep'
@@ -453,7 +458,7 @@ def static_host(aws_key_path, task):
     ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
     while True:
         try:
-            ssh.connect(instance.public_dns_name, username=task.build['Login'], key_filename='%s/%s.pem' % (aws_key_path, instance.key_name))
+            ssh.connect(instance.public_dns_name, username=task.image['Login'], key_filename='%s/%s.pem' % (aws_key_path, instance.key_name))
             break
         except:
             output += ', sleep'
@@ -504,7 +509,7 @@ def upgrade(aws_key_path, task):
     ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
     while True:
         try:
-            ssh.connect(instance.public_dns_name, username=task.build['Login'], key_filename='%s/%s.pem' % (aws_key_path, instance.key_name))
+            ssh.connect(instance.public_dns_name, username=task.image['Login'], key_filename='%s/%s.pem' % (aws_key_path, instance.key_name))
             break
         except:
             output += ', sleep'
