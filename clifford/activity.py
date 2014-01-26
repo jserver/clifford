@@ -151,7 +151,8 @@ def add_user(aws_key_path, task):
 
     if keys:
         user = adduser['User']
-        stdin, stdout, stderr = ssh.exec_command('sudo su -c "mkdir /home/%s/.ssh && chown %s:%s /home/%s/.ssh && chmod 700 /home/%s/.ssh"' % (user, user, user, user, user))
+        stdin, stdout, stderr = ssh.exec_command(
+                'sudo su -c "mkdir /home/%(user)s/.ssh && chown %(user)s:%(user)s /home/%(user)s/.ssh && chmod 700 /home/%(user)s/.ssh"' % {'user': user})
         for line in stderr.readlines():
             output += 'ERROR (mkdir): %s\n' % line
 
@@ -164,17 +165,17 @@ def add_user(aws_key_path, task):
         for line in stderr.readlines():
             output += 'ERROR (cat): %s\n' % line
 
-        stdin, stdout, stderr = ssh.exec_command('sudo su -c "chown %s:%s /home/%s/.ssh/authorized_keys; chmod 600 /home/%s/.ssh/authorized_keys"' % (user, user, user, user))
+        stdin, stdout, stderr = ssh.exec_command(
+                'sudo su -c "chown %(user)s:%(user)s /home/%(user)s/.ssh/authorized_keys; chmod 600 /home/%(user)s/.ssh/authorized_keys"' % {'user': user})
         for line in stderr.readlines():
             output += 'ERROR (authorized_keys): %s\n' % line
 
-    if 'CopyFiles' in adduser:
-        file_names = ' '.join(adduser['CopyFiles'])
-        output += subprocess.check_output(
-                'scp -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no %s %s@%s:~' % (file_names, adduser['User'], instance.public_dns_name),
-                stderr=subprocess.STDOUT,
-                shell=True)
-        output += '\n'
+    for item in adduser['CopyFiles']:
+        with open(os.path.expanduser(item['From']), 'r') as f:
+            contents = f.read()
+            stdin, stdout, stderr = ssh.exec_command('sudo su -c "cat << EOF > %s\n%sEOF" %s' % (item['To'], contents, user))
+            for line in stderr.readlines():
+                output += 'ERROR (copy): %s\n' % line
 
     #TODO: still need to be able to run a script as the new user
 
@@ -390,10 +391,7 @@ def script_runner(aws_key_path, task):
 
     while True:
         try:
-            if user in ['admin', 'ec2-user', 'ubuntu']:
-                ssh.connect(instance.public_dns_name, username=user, key_filename='%s/%s.pem' % (aws_key_path, instance.key_name))
-            else:
-                ssh.connect(instance.public_dns_name, username=user)
+            ssh.connect(instance.public_dns_name, username=task.image['Login'], key_filename='%s/%s.pem' % (aws_key_path, instance.key_name))
             break
         except:
             output += ', sleep'
@@ -410,9 +408,11 @@ def script_runner(aws_key_path, task):
             format_args = task.build['ScriptFormatArgs'].split(',')
             format_args = [name_tag for arg in format_args if arg == '@name']
             contents = contents % tuple(format_args)
-        ssh.exec_command('cat << EOF > %s\n%s\nEOF' % (script_name, contents))
+        ssh.exec_command('cat << EOF > /home/%s/%s\n%s\nEOF' % (user, script_name, contents))
         time.sleep(5)
-        ssh.exec_command('chmod 744 %s' % script_name)
+        ssh.exec_command('sudo chown %(user)s:%(user)s /home/%(user)s/%(script)s' % {'user': user, 'script': script_name})
+        time.sleep(5)
+        ssh.exec_command('sudo chmod 744 /home/%(user)s/%(script)s' % {'user': user, 'script': script_name})
 
     if not copy_only:
         channel = ssh.get_transport().open_session()
@@ -420,7 +420,7 @@ def script_runner(aws_key_path, task):
         channel.input_enabled = True
         forward = paramiko.agent.AgentRequestHandler(channel)
 
-        channel.exec_command('/home/%s/%s' % (user, script_name))
+        channel.exec_command('sudo su -c "/home/%s/%s" %s' % (user, script_name, user))
 
         while True:
             time.sleep(5)

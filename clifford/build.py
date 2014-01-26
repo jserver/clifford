@@ -70,17 +70,6 @@ class Build(BaseCommand, LaunchOptionsMixin):
         # begin the mutliprocessing
         pool = Pool(processes=len(lr.instance_ids))
 
-        if 'ElasticIP' in build:
-            tasks = [Task(build, image, inst_id, []) for inst_id in lr.instance_ids]
-            self.run_activity(pool, elastic_ip, tasks)
-            self.app.stdout.write('ElasticIP Finished\n')
-            time.sleep(10)
-        elif 'StaticHost' not in build or build['StaticHost'] != 'skip':
-            tasks = [Task(build, image, inst_id, [tag_name]) for inst_id in lr.instance_ids]
-            self.run_activity(pool, static_host, tasks)
-            self.app.stdout.write('Static Host Finished\n')
-            time.sleep(10)
-
         if build.get('Upgrade', '') in ['upgrade', 'dist-upgrade']:
             tasks = [Task(build, image, inst_id, []) for inst_id in lr.instance_ids]
             self.run_activity(pool, upgrade, tasks)
@@ -107,14 +96,31 @@ class Build(BaseCommand, LaunchOptionsMixin):
         if 'Script' in build:
             tasks = [Task(build, image, inst_id, [image['Login'], os.path.join(config.script_path, build['Script']), False]) for inst_id in lr.instance_ids]
             self.run_activity(pool, script_runner, tasks)
+            self.app.stdout.write('Script Runner Finished\n')
+            time.sleep(10)
 
         if 'Adduser' in build:
             tasks = [Task(build, image, inst_id, [config.pub_key_path]) for inst_id in lr.instance_ids]
             self.run_activity(pool, add_user, tasks)
+            self.app.stdout.write('Adduser Finished\n')
+            time.sleep(10)
 
             if 'Script' in build['Adduser']:
                 tasks = [Task(build, image, inst_id, [build['Adduser']['User'], os.path.join(config.script_path, build['Adduser']['Script']), False]) for inst_id in lr.instance_ids]
                 self.run_activity(pool, script_runner, tasks)
+                self.app.stdout.write('User Script Runner Finished\n')
+                time.sleep(10)
+
+        if 'ElasticIP' in build:
+            tasks = [Task(build, image, inst_id, []) for inst_id in lr.instance_ids]
+            self.run_activity(pool, elastic_ip, tasks)
+            self.app.stdout.write('ElasticIP Finished\n')
+            time.sleep(10)
+        elif 'StaticHost' not in build or build['StaticHost'] != 'skip':
+            tasks = [Task(build, image, inst_id, [tag_name]) for inst_id in lr.instance_ids]
+            self.run_activity(pool, static_host, tasks)
+            self.app.stdout.write('Static Host Finished\n')
+            time.sleep(10)
 
         pool.close()
         pool.join()

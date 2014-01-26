@@ -3,11 +3,13 @@ import logging
 import os
 import sys
 from collections import OrderedDict
-from os.path import expanduser
 
 import boto
 from cliff.app import App
 from cliff.commandmanager import CommandManager
+
+
+CONFIG_FILE = os.path.expanduser('~/.clifford/config.json')
 
 
 class CliffordApp(App):
@@ -142,7 +144,6 @@ def read_config():
         return OrderedConfig(raw_config)
 
 
-CONFIG_FILE = '%s/.clifford/config.json' % expanduser("~")
 config = read_config()
 
 
