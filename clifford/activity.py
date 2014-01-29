@@ -408,7 +408,10 @@ def script_runner(aws_key_path, task):
             format_args = task.build['ScriptFormatArgs'].split(',')
             format_args = [name_tag for arg in format_args if arg == '@name']
             contents = contents % tuple(format_args)
-        ssh.exec_command('cat << EOF > /home/%s/%s\n%s\nEOF' % (user, script_name, contents))
+        if user == task.image['Login']:
+            ssh.exec_command('cat << EOF > /home/%s/%s\n%s\nEOF' % (user, script_name, contents))
+        else:
+            ssh.exec_command('sudo su -c "cat << EOF > /home/%s/%s\n%s\nEOF" %s' % (user, script_name, contents, user))
         time.sleep(5)
         ssh.exec_command('sudo chown %(user)s:%(user)s /home/%(user)s/%(script)s' % {'user': user, 'script': script_name})
         time.sleep(5)

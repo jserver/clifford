@@ -106,7 +106,7 @@ class Build(BaseCommand, LaunchOptionsMixin):
             time.sleep(10)
 
             if 'Script' in build['Adduser']:
-                tasks = [Task(build, image, inst_id, [build['Adduser']['User'], os.path.join(config.script_path, build['Adduser']['Script']), False]) for inst_id in lr.instance_ids]
+                tasks = [Task(build, image, inst_id, [build['Adduser']['User'], os.path.join(config.script_path, build['Adduser']['Script']), True]) for inst_id in lr.instance_ids]
                 self.run_activity(pool, script_runner, tasks)
                 self.app.stdout.write('User Script Runner Finished\n')
                 time.sleep(10)
