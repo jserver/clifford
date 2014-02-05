@@ -136,7 +136,7 @@ class Groups(Lister):
                 elif item['Type'] == 'group':
                     items += '&' + item['Value'] + ' '
                 elif item['Type'] == 'packages':
-                    items += '$' + item['Value'] + ' '
+                    items += '$' + ' $'.join(item['Value'].split(' ')) + ' '
             if items:
                 items = items[:-1]
 
