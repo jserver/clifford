@@ -31,7 +31,7 @@ class DeleteBucket(BaseCommand):
         return parser
 
     def take_action(self, parsed_args):
-        bucket = self.app.s3_conn.get_bucket(parsed_args.name)
+        bucket = self.app.s3_conn.get_bucket(parsed_args.name, validate=False)
         if bucket and self.sure_check():
             try:
                 bucket.delete()
@@ -49,7 +49,7 @@ class Download(BaseCommand):
         return parser
 
     def take_action(self, parsed_args):
-        bucket = self.app.s3_conn.get_bucket(parsed_args.bucket_name)
+        bucket = self.app.s3_conn.get_bucket(parsed_args.bucket_name, validate=False)
         if not bucket:
             raise RuntimeError('Bucket not found!')
         if os.path.exists(parsed_args.key_name):
@@ -68,7 +68,7 @@ class Upload(BaseCommand):
         return parser
 
     def take_action(self, parsed_args):
-        bucket = self.app.s3_conn.get_bucket(parsed_args.bucket_name)
+        bucket = self.app.s3_conn.get_bucket(parsed_args.bucket_name, validate=False)
         if not bucket:
             raise RuntimeError('Bucket not found!')
         if not os.path.exists(parsed_args.filename):
