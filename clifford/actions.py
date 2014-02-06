@@ -349,11 +349,11 @@ class Tag(BaseCommand):
             instance.remove_tag(tag_name)
 
         else:
-            tag_name = raw_input('Tag: ')
+            tag_name = raw_input('Tag (Name): ')
             if not tag_name:
-                raise RuntimeError('Invalid Tag!')
+                tag_name = 'Name'
             value = raw_input('Value: ')
             if not value:
                 raise RuntimeError('Invalid Value!')
-
-            instance.add_tag(tag_name, value)
+            if self.sure_check():
+                instance.add_tag(tag_name, value)
