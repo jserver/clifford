@@ -170,12 +170,13 @@ def add_user(aws_key_path, task):
         for line in stderr.readlines():
             output += 'ERROR (authorized_keys): %s\n' % line
 
-    for item in adduser['CopyFiles']:
-        with open(os.path.expanduser(item['From']), 'r') as f:
-            contents = f.read()
-            stdin, stdout, stderr = ssh.exec_command('sudo su -c "cat << EOF > %s\n%sEOF" %s' % (item['To'], contents, user))
-            for line in stderr.readlines():
-                output += 'ERROR (copy): %s\n' % line
+    if 'CopyFiles' in adduser:
+        for item in adduser['CopyFiles']:
+            with open(os.path.expanduser(item['From']), 'r') as f:
+                contents = f.read()
+                stdin, stdout, stderr = ssh.exec_command('sudo su -c "cat << EOF > %s\n%sEOF" %s' % (item['To'], contents, user))
+                for line in stderr.readlines():
+                    output += 'ERROR (copy): %s\n' % line
 
     #TODO: still need to be able to run a script as the new user
 
