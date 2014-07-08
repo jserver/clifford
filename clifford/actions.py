@@ -1,6 +1,10 @@
 from collections import OrderedDict
 from subprocess import call
+import json
+import re
 import time
+
+import requests
 
 from commands import BaseCommand
 from main import config
@@ -240,12 +244,10 @@ class Image(BaseCommand):
         parser = super(Image, self).get_parser(prog_name)
         parser.add_argument('-a', '--add')
         parser.add_argument('-r', '--remove', action='store_true')
+        parser.add_argument('-u', '--update', action='store_true')
         return parser
 
     def take_action(self, parsed_args):
-        if not parsed_args.add and not parsed_args.remove:
-            raise RuntimeError('Use -a <ami_id> to add or -r to remove images!')
-
         if parsed_args.add:
             image = self.app.ec2_conn.get_image(parsed_args.add)
             if not image:
@@ -284,6 +286,22 @@ class Image(BaseCommand):
             if self.sure_check():
                 del(images[image])
                 config.save()
+
+        elif parsed_args.update:
+            r = requests.get('https://cloud-images.ubuntu.com/locator/ec2/releasesTable')
+            txt = r.text.replace('"],\n]', '"]\n]')
+            aaData = json.loads(txt)['aaData']
+            imgs = [[a[4], a[5], a[6]] for a in aaData if a[0] == 'us-east-1' and a[1] == 'trusty' and a[2] == '14.04 LTS' and a[3] == 'amd64']
+            amis = []
+            for img in imgs:
+                m = re.search('(?<=ami-)\w+', img[2])
+                #amis.append('ami-' + m.group(0))
+                img[2] = 'ami-' + m.group(0)
+            import pdb; pdb.set_trace()
+
+        else:
+            raise RuntimeError('Use -a <ami_id> to add or -r to remove images!')
+
 
 
 class KeyPaths(BaseCommand):
