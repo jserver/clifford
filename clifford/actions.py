@@ -291,17 +291,31 @@ class Image(BaseCommand):
             r = requests.get('https://cloud-images.ubuntu.com/locator/ec2/releasesTable')
             txt = r.text.replace('"],\n]', '"]\n]')
             aaData = json.loads(txt)['aaData']
-            imgs = [[a[4], a[5], a[6]] for a in aaData if a[0] == 'us-east-1' and a[1] == 'trusty' and a[2] == '14.04 LTS' and a[3] == 'amd64']
-            amis = []
-            for img in imgs:
-                m = re.search('(?<=ami-)\w+', img[2])
-                #amis.append('ami-' + m.group(0))
-                img[2] = 'ami-' + m.group(0)
-            import pdb; pdb.set_trace()
+
+            for image_key in config.images:
+                image = config.images[image_key]
+                if 'Meta' in image:
+                    meta = image['Meta']
+                    imgs = [a[6] for a in aaData if a[0] == meta['Zone'] and
+                            a[1] == meta['Name'] and
+                            a[2] == meta['Version'] and
+                            a[3] == meta['Arch'] and
+                            a[4] == meta['InstanceType']]
+                    if len(imgs) == 1:
+                        ami_id = imgs[0]
+                        m = re.search('(?<=ami-)\w+', ami_id)
+                        ami_id = 'ami-' + m.group(0)
+                        ec2_image = self.app.ec2_conn.get_image(ami_id)
+                        if image['Id'] != ami_id:
+                            image['Id'] = ami_id
+                            image['Name'] = ec2_image.name
+                            self.app.stdout.write('Image: %s Current ami_id: %s New ami_id: %s\n' % (image_key, image['Id'], ami_id))
+                            config.save()
+                    else:
+                        self.app.stdout.write('More than 1 image found, skipping')
 
         else:
-            raise RuntimeError('Use -a <ami_id> to add or -r to remove images!')
-
+            raise RuntimeError('Use -a <ami_id> to add, -r to remove an image and -u to update ubuntu images!')
 
 
 class KeyPaths(BaseCommand):
