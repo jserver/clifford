@@ -9,7 +9,7 @@ from cliff.app import App
 from cliff.commandmanager import CommandManager
 
 
-CONFIG_FILE = os.path.expanduser('~/.clifford/config.json')
+DEFAULT_CONFIG_FILE = os.path.expanduser('~/.clifford/config.json')
 
 
 class CliffordApp(App):
@@ -38,6 +38,9 @@ class CliffordApp(App):
 
 
 class OrderedConfig(OrderedDict):
+    def set_config_file_location(self, config_file):
+        self.config_file = config_file
+
     @property
     def aws_key_path(self):
         return self.get_path('AwsKeyPath')
@@ -87,7 +90,6 @@ class OrderedConfig(OrderedDict):
         return self['Projects']
 
     def get_path(self, key):
-
         if key not in config:
             raise RuntimeError('%s not found!' % key)
         value = config[key]
@@ -96,7 +98,7 @@ class OrderedConfig(OrderedDict):
         return value
 
     def save(self):
-        with open(CONFIG_FILE, 'wb') as fp:
+        with open(self.config_file, 'wb') as fp:
             json.dump(self, fp, indent=2, separators=(',', ': '))
 
 
@@ -115,8 +117,9 @@ def input_valid_dir(name):
     return path
 
 
-def default_config():
+def default_config(config_file=DEFAULT_CONFIG_FILE):
     config = OrderedConfig()
+    config.set_config_file_location(config_file)
     config['AwsKeyPath'] = input_valid_dir('AwsKeyPath')
     config['PubKeyPath'] = input_valid_dir('PubKeyPath')
     config['ScriptPath'] = input_valid_dir('ScriptPath')
@@ -132,22 +135,31 @@ def default_config():
     return config
 
 
-def read_config():
-    if not os.path.exists(CONFIG_FILE):
-        basedir = os.path.dirname(CONFIG_FILE)
+def read_config(config_file=DEFAULT_CONFIG_FILE):
+    if not os.path.exists(config_file):
+        basedir = os.path.dirname(config_file)
         if not os.path.exists(basedir):
             os.makedirs(basedir)
-        with open(CONFIG_FILE, 'a') as fp:
-            json.dump(default_config(), fp, indent=2, separators=(',', ': '))
-    with open(CONFIG_FILE, 'r') as fp:
+        with open(config_file, 'a') as fp:
+            json.dump(default_config(config_file), fp, indent=2, separators=(',', ': '))
+    with open(config_file, 'r') as fp:
         raw_config = json.load(fp, object_pairs_hook=OrderedDict)
-        return OrderedConfig(raw_config)
+        config = OrderedConfig(raw_config)
+        config.set_config_file_location(config_file)
+        return config
 
 
-config = read_config()
+config = None
 
 
 def main(argv=sys.argv[1:]):
+    global config
+    if len(argv) == 2 and argv[0] == '--config':
+        config = read_config(argv[1])
+        argv = argv[2:]
+    else:
+        config = read_config()
+
     myapp = CliffordApp()
     return myapp.run(argv)
 
