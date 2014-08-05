@@ -1,5 +1,4 @@
 boto
-bpython
 cliff
 paramiko
 requests

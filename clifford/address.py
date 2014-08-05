@@ -44,6 +44,8 @@ class Associate(BaseCommand):
             fqdn = '%s.%s' % (parsed_args.inst_name, config['Domain'])
             stdin, stdout, stderr = ssh.exec_command('sudo su -c "echo \'\n### CLIFFORD\n%s\t%s\t%s\' >> /etc/hosts"' % (address.public_ip, fqdn, parsed_args.inst_name))
             ssh.close()
+        else:
+            raise RuntimeError('No Domain configured!')
 
 
 class Disassociate(BaseCommand):

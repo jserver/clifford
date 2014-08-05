@@ -39,6 +39,9 @@ class AwsImages(Lister):
     def take_action(self, parsed_args):
         images = self.app.ec2_conn.get_all_images(owners=['self'])
 
+        if not images:
+            raise RuntimeError('No AWS images found!')
+
         return (('Image ID', 'Name'),
                 ((image.id, image.name) for image in images)
                 )
@@ -92,7 +95,6 @@ class Bundles(Lister):
         parser.add_argument('--py', dest='is_py_bundle', action='store_true')
         return parser
 
-
     def take_action(self, parsed_args):
         bundles = config.bundles if not parsed_args.is_py_bundle else config.python_bundles
         if not bundles:
@@ -144,7 +146,6 @@ class Groups(Lister):
                 group_tuples.append((group, items[:max_groups_len - 3] + '...'))
             else:
                 group_tuples.append((group, items))
-
 
         return (('Name', 'Items'),
                 group_tuples
@@ -258,8 +259,8 @@ class Projects(Lister):
         for project in projects.keys():
             for build in config.projects[project]['Builds']:
                 project_tuples.append((project,
-                                     build.get('Build', ''),
-                                     build.get('Num', '')))
+                                      build.get('Build', ''),
+                                      build.get('Num', '')))
 
         return (('Name', 'Build', 'Num'),
                 project_tuples
@@ -275,8 +276,6 @@ class Scripts(Lister):
         return (('Name',),
                 ((script,) for script in os.listdir(config.script_path) if not script.startswith('.'))
                 )
-
-
 
 
 class SecurityGroups(Lister):
@@ -300,7 +299,10 @@ class Snapshots(Lister):
     def take_action(self, parsed_args):
         snapshots = self.app.ec2_conn.get_all_snapshots(owner='self')
 
-        return (('Name', 'ID', 'Size', 'Status', 'Progress' ),
+        if not snapshots:
+            raise RuntimeError('No snapshots found!')
+
+        return (('Name', 'ID', 'Size', 'Status', 'Progress'),
                 ((snapshot.tags.get('Name', ''),
                   snapshot.id,
                   '%s GiB' % snapshot.volume_size,
@@ -316,6 +318,9 @@ class Volumes(Lister):
 
     def take_action(self, parsed_args):
         volumes = self.app.ec2_conn.get_all_volumes()
+
+        if not volumes:
+            raise RuntimeError('No volumes found!')
 
         return (('Name', 'ID', 'Size', 'Type', 'Snapshot ID', 'Zone', 'Status', 'Instance ID'),
                 ((volume.tags.get('Name', ''),
