@@ -2,46 +2,50 @@
   "AwsKeyPath": "~/.keys",
   "PubKeyPath": "~/keys",
   "ScriptPath": "~/.clifford/scripts",
-  "Domain": "blah.io",
-  "Salt": "OmgSuperSecret",
   "Images": {
-    "precise": {
-      "Id": "ami-23d9a94a",
+    "trusty": {
+      "Id": "ami-b027efd8",
       "Login": "ubuntu",
-      "Name": "ubuntu/images/ebs/ubuntu-precise-12.04-amd64-server-20130624"
+      "Name": "ubuntu/images/ebs-ssd/ubuntu-trusty-14.04-amd64-server-20140724",
+      "Meta": {
+        "Zone": "us-east-1",
+        "Name": "trusty",
+        "Version": "14.04 LTS",
+        "Arch": "amd64",
+        "InstanceType": "ebs-ssd"
+      }
     },
-    "raring": {
-      "Id": "ami-10314d79",
+    "trusty-m3": {
+      "Id": "ami-8827efe0",
       "Login": "ubuntu",
-      "Name": "ubuntu/images/ebs/ubuntu-raring-13.04-amd64-server-20130706"
-    },
-    "wheezy": {
-      "Id": "ami-9e95e8f7",
-      "Login": "admin",
-      "Name": "debian-wheezy-amd64-20130704"
+      "Name": "ubuntu/images/hvm-ssd/ubuntu-trusty-14.04-amd64-server-20140724",
+      "Meta": {
+        "Zone": "us-east-1",
+        "Name": "trusty",
+        "Version": "14.04 LTS",
+        "Arch": "amd64",
+        "InstanceType": "hvm:ebs-ssd"
+      }
     }
   },
   "Bundles": {
-    "dev": "autoconf automake bash-completion build-essential debconf-utils libtool ntp python",
-    "etc": "apache2-utils curl htop python-pip sqlite3 tmux unzip vim-nox zip",
-    "img-libs": "libfreetype6-dev libjpeg-dev liblcms-dev libpng-dev libtiff-dev libwebp-dev zlib1g-dev",
-    "libs": "libevent-dev libgmp-dev libjson0-dev libsqlite3-dev libssl-dev libxslt-dev libyaml-dev libzmq-dev python-dev uuid-dev",
-    "vcs": "bzr git mercurial",
+    "dev": "autoconf automake build-essential libtool ntp",
+    "img-libs": "libfreetype6-dev libjpeg-dev liblcms2-dev libpng12-dev libtiff5-dev libwebp-dev zlib1g-dev",
+    "libs": "libev-dev libevent-dev libgmp-dev libjson0-dev libsqlite3-dev libssl-dev libxslt1-dev libyaml-dev libzmq-dev python-dev uuid-dev",
+    "etc": "apache2-utils figlet finger gnupg2 htop python-pip sqlite3 supervisor unzip vim-nox zip",
+    "vcs": "bzr git-core mercurial",
+    "memcached": "libmemcached-dev memcached",
     "postgres": "postgresql postgresql-client libpq-dev",
     "postgres-client": "postgresql-client libpq-dev"
   },
   "PythonBundles": {
-    "base": "pyflakes virtualenv virtualenvwrapper yolk"
+    "base": "flake8 virtualenvwrapper"
   },
   "Groups": {
     "base": [
       {
         "Type": "bundle",
         "Value": "dev"
-      },
-      {
-        "Type": "bundle",
-        "Value": "etc"
       },
       {
         "Type": "bundle",
@@ -53,10 +57,14 @@
       },
       {
         "Type": "bundle",
+        "Value": "etc"
+      },
+      {
+        "Type": "bundle",
         "Value": "vcs"
       }
     ],
-    "django": [
+    "base-django": [
       {
         "Type": "group",
         "Value": "base"
@@ -66,17 +74,7 @@
         "Value": "postgres-client"
       }
     ],
-    "postgres": [
-      {
-        "Type": "group",
-        "Value": "base"
-      },
-      {
-        "Type": "bundle",
-        "Value": "postgres"
-      }
-    ],
-    "rabbit": [
+    "base-rabbit": [
       {
         "Type": "group",
         "Value": "base"
@@ -94,88 +92,86 @@
   "Builds": {
     "micro": {
       "Size": "t1.micro",
-      "Login": "admin",
-      "Image": "ami-9e95e8f7",
-      "Key": "key_name",
-      "SecurityGroups": [
-        "default",
-        "ssh-only"
-      ],
-      "Zone": "us-east-1b"
-    },
-    "small": {
-      "Size": "m1.small",
-      "Login": "admin",
-      "Image": "ami-9e95e8f7",
-      "Key": "key_name",
-      "SecurityGroups": [
-        "default",
-        "ssh-only"
-      ],
-      "Zone": "us-east-1b"
-    },
-    "django": {
-      "Size": "m1.small",
-      "Login": "admin",
-      "Image": "ami-9e95e8f7",
+      "Image": "trusty",
       "Key": "jserver",
       "SecurityGroups": [
         "default",
-        "django-dev"
+        "ssh-only"
       ],
-      "Zone": "us-east-1b",
-      "Suffix": "www",
-      "Upgrade": "upgrade",
-      "Group": "django",
-      "Pip": "base",
-      "Script": "install_go.sh"
+      "Zone": "us-east-1a"
     },
-    "postgres": {
+    "small": {
       "Size": "m1.small",
-      "Login": "admin",
-      "Image": "ami-9e95e8f7",
-      "Key": "key_name",
+      "Image": "trusty",
+      "Key": "jserver",
       "SecurityGroups": [
         "default",
         "ssh-only"
       ],
-      "Zone": "us-east-1b",
-      "Suffix": "db",
-      "Upgrade": "upgrade",
-      "Group": "postgres",
-      "Pip": "base",
-      "Script": "install_go.sh"
+      "Zone": "us-east-1a"
     },
-    "rabbit": {
+    "medium": {
+      "Size": "m3.medium",
+      "Image": "trusty-m3",
+      "Key": "jserver",
+      "SecurityGroups": [
+        "default",
+        "ssh-only"
+      ]
+    },
+    "createbase": {
       "Size": "m1.small",
-      "Login": "admin",
-      "Image": "ami-9e95e8f7",
-      "Key": "key_name",
+      "Image": "trusty",
+      "Key": "jserver",
       "SecurityGroups": [
         "default",
         "ssh-only"
       ],
-      "Zone": "us-east-1b",
-      "Suffix": "mq",
-      "Upgrade": "upgrade",
-      "Group": "rabbit",
+      "Zone": "us-east-1a",
+      "Upgrade": "dist-upgrade",
+      "Group": "base",
       "Pip": "base",
-      "Script": "install_go.sh"
+      "Script": "server_init.sh"
+    },
+    "m3trusty": {
+      "Size": "m3.medium",
+      "Image": "trusty-m3",
+      "Key": "jserver",
+      "SecurityGroups": [
+        "default",
+        "django-dev",
+        "prod-web"
+      ],
+      "Upgrade": "upgrade",
+      "Group": "base",
+      "Script": "post_launch.sh",
+      "ScriptFormatArgs": "@name",
+      "Adduser": {
+        "User": "joe",
+        "FullName": "Joseph Server",
+        "CopyFiles": [
+          {
+            "From": "~/.secrets/.gitconfig",
+            "To": "~/.gitconfig"
+          },
+          {
+            "From": "~/.secrets/.bash_project",
+            "To": "~/.bash_project"
+          }
+        ],
+        "Script": "ubuntu_dotfiles.sh"
+      }
     }
   },
   "Projects": {
-    "sample_project": {
+    "django-site": {
       "Builds": [
         {
-          "Build": "django",
+          "Build": "small-django",
           "Num": 2
         },
         {
-          "Build": "postgres",
-          "Num": 1
-        },
-        {
-          "Build": "rabbit",
+          "Build": "micro-rabbit",
           "Num": 1
         }
       ]
