@@ -307,9 +307,9 @@ class Image(BaseCommand):
                         ami_id = 'ami-' + m.group(0)
                         ec2_image = self.app.ec2_conn.get_image(ami_id)
                         if image['Id'] != ami_id:
+                            self.app.stdout.write('Image: %s Current ami_id: %s New ami_id: %s Updating...\n' % (image_key, image['Id'], ami_id))
                             image['Id'] = ami_id
                             image['Name'] = ec2_image.name
-                            self.app.stdout.write('Image: %s Current ami_id: %s New ami_id: %s\n' % (image_key, image['Id'], ami_id))
                             config.save()
                     else:
                         self.app.stdout.write('More than 1 image found, skipping')
