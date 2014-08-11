@@ -391,6 +391,7 @@ class Script(BaseCommand):
     def get_parser(self, prog_name):
         parser = super(Script, self).get_parser(prog_name)
         parser.add_argument('-y', dest='assume_yes', action='store_true')
+        parser.add_argument('--cat', action='store_true')
         parser.add_argument('--script')
         parser.add_argument('--user')
         parser.add_argument('--format')
@@ -400,12 +401,21 @@ class Script(BaseCommand):
         return parser
 
     def take_action(self, parsed_args):
-        instance = self.get_instance(parsed_args.name, parsed_args.arg_is_id)
         script_path = config.script_path
+
+        if parsed_args.cat:
+            script_name = parsed_args.name
+            script = '%s/%s' % (script_path, script_name)
+            with open(script, 'r') as f:
+                contents = f.read()
+                self.app.stdout.write(contents)
+            return
+
+        instance = self.get_instance(parsed_args.name, parsed_args.arg_is_id)
 
         if parsed_args.script:
             script_name = parsed_args.script
-            script = '%s/%s' % (script_path, parsed_args.script)
+            script = '%s/%s' % (script_path, script_name)
         else:
             scripts = glob.glob('%s/*.sh' % script_path)
             script_name = self.question_maker('Select script', 'script', [{'text': item[len(script_path) + 1:]} for item in scripts])

@@ -78,9 +78,10 @@ class Builds(Lister):
                                  builds[build].get('Key', ''),
                                  builds[build].get('Zone', ''),
                                  builds[build].get('Group', ''),
+                                 builds[build].get('Script', ''),
                                  builds[build].get('Suffix', '')))
 
-        return (('Name', 'Size', 'Image', 'Key', 'Zone', 'Group', 'Suffix'),
+        return (('Name', 'Size', 'Image', 'Key', 'Zone', 'Group', 'Script', 'Suffix'),
                 build_tuples
                 )
 
