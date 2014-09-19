@@ -99,7 +99,10 @@ def launcher(tag_name, aws_key_path, script_path, **kwargs):
     out.write('Instance(s) should now be running\n')
     for inst in instances:
         if aws_key_path:
-            out.write('ssh -i %s/%s.pem %s@%s\n' % (aws_key_path, inst.key_name, image['Login'], inst.public_dns_name))
+            out.write('ssh -i %s/%s.pem %s@%s\n' % (aws_key_path,
+                                                    inst.key_name,
+                                                    image['Login'],
+                                                    inst.public_dns_name))
         else:
             out.write('Public DNS: %s\n' % inst.public_dns_name)
     if 'out' in kwargs:
@@ -130,7 +133,9 @@ def add_user(aws_key_path, task):
     ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
     while True:
         try:
-            ssh.connect(instance.public_dns_name, username=task.image['Login'], key_filename='%s/%s.pem' % (aws_key_path, instance.key_name))
+            ssh.connect(instance.public_dns_name,
+                        username=task.image['Login'],
+                        key_filename='%s/%s.pem' % (aws_key_path, instance.key_name))
             break
         except:
             output += ', sleep'
@@ -329,8 +334,8 @@ def group_installer(aws_key_path, task):
     return output
 
 
-def pip_installer(aws_key_path, task):
-    output = 'Running Pip Installer on %s\n' % task.instance_id
+def py_installer(aws_key_path, task):
+    output = 'Running Python Installer on %s\n' % task.instance_id
 
     output += 'instance, '
     conn = boto.connect_ec2()
@@ -338,10 +343,10 @@ def pip_installer(aws_key_path, task):
     instance = reservations[0].instances[0]
 
     output += 'logger, '
-    logname = 'pip_installer.%s' % instance.id
+    logname = 'py_installer.%s' % instance.id
     logger = logging.getLogger(logname)
     logger.setLevel(logging.ERROR)
-    fh = logging.FileHandler('/tmp/pip_installer_%s.log' % instance.id)
+    fh = logging.FileHandler('/tmp/py_installer_%s.log' % instance.id)
     logger.addHandler(fh)
 
     output += 'connecting'
@@ -357,8 +362,9 @@ def pip_installer(aws_key_path, task):
             time.sleep(60)
     output += '\n'
 
-    packages = task.arg_list[0]
-    stdin, stdout, stderr = ssh.exec_command('sudo pip install %s' % packages)
+    py_installer = task.arg_list[0]
+    packages = task.arg_list[1]
+    stdin, stdout, stderr = ssh.exec_command('sudo %s %s' % (py_installer, packages))
     for line in stdout.readlines():
         if line.startswith('Installed') or line.startswith('Finished') or line.startswith('Successfully'):
             output += line

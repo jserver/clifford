@@ -283,11 +283,11 @@ class GroupInstall(BaseCommand):
             ssh.close()
 
 
-class PipInstall(BaseCommand):
-    "Python pip install a bundle on a remote ec2 instance."
+class PyInstall(BaseCommand):
+    "Python install a bundle on a remote ec2 instance."
 
     def get_parser(self, prog_name):
-        parser = super(PipInstall, self).get_parser(prog_name)
+        parser = super(PyInstall, self).get_parser(prog_name)
         parser.add_argument('-y', dest='assume_yes', action='store_true')
         parser.add_argument('--id', dest='arg_is_id', action='store_true')
         parser.add_argument('name')
@@ -302,7 +302,7 @@ class PipInstall(BaseCommand):
             ssh = paramiko.SSHClient()
             ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
             ssh.connect(instance.public_dns_name, username=self.get_user(instance), key_filename='%s/%s.pem' % (config.aws_key_path, instance.key_name))
-            stdin, stdout, stderr = ssh.exec_command('sudo pip install %s' % bundle)
+            stdin, stdout, stderr = ssh.exec_command('sudo %s %s' % (config['PythonInstaller'], bundle))
             for line in stdout.readlines():
                 if line.startswith('Installed') or line.startswith('Finished'):
                     self.app.stdout.write(line)

@@ -124,6 +124,7 @@ def default_config(config_file=DEFAULT_CONFIG_FILE):
     config['PubKeyPath'] = input_valid_dir('PubKeyPath')
     config['ScriptPath'] = input_valid_dir('ScriptPath')
     # config['Domain'] = raw_input('Enter domain: ')
+    config['PythonInstaller'] = raw_input('Enter Python Install Command: ')
     # config['Salt'] = raw_input('Enter Password Salt: ')
     config['Images'] = OrderedDict()
     config['Bundles'] = OrderedDict()

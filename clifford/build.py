@@ -4,7 +4,7 @@ import os
 import time
 
 from activity import Task
-from activity import add_user, elastic_ip, group_installer, launcher, pip_installer, script_runner, static_host, upgrade
+from activity import add_user, elastic_ip, group_installer, launcher, py_installer, script_runner, static_host, upgrade
 from commands import BaseCommand
 from main import config
 from mixins import LaunchOptionsMixin
@@ -85,12 +85,12 @@ class Build(BaseCommand, LaunchOptionsMixin):
                 self.app.stdout.write('Group Installer Finished\n')
                 time.sleep(10)
 
-        if build.get('Pip', '') in config.python_bundles:
-            python_packages = config.python_bundles[build['Pip']]
+        if build.get('PyGroup', '') in config.python_bundles:
+            python_packages = config.python_bundles[build['PyGroup']]
             if python_packages:
-                tasks = [Task(build, image, inst_id, [python_packages]) for inst_id in lr.instance_ids]
-                self.run_activity(pool, pip_installer, tasks)
-                self.app.stdout.write('Pip Installer Finished\n')
+                tasks = [Task(build, image, inst_id, [config['PythonInstaller'], python_packages]) for inst_id in lr.instance_ids]
+                self.run_activity(pool, py_installer, tasks)
+                self.app.stdout.write('Python Installer Finished\n')
                 time.sleep(10)
 
         if 'Script' in build:
@@ -205,7 +205,7 @@ class Build(BaseCommand, LaunchOptionsMixin):
             build['Group'] = group_option
 
         if bundle_option != 'Skip Step':
-            build['Pip'] = bundle_option
+            build['PyGroup'] = bundle_option
 
         config.builds[name] = build
         config.save()

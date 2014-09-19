@@ -102,12 +102,12 @@ class Project(BaseCommand):
                 self.app.stdout.write('Group Installer Finished\n')
                 time.sleep(10)
 
-            if 'Pip' in lr.build and lr.build['Pip'] in config.python_bundles:
-                python_packages = config.python_bundles[lr.build['Pip']]
-                self.app.stdout.write('python: %s [%s]\n' % (lr.build['Pip'], python_packages))
+            if 'PyGroup' in lr.build and lr.build['PyGroup'] in config.python_bundles:
+                python_packages = config.python_bundles[lr.build['PyGroup']]
+                self.app.stdout.write('python: %s [%s]\n' % (lr.build['PyGroup'], python_packages))
 
-                self.run_activity(reservation, pool, pip_installer, [lr.image['Login'], python_packages, config.aws_key_path])
-                self.app.stdout.write('Pip Installer Finished\n')
+                self.run_activity(reservation, pool, py_installer, [lr.image['Login'], python_packages, config.aws_key_path])
+                self.app.stdout.write('Python Installer Finished\n')
                 time.sleep(10)
 
             if 'Script' in lr.build:
