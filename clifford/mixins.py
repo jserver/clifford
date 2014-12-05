@@ -6,12 +6,12 @@ from main import config
 
 class LaunchOptionsMixin(object):
     def get_instance_type(self, size=''):
-        SIZES = ['t1.micro', 'm1.small', 'm1.medium', 'm1.large']
+        SIZES = ['t1.micro', 'm1.small', 'm1.medium', 'm1.large', 'm3.medium']
         if size and size in SIZES:
             instance_type = size
         else:
             instance_type = self.question_maker('Available Sizes', 'size',
-                    [{'text': sz} for sz in SIZES])
+                                                [{'text': sz} for sz in SIZES])
 
         return instance_type
 
@@ -48,7 +48,7 @@ class LaunchOptionsMixin(object):
                 key = all_keys[0]
             else:
                 key = self.question_maker('Available Keys', 'key',
-                        [{'text': item.name, 'obj': item} for item in all_keys])
+                                          [{'text': item.name, 'obj': item} for item in all_keys])
 
         return key
 
@@ -93,8 +93,8 @@ class LaunchOptionsMixin(object):
             else:
                 sorted_groups = sorted(all_security_groups, key=lambda group: group.name.lower())
                 sec_grps = self.question_maker('Available Security Groups', 'security group',
-                        [{'text': item.name, 'obj': item} for item in sorted_groups],
-                        multiple_answers=True)
+                                               [{'text': item.name, 'obj': item} for item in sorted_groups],
+                                               multiple_answers=True)
                 if return_names:
                     security_groups.extend([sg.name for sg in sec_grps])
                 else:

@@ -111,8 +111,12 @@ def input_valid_dir(name):
         value = os.path.expanduser(path)
         value = os.path.expandvars(value)
         if not os.path.isdir(value):
-            print 'Directory does not exist!\n'
-            continue
+            yn = raw_input('Do you want to make directory (Y/n)? ')
+            if yn.lower() in ['', 'y', 'yes']:
+                os.makedirs(value)
+                break
+            else:
+                continue
         break
     return path
 
@@ -124,6 +128,7 @@ def default_config(config_file=DEFAULT_CONFIG_FILE):
     config['PubKeyPath'] = input_valid_dir('PubKeyPath')
     config['ScriptPath'] = input_valid_dir('ScriptPath')
     # config['Domain'] = raw_input('Enter domain: ')
+    config['PackageInstaller'] = raw_input('Enter Package Install Command: ')
     config['PythonInstaller'] = raw_input('Enter Python Install Command: ')
     # config['Salt'] = raw_input('Enter Password Salt: ')
     config['Images'] = OrderedDict()

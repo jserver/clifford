@@ -4,7 +4,8 @@ import os
 import time
 
 from activity import Task
-from activity import add_user, elastic_ip, group_installer, launcher, py_installer, script_runner, static_host, upgrade
+from activity import (add_user, elastic_ip, group_installer, launcher, py_installer,
+                      script_runner, static_host, upgrade, wait_for_ok)
 from commands import BaseCommand
 from main import config
 from mixins import LaunchOptionsMixin
@@ -64,8 +65,8 @@ class Build(BaseCommand, LaunchOptionsMixin):
                  num=parsed_args.num, q=q, out=self.app.stdout)
         lr = q.get()
 
-        self.app.stdout.write('Sleeping 1 minute to allow server to come up...\n')
-        time.sleep(60)
+        self.app.stdout.write('Allowing server to come up...\n')
+        wait_for_ok([inst_id for inst_id in lr.instance_ids])
 
         # begin the mutliprocessing
         pool = Pool(processes=len(lr.instance_ids))
@@ -74,7 +75,9 @@ class Build(BaseCommand, LaunchOptionsMixin):
             tasks = [Task(build, image, inst_id, []) for inst_id in lr.instance_ids]
             self.run_activity(pool, upgrade, tasks)
             self.app.stdout.write('Upgrade Finished\n')
-            time.sleep(10)
+            if build.get('Upgrade') == 'dist-upgrade':
+                self.app.stdout.write('Rebooting after dist-upgrade...\n')
+                wait_for_ok([inst_id for inst_id in lr.instance_ids])
 
         if build.get('Group', '') in config.groups:
             bundles = []
@@ -153,6 +156,26 @@ class Build(BaseCommand, LaunchOptionsMixin):
             if not results:
                 break
         self.app.stdout.write('-------------------------\n')
+
+    '''
+    def wait_for_ok(self, instance_ids, time_to_wait=360):
+        waiting_time = 0
+        while True:
+            self.app.stdout.write('Sleeping 30 seconds...\n')
+            time.sleep(30)
+            waiting_time += 30
+            all_instances = self.app.ec2_conn.get_all_instance_status()
+            for instance in all_instances:
+                if instance.id not in instance_ids:
+                    continue
+                print instance.id, instance.system_status.status, instance.instance_status.status
+                if instance.system_status.status == 'ok' and instance.instance_status.status == 'ok':
+                    instance_ids.remove(instance.id)
+            if not instance_ids:
+                break
+            if waiting_time >= time_to_wait:
+                raise RuntimeError('Servers not ok after %s' % time_to_wait)
+    '''
 
     def add(self, name):
         instance_type = self.get_instance_type()

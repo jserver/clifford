@@ -2,7 +2,7 @@ import glob
 import logging
 import os
 import StringIO
-import subprocess
+import sys
 import time
 from collections import namedtuple
 from subprocess import call
@@ -13,6 +13,26 @@ import paramiko
 
 Task = namedtuple('Task', ['build', 'image', 'instance_id', 'arg_list'])
 LaunchResult = namedtuple('LaunchResult', ['build', 'image', 'instance_ids'])
+
+
+def wait_for_ok(instance_ids, time_to_wait=360):
+    waiting_time = 0
+    conn = boto.connect_ec2()
+    while True:
+        sys.stdout.write('Sleeping 30 seconds...\n')
+        time.sleep(30)
+        waiting_time += 30
+        all_instances = conn.get_all_instance_status()
+        for instance in all_instances:
+            if instance.id not in instance_ids:
+                continue
+            print instance.id, instance.system_status.status, instance.instance_status.status
+            if instance.system_status.status == 'ok' and instance.instance_status.status == 'ok':
+                instance_ids.remove(instance.id)
+        if not instance_ids:
+            break
+        if waiting_time >= time_to_wait:
+            raise RuntimeError('Servers not ok after %s' % time_to_wait)
 
 
 def launcher(tag_name, aws_key_path, script_path, **kwargs):

@@ -13,6 +13,7 @@ from main import config
 class Cnct(BaseCommand):
     def get_parser(self, prog_name):
         parser = super(Cnct, self).get_parser(prog_name)
+        parser.add_argument('-s', dest='display', action='store_true')
         parser.add_argument('--id', dest='arg_is_id', action='store_true')
         parser.add_argument('inst_name')
         return parser
@@ -21,14 +22,17 @@ class Cnct(BaseCommand):
         instance = self.get_instance(parsed_args.inst_name, parsed_args.arg_is_id)
         login = instance.tags.get('Login', None),
         if login:
-            try:
-                retcode = call('ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -i %s/%s.pem %s@%s' % (config.aws_key_path, instance.key_name, login[0], instance.public_dns_name), shell=True)
-                if retcode < 0:
-                    self.app.stdout.write('Child was terminated by signal %s\n' % -retcode)
-                else:
-                    self.app.stdout.write('Child returned %s\n' % retcode)
-            except OSError as e:
-                self.app.stdout.write('Execution failed: %s\n' % e)
+            if parsed_args.display:
+                self.app.stdout.write('ssh -i %s/%s.pem %s@%s\n' % (config.aws_key_path, instance.key_name, login[0], instance.public_dns_name))
+            else:
+                try:
+                    retcode = call('ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -i %s/%s.pem %s@%s' % (config.aws_key_path, instance.key_name, login[0], instance.public_dns_name), shell=True)
+                    if retcode < 0:
+                        self.app.stdout.write('Child was terminated by signal %s\n' % -retcode)
+                    else:
+                        self.app.stdout.write('Child returned %s\n' % retcode)
+                except OSError as e:
+                    self.app.stdout.write('Execution failed: %s\n' % e)
         else:
             raise RuntimeError('Login unknown')
 
