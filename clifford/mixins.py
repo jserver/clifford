@@ -6,7 +6,7 @@ from main import config
 
 class LaunchOptionsMixin(object):
     def get_instance_type(self, size=''):
-        SIZES = ['t1.micro', 'm1.small', 'm1.medium', 'm1.large', 'm3.medium']
+        SIZES = ['m1.small', 'm3.medium']
         if size and size in SIZES:
             instance_type = size
         else:

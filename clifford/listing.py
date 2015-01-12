@@ -216,7 +216,7 @@ class Instances(Lister):
                 instances.append((instance.tags.get('Name', ''),
                                   instance.id,
                                   instance.state,
-                                  instance.instance_type[3:],
+                                  instance.instance_type,
                                   'Y' if instance.root_device_type == 'ebs' else 'N',
                                   'Y' if instance.architecture == 'x86_64' else 'N',
                                   instance.placement,
