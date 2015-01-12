@@ -128,7 +128,16 @@ def default_config(config_file=DEFAULT_CONFIG_FILE):
     config['PubKeyPath'] = input_valid_dir('PubKeyPath')
     config['ScriptPath'] = input_valid_dir('ScriptPath')
     # config['Domain'] = raw_input('Enter domain: ')
+    print 'Acceptable Package Install Commands'
+    print '----------------------------------'
+    print 'apt-get -y install'
+    print 'pkg '
+    print 'yum '
     config['PackageInstaller'] = raw_input('Enter Package Install Command: ')
+    print 'Acceptable Python Install Commands'
+    print '----------------------------------'
+    print 'easy_install '
+    print 'pip install '
     config['PythonInstaller'] = raw_input('Enter Python Install Command: ')
     # config['Salt'] = raw_input('Enter Password Salt: ')
     config['Images'] = OrderedDict()
